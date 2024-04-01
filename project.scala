@@ -11,3 +11,12 @@
 //> using dep com.lihaoyi::scalatags::0.12.0
 
 //> using dep org.scalameta::munit::1.0.0-M11
+
+//> using publish.repository central-s01
+//> using publish.organization io.github.quafadas
+//> using publish.name "live-server-scala-cli-js"
+//> using publish.computeVersion "git:tag"
+//> using publish.license "Apache-2.0"
+//> using publish.url "https://github.com/quafadas/live-server-scala-cli-js"
+//> using publish.versionControl "github:quafadas/live-server-scala-cli-js"
+//> using publish.developer "Simon Parten||https://github.com/Quafadas"
