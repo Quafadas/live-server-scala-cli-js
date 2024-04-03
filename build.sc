@@ -1,9 +1,11 @@
 import $ivy.`io.github.quafadas::millSite::0.0.19`
 import $ivy.`de.tototec::de.tobiasroeser.mill.vcs.version::0.4.0`
+import $file.playwrightVersion // used to cache in GHA
 
 import io.github.quafadas.millSite._
 import mill._, scalalib._, publish._
 import de.tobiasroeser.mill.vcs.version._
+
 
 object project extends ScalaModule with PublishModule {
   def scalaVersion = "3.4.1"
@@ -22,8 +24,8 @@ object project extends ScalaModule with PublishModule {
   object test extends ScalaTests with TestModule.Munit {
     def ivyDeps = super.ivyDeps() ++ project.ivyDeps() ++ Seq(
       ivy"org.scalameta::munit::1.0.0-M11",
-      ivy"com.microsoft.playwright:playwright:1.41.1",
-      ivy"com.microsoft.playwright:driver-bundle:1.41.1",
+      ivy"com.microsoft.playwright:playwright:${playwrightVersion.pwV}",
+      ivy"com.microsoft.playwright:driver-bundle:${playwrightVersion.pwV}",
       ivy"com.lihaoyi::os-lib:0.9.3"
     )
   }
