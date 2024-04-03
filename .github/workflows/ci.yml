@@ -31,7 +31,7 @@ jobs:
       - uses: coursier/setup-action@main
         with:
           jvm: temurin@17
-          apps: mill
+          apps: mill scala-cli
       - name: Checkout current branch (full)
         uses: actions/checkout@v4
         with:
