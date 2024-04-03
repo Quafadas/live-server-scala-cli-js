@@ -38,6 +38,7 @@ jobs:
           fetch-depth: 0
 
       - name: Cache Playwright dependencies
+        id: cache-pw
         uses: actions/cache@v2
         with:
           path: /home/runner/.cache/ms-playwright
@@ -45,15 +46,13 @@ jobs:
           restore-keys: |
             playwright-${{ runner.os }}-
 
-      - name: Prepare GPG
-        run: |
-          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
-          gpgconf --reload gpg-agent
-
       - name: Install Playwright
+        if: ${{ steps.cache-pw.outputs.cache-hit != 'true' }}
         run: just setupPlaywright
+
       - name: compile
         run: mill __.compile
+
       - name: Test
         run: mill project.test
 
@@ -78,6 +77,11 @@ jobs:
           gpg_private_key: ${{ secrets.PGP_SECRET }}
           passphrase: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
           git_config_global: true
+
+      - name: Prepare GPG
+        run: |
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          gpgconf --reload gpg-agent
 
       - name: List keys
         run: gpg -K
