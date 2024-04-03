@@ -47,7 +47,6 @@ jobs:
             playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.sc') }}
 
       - name: Install Playwright
-        if: ${{ steps.cache-pw.outputs.cache-hit != 'true' }}
         run: just setupPlaywright
 
       - name: compile
