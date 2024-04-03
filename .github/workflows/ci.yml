@@ -68,4 +68,4 @@ jobs:
         run: gpg -K
 
       - name: Publish to Maven Central
-        run: ./mill -i mill.scalalib.PublishModule/publishAll __.publishArtifacts --sonatypeUri https://s01.oss.sonatype.org/service/local --sonatypeCreds "${{ secrets.PUBLISH_USER }}:${{ secrets.PUBLISH_PASSWORD }}" --gpgArgs "--passphrase=${{ secrets.PUBLISH_SECRET_KEY_PASSWORD}},--batch,--yes,-a,-b,--pinentry-mode,loopback" --readTimeout 600000 --awaitTimeout 600000 --release true --signed true
+        run: mill -i mill.scalalib.PublishModule/publishAll __.publishArtifacts --sonatypeUri https://s01.oss.sonatype.org/service/local --sonatypeCreds "${{ secrets.PUBLISH_USER }}:${{ secrets.PUBLISH_PASSWORD }}" --gpgArgs "--passphrase=${{ secrets.PUBLISH_SECRET_KEY_PASSWORD}},--batch,--yes,-a,-b,--pinentry-mode,loopback" --readTimeout 600000 --awaitTimeout 600000 --release true --signed true
