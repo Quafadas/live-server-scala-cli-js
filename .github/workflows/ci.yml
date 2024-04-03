@@ -31,14 +31,13 @@ jobs:
       - uses: coursier/setup-action@v1
         with:
           jvm: adopt@17
+          apps: mill
       - name: Checkout current branch (full)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Install Playwright
         run: just setupPlaywright
-      - name: Test
-        run: just setupMill
       - name: Test
         run: ./mill project.test
 
