@@ -19,6 +19,8 @@ object project extends ScalaModule with PublishModule {
     ivy"com.lihaoyi::scalatags::0.12.0"
   )
 
+  def artifactName = "live-server-scala-cli-js"
+
   def publishVersion = VcsVersion.vcsState().format()
 
   object test extends ScalaTests with TestModule.Munit {
