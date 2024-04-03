@@ -58,11 +58,14 @@ jobs:
           distribution: 'temurin'
           java-version: 17
 
-      - name: Setup GPG secrets
-        run: |
-          gpg --version
-          cat <(echo "${{ secrets.PGP_SECRET }}") | base64 --decode | gpg --batch --import
-          gpg --list-secret-keys --keyid-format LONG
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.PGP_SECRET }}
+          passphrase: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
+
+      - name: List keys
+        run: gpg -K
 
       - name: Publish to Maven Central
         run: ./mill -i mill.scalalib.PublishModule/publishAll __.publishArtifacts --sonatypeUri https://s01.oss.sonatype.org/service/local --sonatypeCreds "${{ secrets.PUBLISH_USER }}:${{ secrets.PUBLISH_PASSWORD }}" --gpgArgs "--passphrase=${{ secrets.PUBLISH_SECRET_KEY_PASSWORD}},--batch,--yes,-a,-b,--pinentry-mode,loopback" --readTimeout 600000 --awaitTimeout 600000 --release true --signed true
