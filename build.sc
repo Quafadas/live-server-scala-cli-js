@@ -1,0 +1,41 @@
+import mill._
+import mill.scalalib._
+
+object project extends ScalaModule with PublishModule {
+  def scalaVersion = "3.4.1"
+  def ivyDeps = super.ivyDeps() ++ Seq(
+    ivy"org.http4s::http4s-ember-server::0.23.26",
+    ivy"org.http4s::http4s-dsl::0.23.26",
+    ivy"org.http4s::http4s-scalatags::0.25.2",
+    ivy"io.circe::circe-core::0.14.6",
+    ivy"io.circe::circe-generic::0.14.6",
+    ivy"co.fs2::fs2-io::3.10.2",
+    ivy"com.lihaoyi::scalatags::0.12.0"
+  )
+
+  def publishVersion = VcsVersion.vcsState().format()
+
+  object test extends ScalaTests with TestModule.Munit {
+    def ivyDeps = super.ivyDeps() ++ Seq(
+      ivy"org.scalameta::munit::1.0.0-M11",
+      ivy"com.microsoft.playwright:playwright:1.41.1",
+      ivy"com.microsoft.playwright:driver-bundle:1.41.1",
+    )
+  }
+
+  override def pomSettings = T {
+    PomSettings(
+      description = "An experimental live server for scala JS projects",
+      organization = "io.github.quafadas",
+      url = "https://github.com/Quafadas/live-server-scala-cli-js",
+      licenses = Seq(License.`Apache-2.0`),
+      versionControl =
+        VersionControl.github("quafadas", "live-server-scala-cli-js"),
+      developers = Seq(
+        Developer("quafadas", "Simon Parten", "https://github.com/quafadas")
+      )
+    )
+  }
+
+
+}

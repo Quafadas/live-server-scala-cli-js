@@ -3,24 +3,21 @@ default:
   just --list
 
 setupIde:
-  scala-cli setup-ide . --exclude testDir --exclude native
-
-package:
-  scala-cli package .
+  mill mill.bsp.BSP/install
 
 compile:
-  scala-cli compile . --exclude testDir --exclude native --power
+  mill project.compile
 
 test:
-  scala-cli test . --exclude testDir --exclude native --power
-
-jvmWatch:
-  scala-cli run project.scala file.watcher.scala
+  mill project.test
 
 jvmServe:
-  scala-cli run project.scala live.serverJvm.scala htmlGen.scala file.hasher.scala -- "/Users/simon/Code/helloScalaJs/out"
+  scala-cli project.run /Users/simon/Code/helloScalaJs /Users/simon/Code/helloScalaJs/out
 
 setupPlaywright:
   cs launch com.microsoft.playwright:playwright:1.41.1 -M "com.microsoft.playwright.CLI" -- install --with-deps
+
+publish:
+  mill
 
 gha: setupPlaywright test

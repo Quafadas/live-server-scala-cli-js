@@ -4,3 +4,5 @@
 .vscode
 native
 testDir
+.bsp
+out
