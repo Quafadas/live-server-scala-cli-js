@@ -39,9 +39,4 @@ jobs:
     - uses: VirtusLab/scala-cli-setup@main
 
     - name: Publish
-      run: scala-cli publish . --power --suppress-experimental-feature-warning
-      env:
-        PUBLISH_USER: ${{ secrets.PUBLISH_USER }}
-        PUBLISH_PASSWORD: ${{ secrets.PUBLISH_PASSWORD }}
-        PUBLISH_SECRET_KEY: ${{ secrets.PUBLISH_SECRET_KEY }}
-        PUBLISH_SECRET_KEY_PASSWORD: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
+      run: scala-cli publish . --power --secret-key ${{secrets.PUBLISH_SECRET_KEY}} --secret-key-password ${{secrets.PUBLISH_SECRET_KEY_PASSWORD}} --user ${{ secrets.PUBLISH_USER }} --password ${{secrets.PUBLISH_PASSWORD}}
