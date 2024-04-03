@@ -20,4 +20,7 @@ setupPlaywright:
 publish:
   mill
 
-gha: setupPlaywright test
+setupMill:
+  curl -L https://raw.githubusercontent.com/lefou/millw/0.4.11/millw > mill && chmod +x mill
+
+gha: setupMill setupPlaywright test
