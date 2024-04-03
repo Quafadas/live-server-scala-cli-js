@@ -27,11 +27,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
-      - name: Checkout current branch (full)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
+      - uses: taiki-e/install-action@just
+      - uses: coursier/cache-action@v6.4
       - name: Setup Java (temurin@17)
         id: setup-java-temurin-17
         if: matrix.java == 'temurin@17'
@@ -39,7 +36,14 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-
+      - name: Checkout current branch (full)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Playwright
+        run: just setupPlaywright
+      - name: Test
+        run: just setupMill
       - name: Test
         run: ./mill project.test
 
