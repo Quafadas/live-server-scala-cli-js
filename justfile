@@ -20,5 +20,4 @@ jvmServe:
 setupPlaywright:
   cs launch com.microsoft.playwright:playwright:1.41.1 -M "com.microsoft.playwright.CLI" -- install --with-deps
 
-gha:
-  setupPlaywright test
+gha: setupPlaywright test
