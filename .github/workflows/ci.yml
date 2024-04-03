@@ -28,7 +28,7 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: taiki-e/install-action@just
-      - uses: coursier/setup-action@v1
+      - uses: coursier/setup-action@main
         with:
           jvm: temurin@17
           apps: mill
