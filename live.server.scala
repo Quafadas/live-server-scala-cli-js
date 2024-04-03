@@ -37,9 +37,10 @@ import _root_.io.circe.Encoder
 import cats.syntax.strong
 import fs2.concurrent.Topic
 
-sealed trait FrontendEvent(val typ: String) derives Encoder.AsObject
-case class KeepAlive(override val typ: String = "keepAlive") extends FrontendEvent(typ) derives Encoder.AsObject
-case class PageRefresh(override val typ: String = "pageRefresh") extends FrontendEvent(typ) derives Encoder.AsObject
+sealed trait FrontendEvent derives Encoder.AsObject
+
+case class KeepAlive() extends FrontendEvent derives Encoder.AsObject
+case class PageRefresh() extends FrontendEvent derives Encoder.AsObject
 
 object LiveServer extends IOApp:
 
