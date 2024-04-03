@@ -44,7 +44,7 @@ jobs:
           path: /home/runner/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.sc') }}
           restore-keys: |
-            playwright-${{ runner.os }}-
+            playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.sc') }}
 
       - name: Install Playwright
         if: ${{ steps.cache-pw.outputs.cache-hit != 'true' }}
