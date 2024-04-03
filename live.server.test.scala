@@ -4,7 +4,6 @@ import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 import com.sun.net.httpserver.*;
 import java.net.InetSocketAddress;
 import com.microsoft.playwright.Page.InputValueOptions
-import com.sun.net.httpserver.SimpleFileServer
 import java.nio.file.Paths
 import com.microsoft.playwright.impl.driver.Driver
 import scala.concurrent.Future
