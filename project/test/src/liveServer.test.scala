@@ -49,7 +49,7 @@ class PlaywrightTest extends munit.FunSuite:
       )
       .unsafeToFuture()
 
-    Thread.sleep(2500) // give the thing time to start.
+    Thread.sleep(4000) // give the thing time to start.
 
     page.navigate(s"http://localhost:8085/index.html")
     assertThat(page.locator("h1")).containsText("HelloWorld");
