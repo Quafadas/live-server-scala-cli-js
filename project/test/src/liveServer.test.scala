@@ -26,7 +26,6 @@ class PlaywrightTest extends munit.FunSuite:
   val outDir = testDir / ".out"
 
   override def beforeAll(): Unit =
-
     pw = Playwright.create()
     browser = pw.chromium().launch();
     page = browser.newPage();
@@ -39,6 +38,7 @@ class PlaywrightTest extends munit.FunSuite:
 
     os.write.over(testDir / "hello.scala", helloWorldCode("Hello"))
     os.write.over(testDir / ".out" / "styles.less", "")
+    os.proc("scala-cli", "compile", testDir.toString).call(cwd = testDir)
 
     LiveServer
       .run(
