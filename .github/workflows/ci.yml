@@ -44,7 +44,7 @@ jobs:
         run: mill project.test
 
   publish:
-    if: github.repository == 'Quafadas/live-server-scala-cli-js' && contains(github.ref, 'refs/tags/')
+    # if: github.repository == 'Quafadas/live-server-scala-cli-js' && contains(github.ref, 'refs/tags/')
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -63,6 +63,7 @@ jobs:
         with:
           gpg_private_key: ${{ secrets.PGP_SECRET }}
           passphrase: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
+          git_config_global: true
 
       - name: List keys
         run: gpg -K
