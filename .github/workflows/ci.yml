@@ -39,7 +39,7 @@ jobs:
     - uses: VirtusLab/scala-cli-setup@main
 
     - name: Publish
-      run: scala-cli publish . --power --user env:PUBLISH_USER --password env:PUBLISH_PASSWORD --gpg-key $PUBLISH_SECRET_KEY --gpg-option --pinentry-mode --gpg-option loopback --gpg-option --passphrase --gpg-option $PUBLISH_SECRET_KEY_PASSWORD
+      run: scala-cli publish . --power --user env:PUBLISH_USER --password env:PUBLISH_PASSWORD --gpg-key env:PUBLISH_SECRET_KEY --gpg-option --pinentry-mode --gpg-option loopback --gpg-option --passphrase --gpg-option env:PUBLISH_SECRET_KEY_PASSWORD --suppress-experimental-feature-warning
       env:
         PUBLISH_USER: ${{ secrets.PUBLISH_USER }}
         PUBLISH_PASSWORD: ${{ secrets.PUBLISH_PASSWORD }}
