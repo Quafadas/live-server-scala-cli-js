@@ -33,7 +33,7 @@ import fs2.io.file.Files
 import fs2.io.Watcher.Event
 import org.http4s.ServerSentEvent
 import _root_.io.circe.Encoder
-import Main2.seedMapOnStart
+
 import cats.syntax.strong
 import fs2.concurrent.Topic
 
@@ -41,35 +41,41 @@ sealed trait FrontendEvent(val typ: String) derives Encoder.AsObject
 case class KeepAlive(override val typ: String = "keepAlive") extends FrontendEvent(typ) derives Encoder.AsObject
 case class PageRefresh(override val typ: String = "pageRefresh") extends FrontendEvent(typ) derives Encoder.AsObject
 
-object Main2 extends IOApp:
+object LiveServer extends IOApp:
 
-  import cats.effect.Concurrent
+  private val refreshTopic = Topic[IO, String].toResource
 
-  val refreshTopic = Topic[IO, String].toResource
+  private def buildRunner(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, outDir: fs2.io.file.Path) =
+    ProcessBuilder(
+      "scala-cli",
+      "--power",
+      "package",
+      "--js",
+      ".",
+      "-o",
+      outDir.toString(),
+      "-f",
+      "-w"
+    ).withWorkingDirectory(workDir)
+      .spawn[IO]
+      .use { p =>
+        // p.stderr.through(fs2.io.stdout).compile.drain >>
+        p.stderr
+          .through(text.utf8.decode)
+          .debug()
+          .chunks
+          .evalMap(aChunk =>
+            if aChunk.toString.contains("node ./") then
+              // IO.println("emit") >>
+              refreshTopic.publish1("hi")
+            else IO.unit
+          )
+          .compile
+          .drain
+      }
+      .background
 
-  def buildRunner(refreshTopic: Topic[IO, String]) = ProcessBuilder(
-    "just",
-    "packageW"
-  ).withWorkingDirectory(fs2.io.file.Path("/Users/simon/Code/helloScalaJs"))
-    .spawn[IO]
-    .use { p =>
-      // p.stderr.through(fs2.io.stdout).compile.drain >>
-      p.stderr
-        .through(text.utf8.decode)
-        .debug()
-        .chunks
-        .evalMap(aChunk =>
-          if aChunk.toString.contains("node ./") then
-            // IO.println("emit") >>
-            refreshTopic.publish1("hi")
-          else IO.unit
-        )
-        .compile
-        .drain
-    }
-    .background
-
-  def seedMapOnStart(stringPath: String, mr: MapRef[IO, String, Option[String]]) =
+  private def seedMapOnStart(stringPath: String, mr: MapRef[IO, String, Option[String]]) =
     val asFs2 = fs2.io.file.Path(stringPath)
     fs2.io.file
       .Files[IO]
@@ -92,7 +98,7 @@ object Main2 extends IOApp:
 
   end seedMapOnStart
 
-  def fileWatcher(
+  private def fileWatcher(
       stringPath: fs2.io.file.Path,
       mr: MapRef[IO, String, Option[String]]
   ): ResourceIO[IO[OutcomeIO[Unit]]] =
@@ -135,7 +141,7 @@ object Main2 extends IOApp:
       .background
   end fileWatcher
 
-  def routes(
+  private def routes(
       stringPath: String,
       refreshTopic: Topic[IO, String]
   ): Resource[IO, (HttpApp[IO], MapRef[IO, String, Option[String]], Ref[IO, Map[String, String]])] =
@@ -169,7 +175,7 @@ object Main2 extends IOApp:
     )
   end routes
 
-  def buildServer(httpApp: HttpApp[IO]) = EmberServerBuilder
+  private def buildServer(httpApp: HttpApp[IO]) = EmberServerBuilder
     .default[IO]
     .withHttp2
     .withHost(host"localhost")
@@ -178,20 +184,26 @@ object Main2 extends IOApp:
     .withShutdownTimeout(10.milli)
     .build
 
+  /*
+          args.head is the base directory
+          args.tail.head is the output directory
+   */
   override def run(args: List[String]): IO[ExitCode] =
-    val serveDir = args.head
+    println("args || " + args.mkString(","))
+    val baseDir = args.head
+    val outDir = args.tail.head
     val server = for
       _ <- IO.println("Start dev server ").toResource
       refreshPub <- refreshTopic
-      _ <- buildRunner(refreshPub)
-      routes <- routes(serveDir, refreshPub)
+      _ <- buildRunner(refreshPub, fs2.io.file.Path(baseDir), fs2.io.file.Path(outDir))
+      routes <- routes(outDir.toString(), refreshPub)
       (app, mr, ref) = routes
       _ <- seedMapOnStart(args.head, mr)
-      _ <- fileWatcher(fs2.io.file.Path(serveDir), mr)
+      _ <- fileWatcher(fs2.io.file.Path(baseDir), mr)
       server <- buildServer(app)
     yield server
 
     server.use(_ => IO.never).as(ExitCode.Success)
 
   end run
-end Main2
+end LiveServer

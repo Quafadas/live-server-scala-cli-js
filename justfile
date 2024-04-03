@@ -3,26 +3,22 @@ default:
   just --list
 
 setupIde:
-  scala-cli setup-ide .
+  scala-cli setup-ide . --exclude testDir --exclude native
 
 package:
   scala-cli package .
 
-
 test:
-  scala-cli test project.scala htmlGen.scala htmlGen.test.scala
-
-packageWatcher:
-  scala-cli package file.nativewatcher.scala project.native.scala -f
-
-serveNative:
-  scala-cli run file.nativewatcher.scala project.native.scala
-
-procT:
-  scala-cli run process.scala project.scala
+  scala-cli test . --exclude testDir --exclude native
 
 jvmWatch:
   scala-cli run project.scala file.watcher.scala
 
 jvmServe:
   scala-cli run project.scala live.serverJvm.scala htmlGen.scala file.hasher.scala -- "/Users/simon/Code/helloScalaJs/out"
+
+setupPlaywright:
+  cs launch com.microsoft.playwright:playwright:1.41.1 -M "com.microsoft.playwright.CLI" -- install --with-deps
+
+gha:
+  setupPlaywright test
