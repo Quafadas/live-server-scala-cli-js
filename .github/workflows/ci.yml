@@ -19,7 +19,13 @@ jobs:
     - uses: coursier/cache-action@v6.4
     - uses: VirtusLab/scala-cli-setup@main
     - uses: taiki-e/install-action@just
-    - run: just gha
+    - name: Install Playwright
+      run: just setupPlaywright
+    - name: compile
+      run: just compile
+    - name: test
+      run: just test
+
 
   publish:
     needs: test

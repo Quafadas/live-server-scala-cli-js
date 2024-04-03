@@ -8,6 +8,9 @@ setupIde:
 package:
   scala-cli package .
 
+compile:
+  scala-cli compile . --exclude testDir --exclude native --power
+
 test:
   scala-cli test . --exclude testDir --exclude native --power
 
