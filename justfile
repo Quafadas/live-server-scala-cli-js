@@ -9,7 +9,7 @@ package:
   scala-cli package .
 
 test:
-  scala-cli test . --exclude testDir --exclude native
+  scala-cli test . --exclude testDir --exclude native --power
 
 jvmWatch:
   scala-cli run project.scala file.watcher.scala
