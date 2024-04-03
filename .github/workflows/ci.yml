@@ -39,4 +39,9 @@ jobs:
     - uses: VirtusLab/scala-cli-setup@main
 
     - name: Publish
-      run: scala-cli publish . --power --secret-key value:${{secrets.PUBLISH_SECRET_KEY}} --secret-key-password value:${{secrets.PUBLISH_SECRET_KEY_PASSWORD}} --user value:${{ secrets.PUBLISH_USER }} --password value:${{secrets.PUBLISH_PASSWORD}}
+      run: scala-cli publish . --power --suppress-experimental-feature-warning
+      env:
+        SONATYPE_USERNAME: ${{ secrets.PUBLISH_USER }}
+        SONATYPE_PASSWORD: ${{ secrets.PUBLISH_PASSWORD }}
+        PGP_SECRET: ${{ secrets.PUBLISH_SECRET_KEY }}
+        PGP_PASSPHRASE: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
