@@ -39,7 +39,7 @@ jobs:
       - name: Install Playwright
         run: just setupPlaywright
       - name: Test
-        run: ./mill project.test
+        run: mill project.test
 
   publish:
     if: github.repository == 'Quafadas/live-server-scala-cli-js' && contains(github.ref, 'refs/tags/')
