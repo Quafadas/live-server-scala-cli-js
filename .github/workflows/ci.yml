@@ -38,6 +38,8 @@ jobs:
           fetch-depth: 0
       - name: Install Playwright
         run: just setupPlaywright
+      - name: compile
+        run: mill __.compile
       - name: Test
         run: mill project.test
 
