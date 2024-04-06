@@ -36,6 +36,7 @@ import _root_.io.circe.Encoder
 
 import cats.syntax.strong
 import fs2.concurrent.Topic
+import scalatags.Text.styles
 
 sealed trait FrontendEvent derives Encoder.AsObject
 
@@ -45,6 +46,8 @@ case class PageRefresh() extends FrontendEvent derives Encoder.AsObject
 object LiveServer extends IOApp:
 
   private val refreshTopic = Topic[IO, String].toResource
+
+  private val port = port"8085"
 
   private def buildRunner(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, outDir: fs2.io.file.Path) =
     ProcessBuilder(
@@ -81,7 +84,7 @@ object LiveServer extends IOApp:
     fs2.io.file
       .Files[IO]
       .walk(asFs2)
-      .filter(_.endsWith(".js"))
+      // .filter(_.endsWith(".js"))
       .evalMap { f =>
         Files[IO]
           .isRegularFile(f)
@@ -110,29 +113,29 @@ object LiveServer extends IOApp:
           .evalTap((e: Event) =>
             e match
               case Event.Created(path, i) =>
-                if path.endsWith(".js") then
-                  fielHash(fs2.io.file.Path(path.toString()))
-                    .flatMap(h =>
-                      val serveAt = path.relativize(stringPath.toNioPath)
-                      // IO.println(s"created $path, $h") >>
-                      mr.setKeyValue(serveAt.toString(), h)
-                    )
-                else IO.unit
+                // if path.endsWith(".js") then
+                fielHash(fs2.io.file.Path(path.toString()))
+                  .flatMap(h =>
+                    val serveAt = path.relativize(stringPath.toNioPath)
+                    // IO.println(s"created $path, $h") >>
+                    mr.setKeyValue(serveAt.toString(), h)
+                  )
+              // else IO.unit
               case Event.Modified(path, i) =>
-                if path.endsWith(".js") then
-                  fielHash(fs2.io.file.Path(path.toString()))
-                    .flatMap(h =>
-                      val serveAt = path.relativize(stringPath.toNioPath)
-                      // IO.println(s"modifed $path , $h") >>
-                      mr.setKeyValue(serveAt.toString(), h)
-                    )
-                else IO.unit
+                // if path.endsWith(".js") then
+                fielHash(fs2.io.file.Path(path.toString()))
+                  .flatMap(h =>
+                    val serveAt = path.relativize(stringPath.toNioPath)
+                    // IO.println(s"modifed $path , $h") >>
+                    mr.setKeyValue(serveAt.toString(), h)
+                  )
+              // else IO.unit
               case Event.Deleted(path, i) =>
-                if path.endsWith(".js") then
-                  val serveAt = path.relativize(stringPath.toNioPath)
-                  // IO.println(s"deleted $path") >>
-                  mr.unsetKey(serveAt.toString())
-                else IO.unit
+                // if path.endsWith(".js") then
+                val serveAt = path.relativize(stringPath.toNioPath)
+                // IO.println(s"deleted $path") >>
+                mr.unsetKey(serveAt.toString())
+              // else IO.unit
               case e: Event.Overflow    => IO.println("overflow")
               case e: Event.NonStandard => IO.println("non-standard")
           )
@@ -144,7 +147,8 @@ object LiveServer extends IOApp:
 
   private def routes(
       stringPath: String,
-      refreshTopic: Topic[IO, String]
+      refreshTopic: Topic[IO, String],
+      stylesPath: String
   ): Resource[IO, (HttpApp[IO], MapRef[IO, String, Option[String]], Ref[IO, Map[String, String]])] =
     Resource.eval(
       for
@@ -155,9 +159,13 @@ object LiveServer extends IOApp:
           "" -> fileService[IO](FileService.Config(stringPath))
         )
 
+        val styles = Router(
+          "" -> fileService[IO](FileService.Config(stylesPath))
+        )
+
         val overrides = HttpRoutes
           .of[IO] {
-            case GET -> Root / "index.html" =>
+            case GET -> Root =>
               Ok((ref.get.map(_.toSeq.map((path, hash) => (fs2.io.file.Path(path), hash))).map(makeHeader)))
             case GET -> Root / "all" =>
               ref.get.flatMap { m =>
@@ -172,7 +180,7 @@ object LiveServer extends IOApp:
               )
           }
 
-        (overrides.combineK(staticFiles).orNotFound, mr, ref)
+        (overrides.combineK(staticFiles).combineK(styles).orNotFound, mr, ref)
     )
   end routes
 
@@ -180,27 +188,31 @@ object LiveServer extends IOApp:
     .default[IO]
     .withHttp2
     .withHost(host"localhost")
-    .withPort(port"8085")
+    .withPort(port)
     .withHttpApp(httpApp)
     .withShutdownTimeout(10.milli)
     .build
 
   /*
-          args.head is the base directory
-          args.tail.head is the output directory
+          args(0) is the base directory
+          args(1) is the output directory
+          args(2) is the styles directory (contains *.less files)
    */
   override def run(args: List[String]): IO[ExitCode] =
     println("args || " + args.mkString(","))
     val baseDir = args.head
-    val outDir = args.tail.head
+    val outDir = args(1)
+    val stylesDir = args(2)
     val server = for
-      _ <- IO.println("Start dev server ").toResource
+      _ <- IO.println(s"Start dev server on https://localhost:$port").toResource
       refreshPub <- refreshTopic
       _ <- buildRunner(refreshPub, fs2.io.file.Path(baseDir), fs2.io.file.Path(outDir))
-      routes <- routes(outDir.toString(), refreshPub)
+      routes <- routes(outDir.toString(), refreshPub, stylesDir)
       (app, mr, ref) = routes
-      _ <- seedMapOnStart(args.head, mr)
-      _ <- fileWatcher(fs2.io.file.Path(baseDir), mr)
+      _ <- seedMapOnStart(outDir, mr)
+      _ <- seedMapOnStart(stylesDir, mr)
+      _ <- fileWatcher(fs2.io.file.Path(outDir), mr)
+      _ <- fileWatcher(fs2.io.file.Path(stylesDir), mr)
       server <- buildServer(app)
     yield server
 

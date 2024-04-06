@@ -33,13 +33,6 @@ def makeHeader(modules: Seq[(Path, String)]) =
       script("less.watch();"),
       script(src := "main.js", `type` := "module"),
       script(raw(raw"""const sse = new EventSource('/api/v1/sse');
-/*
- * The event "message" is a special case, as it
- * will capture events without an event field
- * as well as events that have the specific type
- * `event: message` It will not trigger on any
- * other event type.
- */
 sse.addEventListener('message', (e) => {
   const msg = JSON.parse(e.data)
 

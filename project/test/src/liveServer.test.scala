@@ -9,6 +9,7 @@ import com.microsoft.playwright.impl.driver.Driver
 import scala.concurrent.Future
 
 import cats.effect.unsafe.implicits.global
+import scalatags.Text.styles
 
 /*
 Run
@@ -24,6 +25,7 @@ class PlaywrightTest extends munit.FunSuite:
 
   val testDir = os.pwd / "testDir"
   val outDir = testDir / ".out"
+  val styleDir = testDir / "styles"
 
   override def beforeAll(): Unit =
     pw = Playwright.create()
@@ -35,29 +37,31 @@ class PlaywrightTest extends munit.FunSuite:
 
     if os.exists(testDir) then os.remove.all(os.pwd / "testDir")
     os.makeDir.all(outDir)
+    os.makeDir.all(styleDir)
 
     os.write.over(testDir / "hello.scala", helloWorldCode("Hello"))
-    os.write.over(testDir / ".out" / "styles.less", "")
+    os.write.over(styleDir / "styles.less", "")
     os.proc("scala-cli", "compile", testDir.toString).call(cwd = testDir)
 
     LiveServer
       .run(
         List(
           testDir.toString,
-          outDir.toString
+          outDir.toString,
+          styleDir.toString
         )
       )
       .unsafeToFuture()
 
     Thread.sleep(4000) // give the thing time to start.
 
-    page.navigate(s"http://localhost:8085/index.html")
+    page.navigate(s"http://localhost:8085")
     assertThat(page.locator("h1")).containsText("HelloWorld");
 
     os.write.over(testDir / "hello.scala", helloWorldCode("Bye"))
     assertThat(page.locator("h1")).containsText("ByeWorld");
 
-    os.write.append(testDir / ".out" / "styles.less", "h1 { color: red; }")
+    os.write.append(styleDir / "styles.less", "h1 { color: red; }")
     assertThat(page.locator("h1")).hasCSS("color", "rgb(255, 0, 0)")
 
   }

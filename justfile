@@ -12,7 +12,7 @@ test:
   mill project.test
 
 jvmServe:
-  scala-cli project.run /Users/simon/Code/helloScalaJs /Users/simon/Code/helloScalaJs/out
+  mill project.run /Users/simon/Code/helloScalaJs /Users/simon/Code/helloScalaJs/out /Users/simon/Code/helloScalaJs/styles
 
 setupPlaywright:
   cs launch com.microsoft.playwright:playwright:1.41.1 -M "com.microsoft.playwright.CLI" -- install --with-deps
