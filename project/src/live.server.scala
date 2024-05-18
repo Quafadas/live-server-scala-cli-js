@@ -220,5 +220,3 @@ object LiveServer extends IOApp:
 
   end run
 end LiveServer
-
-val s: String = 1
