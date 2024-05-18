@@ -30,7 +30,7 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           # Change this to point to your image name
-          imageName: ghcr.io/quafadas/scalaJsLiveServer
+          imageName: ghcr.io/quafadas/scala-js-live-server
           # Change this to be your CI task/script
           runCmd: |
             # Add multiple commands to run if needed
