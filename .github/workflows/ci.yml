@@ -46,6 +46,9 @@ jobs:
           restore-keys: |
             playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.sc') }}
 
+      - name: formatCheck
+        run: mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
+
       - name: Install Playwright
         run: just setupPlaywright
 

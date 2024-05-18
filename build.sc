@@ -4,10 +4,11 @@ import $file.playwrightVersion // used to cache in GHA
 
 import io.github.quafadas.millSite._
 import mill._, scalalib._, publish._
+import mill.scalalib.scalafmt.ScalafmtModule
 import de.tobiasroeser.mill.vcs.version._
 
 
-object project extends ScalaModule with PublishModule {
+object project extends ScalaModule with PublishModule with ScalafmtModule {
   def scalaVersion = "3.4.1"
   def ivyDeps = super.ivyDeps() ++ Seq(
     ivy"org.http4s::http4s-ember-server::0.23.26",
