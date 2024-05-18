@@ -59,7 +59,7 @@ jobs:
         run: mill project.test
 
   publish:
-    # if: github.repository == 'Quafadas/live-server-scala-cli-js' && contains(github.ref, 'refs/tags/')
+    if: github.repository == 'Quafadas/live-server-scala-cli-js' && contains(github.ref, 'refs/tags/')
     needs: build
     runs-on: ubuntu-latest
     steps:
