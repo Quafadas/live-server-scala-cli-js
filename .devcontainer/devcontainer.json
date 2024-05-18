@@ -33,7 +33,7 @@
   // "forwardPorts": [],
 
   // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": ""
+  "postCreateCommand": "./mill __.prepareOffline"
 
   // Configure tool-specific properties.
   // "customizations": {},
