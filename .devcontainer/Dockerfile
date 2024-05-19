@@ -9,7 +9,7 @@ COPY build.sc .
 RUN cs install metals
 
 # Download mills dependancies. if build.sc hasn't changed, this _should_ hit the layer cache.
-RUN mill __.prepareOffline
+RUN ./mill __.prepareOffline
 
 # Copy source into container
 COPY . .
