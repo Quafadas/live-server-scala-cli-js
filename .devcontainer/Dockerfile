@@ -1,6 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/base:jammy
-
-
+FROM mcr.microsoft.com/devcontainers/base:ubuntu
 
 # https://get-coursier.io/docs/cli-installation
 RUN curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux.gz" | gzip -d > cs && chmod +x cs && mv cs /usr/local/bin/cs

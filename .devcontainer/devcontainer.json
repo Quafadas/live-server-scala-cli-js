@@ -2,8 +2,9 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
 {
   "name": "Ubuntu",
-  // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  "image": "ghcr.io/quafadas/scala-js-live-server",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
 	"customizations": {
 		"vscode": {
 			"extensions": [
