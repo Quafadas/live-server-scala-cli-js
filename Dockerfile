@@ -14,6 +14,8 @@ RUN ./mill __.prepareOffline
 # Copy source into container
 COPY . .
 
+RUN chmod +x mill
+
 # Compile the project - anything that has hit "main" should (at least!) compile
 # And setup mills BSP server for metals
 RUN ./mill show __.compile && ./mill mill.bsp.BSP/install
