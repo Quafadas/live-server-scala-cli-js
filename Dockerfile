@@ -1,5 +1,11 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu
 
+# Install OpenJDK 11
+RUN apt-get update && \
+    apt-get install -y openjdk-17-jdk && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
 # https://get-coursier.io/docs/cli-installation
 RUN curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux.gz" | gzip -d > cs && chmod +x cs && mv cs /usr/local/bin/cs
 
