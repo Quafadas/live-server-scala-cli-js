@@ -11,6 +11,7 @@ RUN curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linu
 
 COPY build.sc .
 COPY mill .
+COPY .mill-version .
 
 # Download mills dependancies. if build.sc hasn't changed, this _should_ hit the layer cache.
 RUN ./mill __.prepareOffline
