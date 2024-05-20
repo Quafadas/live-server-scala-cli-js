@@ -29,6 +29,8 @@
   //   //, "ghcr.io/devcontainers-contrib/features/scalacli-sdkman:2": {}
   },
 
+  "onCreateCommand": "mill -j 0 __.prepareOffline && mill -j 0 __.compile && mill -j 0 mill.bsp.BSP/install"
+
   // // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
 
