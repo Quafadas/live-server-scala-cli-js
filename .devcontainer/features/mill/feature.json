@@ -1,0 +1,8 @@
+{
+  "id": "mill",
+  "version": "1.0.0",
+  "name": "Mill Build Tool",
+  "description": "Installs Mill, a Scala build tool.",
+  "installsAfter": [],
+  "options": {}
+}
