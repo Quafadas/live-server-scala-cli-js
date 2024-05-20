@@ -22,19 +22,19 @@
 		}
   },
 
-  // Features to add to the dev container. More info: https://containers.dev/features.
-  "features": {
-    "ghcr.io/devcontainers/features/java:1": {
-      "version": 21
-    }
-    //, "ghcr.io/devcontainers-contrib/features/scalacli-sdkman:2": {}
-  },
+  // // Features to add to the dev container. More info: https://containers.dev/features.
+  // "features": {
+  //   // "ghcr.io/devcontainers/features/java:1": {
+  //   //   "version": 21
+  //   // }
+  //   //, "ghcr.io/devcontainers-contrib/features/scalacli-sdkman:2": {}
+  // },
 
-  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  // // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
 
   // Use 'postCreateCommand' to run commands after the container is created.
-  "postCreateCommand": "./mill __.prepareOffline"
+  // "postCreateCommand": "./mill __.prepareOffline"
 
   // Configure tool-specific properties.
   // "customizations": {},
