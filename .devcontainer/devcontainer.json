@@ -3,7 +3,7 @@
 {
   "name": "Ubuntu",
   "build": {
-    "dockerfile": "mcr.microsoft.com/devcontainers/java:17"
+    "dockerfile": "mcr.microsoft.com/devcontainers/base:jammy"
   },
 	"customizations": {
 		"vscode": {
