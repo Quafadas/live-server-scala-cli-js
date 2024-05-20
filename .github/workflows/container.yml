@@ -36,5 +36,6 @@ jobs:
           # Change this to be your CI task/script
           runCmd: |
             # Add multiple commands to run if needed
-            ./mill -v
-            ./mill __.compile
+            cs version
+            mill -v
+            mill __.compile
