@@ -15,16 +15,16 @@ COPY .mill-version .
 COPY playwrightVersion.sc .
 
 # Install these extensions
-RUN code-server --install-extension scalameta.metals \
-  && code-server --install-extension usernamehw.errorlens \
-  && code-server --install-extension vscjava.vscode-java-pack \
-  && code-server --install-extension github.copilot \
-  && code-server --install-extension github.copilot-chat \
-  && code-server --install-extension github.vscode-github-actions \
-  && code-server --install-extension github.vscode-pull-request-github \
-  && code-server --install-extension eamodio.gitlens \
-  && code-server --install-extension ms-vscode-remote.remote-containers \
-  && code-server --install-extension github.vscode-pull-request-github
+RUN code --install-extension scalameta.metals \
+  && code --install-extension usernamehw.errorlens \
+  && code --install-extension vscjava.vscode-java-pack \
+  && code --install-extension github.copilot \
+  && code --install-extension github.copilot-chat \
+  && code --install-extension github.vscode-github-actions \
+  && code --install-extension github.vscode-pull-request-github \
+  && code --install-extension eamodio.gitlens \
+  && code --install-extension ms-vscode-remote.remote-containers \
+  && code --install-extension github.vscode-pull-request-github
 
 # Download mills dependancies. if build.sc hasn't changed, this _should_ hit the layer cache.
 RUN ./mill __.prepareOffline
