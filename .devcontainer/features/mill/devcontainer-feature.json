@@ -4,7 +4,7 @@
   "name": "Mill Build Tool",
   "description": "Installs Mill, a Scala build tool.",
   "installsAfter":  [
-    "ghcr.io/devcontainers/features/common-utils"
+    "ghcr.io/devcontainers/features/java:1"
   ],
   "options": {}
 }

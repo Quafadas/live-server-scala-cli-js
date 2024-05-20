@@ -23,7 +23,7 @@
   // // Features to add to the dev container. More info: https://containers.dev/features.
   "features": {
     "ghcr.io/devcontainers/features/java:1": {
-      "version": 21
+      "version": 17
     },
     "./features/mill": {}
   //   //, "ghcr.io/devcontainers-contrib/features/scalacli-sdkman:2": {}
