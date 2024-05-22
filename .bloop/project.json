@@ -1,0 +1,692 @@
+{
+    "version": "1.4.0",
+    "project": {
+        "name": "project",
+        "directory": "/workspaces/live-server-scala-cli-js/project",
+        "workspaceDir": "/workspaces/live-server-scala-cli-js",
+        "sources": [
+            "/workspaces/live-server-scala-cli-js/project/src"
+        ],
+        "dependencies": [
+            
+        ],
+        "classpath": [
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-ember-server_3/0.23.26/http4s-ember-server_3-0.23.26.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-dsl_3/0.23.26/http4s-dsl_3-0.23.26.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-scalatags_3/0.25.2/http4s-scalatags_3-0.25.2.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/io/circe/circe-core_3/0.14.6/circe-core_3-0.14.6.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/io/circe/circe-generic_3/0.14.6/circe-generic_3-0.14.6.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/co/fs2/fs2-io_3/3.10.2/fs2-io_3-3.10.2.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/scalatags_3/0.12.0/scalatags_3-0.12.0.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.4.1/scala3-library_3-3.4.1.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-ember-core_3/0.23.26/http4s-ember-core_3-0.23.26.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-server_3/0.23.26/http4s-server_3-0.23.26.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/log4cats-slf4j_3/2.6.0/log4cats-slf4j_3-2.6.0.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-core_3/0.23.26/http4s-core_3-0.23.26.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/io/circe/circe-numbers_3/0.14.6/circe-numbers_3-0.14.6.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-core_3/2.10.0/cats-core_3-2.10.0.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/co/fs2/fs2-core_3/3.10.2/fs2-core_3-3.10.2.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/comcast/ip4s-core_3/3.5.0/ip4s-core_3-3.5.0.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/sourcecode_3/0.3.0/sourcecode_3-0.3.0.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/geny_3/1.0.0/geny_3-1.0.0.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.12/scala-library-2.13.12.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/log4cats-core_3/2.6.0/log4cats-core_3-2.6.0.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/twitter/hpack/1.0.2/hpack-1.0.2.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-effect_3/3.5.4/cats-effect_3-3.5.4.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/case-insensitive_3/1.4.0/case-insensitive_3-1.4.0.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-effect-std_3/3.5.4/cats-effect-std_3-3.5.4.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-parse_3/1.0.0/cats-parse_3-1.0.0.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-crypto_3/0.2.4/http4s-crypto_3-0.2.4.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/literally_3/1.1.0/literally_3-1.1.0.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scodec/scodec-bits_3/1.1.38/scodec-bits_3-1.1.38.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/vault_3/3.5.0/vault_3-3.5.0.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/log4s/log4s_3/1.10.0/log4s_3-1.10.0.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-kernel_3/2.10.0/cats-kernel_3-2.10.0.jar",
+            "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-effect-kernel_3/3.5.4/cats-effect-kernel_3-3.5.4.jar"
+        ],
+        "out": "/workspaces/live-server-scala-cli-js/.bloop/out/project",
+        "classesDir": "/workspaces/live-server-scala-cli-js/.bloop/out/project/classes",
+        "resources": [
+            "/workspaces/live-server-scala-cli-js/project/resources"
+        ],
+        "scala": {
+            "organization": "org.scala-lang",
+            "name": "scala-compiler",
+            "version": "3.4.1",
+            "options": [
+                
+            ],
+            "jars": [
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-compiler_3/3.4.1/scala3-compiler_3-3.4.1.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.4.1/scala3-library_3-3.4.1.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-interfaces/3.4.1/scala3-interfaces-3.4.1.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/tasty-core_3/3.4.1/tasty-core_3-3.4.1.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/modules/scala-asm/9.6.0-scala-1/scala-asm-9.6.0-scala-1.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-sbt/compiler-interface/1.9.6/compiler-interface-1.9.6.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/jline/jline-reader/3.19.0/jline-reader-3.19.0.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/jline/jline-terminal/3.19.0/jline-terminal-3.19.0.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/jline/jline-terminal-jna/3.19.0/jline-terminal-jna-3.19.0.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.12/scala-library-2.13.12.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-sbt/util-interface/1.9.8/util-interface-1.9.8.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/net/java/dev/jna/jna/5.3.1/jna-5.3.1.jar"
+            ]
+        },
+        "java": {
+            "options": [
+                
+            ]
+        },
+        "platform": {
+            "name": "jvm",
+            "config": {
+                "home": "/usr/local/sdkman/candidates/java/current",
+                "options": [
+                    "-Duser.dir=/workspaces/live-server-scala-cli-js"
+                ]
+            },
+            "mainClass": [
+                
+            ],
+            "classpath": [
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-ember-server_3/0.23.26/http4s-ember-server_3-0.23.26.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-dsl_3/0.23.26/http4s-dsl_3-0.23.26.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-scalatags_3/0.25.2/http4s-scalatags_3-0.25.2.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/io/circe/circe-core_3/0.14.6/circe-core_3-0.14.6.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/io/circe/circe-generic_3/0.14.6/circe-generic_3-0.14.6.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/co/fs2/fs2-io_3/3.10.2/fs2-io_3-3.10.2.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/scalatags_3/0.12.0/scalatags_3-0.12.0.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.4.1/scala3-library_3-3.4.1.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-ember-core_3/0.23.26/http4s-ember-core_3-0.23.26.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-server_3/0.23.26/http4s-server_3-0.23.26.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/log4cats-slf4j_3/2.6.0/log4cats-slf4j_3-2.6.0.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-core_3/0.23.26/http4s-core_3-0.23.26.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/io/circe/circe-numbers_3/0.14.6/circe-numbers_3-0.14.6.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-core_3/2.10.0/cats-core_3-2.10.0.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/co/fs2/fs2-core_3/3.10.2/fs2-core_3-3.10.2.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/comcast/ip4s-core_3/3.5.0/ip4s-core_3-3.5.0.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/sourcecode_3/0.3.0/sourcecode_3-0.3.0.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/geny_3/1.0.0/geny_3-1.0.0.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.12/scala-library-2.13.12.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/log4cats-core_3/2.6.0/log4cats-core_3-2.6.0.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/twitter/hpack/1.0.2/hpack-1.0.2.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-effect_3/3.5.4/cats-effect_3-3.5.4.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/case-insensitive_3/1.4.0/case-insensitive_3-1.4.0.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-effect-std_3/3.5.4/cats-effect-std_3-3.5.4.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-parse_3/1.0.0/cats-parse_3-1.0.0.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-crypto_3/0.2.4/http4s-crypto_3-0.2.4.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/literally_3/1.1.0/literally_3-1.1.0.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scodec/scodec-bits_3/1.1.38/scodec-bits_3-1.1.38.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/vault_3/3.5.0/vault_3-3.5.0.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/log4s/log4s_3/1.10.0/log4s_3-1.10.0.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-kernel_3/2.10.0/cats-kernel_3-2.10.0.jar",
+                "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-effect-kernel_3/3.5.4/cats-effect-kernel_3-3.5.4.jar"
+            ],
+            "resources": [
+                "/workspaces/live-server-scala-cli-js/project/resources"
+            ]
+        },
+        "resolution": {
+            "modules": [
+                {
+                    "organization": "co.fs2",
+                    "name": "fs2-core_3",
+                    "version": "3.10.2",
+                    "artifacts": [
+                        {
+                            "name": "fs2-core_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/co/fs2/fs2-core_3/3.10.2/fs2-core_3-3.10.2.jar"
+                        },
+                        {
+                            "name": "fs2-core_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/co/fs2/fs2-core_3/3.10.2/fs2-core_3-3.10.2-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.typelevel",
+                    "name": "cats-effect_3",
+                    "version": "3.5.4",
+                    "artifacts": [
+                        {
+                            "name": "cats-effect_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-effect_3/3.5.4/cats-effect_3-3.5.4.jar"
+                        },
+                        {
+                            "name": "cats-effect_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-effect_3/3.5.4/cats-effect_3-3.5.4-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.circe",
+                    "name": "circe-generic_3",
+                    "version": "0.14.6",
+                    "artifacts": [
+                        {
+                            "name": "circe-generic_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/io/circe/circe-generic_3/0.14.6/circe-generic_3-0.14.6.jar"
+                        },
+                        {
+                            "name": "circe-generic_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/io/circe/circe-generic_3/0.14.6/circe-generic_3-0.14.6-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "co.fs2",
+                    "name": "fs2-io_3",
+                    "version": "3.10.2",
+                    "artifacts": [
+                        {
+                            "name": "fs2-io_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/co/fs2/fs2-io_3/3.10.2/fs2-io_3-3.10.2.jar"
+                        },
+                        {
+                            "name": "fs2-io_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/co/fs2/fs2-io_3/3.10.2/fs2-io_3-3.10.2-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.typelevel",
+                    "name": "cats-effect-kernel_3",
+                    "version": "3.5.4",
+                    "artifacts": [
+                        {
+                            "name": "cats-effect-kernel_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-effect-kernel_3/3.5.4/cats-effect-kernel_3-3.5.4.jar"
+                        },
+                        {
+                            "name": "cats-effect-kernel_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-effect-kernel_3/3.5.4/cats-effect-kernel_3-3.5.4-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.typelevel",
+                    "name": "literally_3",
+                    "version": "1.1.0",
+                    "artifacts": [
+                        {
+                            "name": "literally_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/literally_3/1.1.0/literally_3-1.1.0.jar"
+                        },
+                        {
+                            "name": "literally_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/literally_3/1.1.0/literally_3-1.1.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.log4s",
+                    "name": "log4s_3",
+                    "version": "1.10.0",
+                    "artifacts": [
+                        {
+                            "name": "log4s_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/log4s/log4s_3/1.10.0/log4s_3-1.10.0.jar"
+                        },
+                        {
+                            "name": "log4s_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/log4s/log4s_3/1.10.0/log4s_3-1.10.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.http4s",
+                    "name": "http4s-core_3",
+                    "version": "0.23.26",
+                    "artifacts": [
+                        {
+                            "name": "http4s-core_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-core_3/0.23.26/http4s-core_3-0.23.26.jar"
+                        },
+                        {
+                            "name": "http4s-core_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-core_3/0.23.26/http4s-core_3-0.23.26-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.typelevel",
+                    "name": "log4cats-core_3",
+                    "version": "2.6.0",
+                    "artifacts": [
+                        {
+                            "name": "log4cats-core_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/log4cats-core_3/2.6.0/log4cats-core_3-2.6.0.jar"
+                        },
+                        {
+                            "name": "log4cats-core_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/log4cats-core_3/2.6.0/log4cats-core_3-2.6.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.http4s",
+                    "name": "http4s-server_3",
+                    "version": "0.23.26",
+                    "artifacts": [
+                        {
+                            "name": "http4s-server_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-server_3/0.23.26/http4s-server_3-0.23.26.jar"
+                        },
+                        {
+                            "name": "http4s-server_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-server_3/0.23.26/http4s-server_3-0.23.26-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.typelevel",
+                    "name": "cats-kernel_3",
+                    "version": "2.10.0",
+                    "artifacts": [
+                        {
+                            "name": "cats-kernel_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-kernel_3/2.10.0/cats-kernel_3-2.10.0.jar"
+                        },
+                        {
+                            "name": "cats-kernel_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-kernel_3/2.10.0/cats-kernel_3-2.10.0-sources.jar"
+                        },
+                        {
+                            "name": "cats-kernel_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-kernel_3/2.10.0/cats-kernel_3-2.10.0.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.lihaoyi",
+                    "name": "sourcecode_3",
+                    "version": "0.3.0",
+                    "artifacts": [
+                        {
+                            "name": "sourcecode_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/sourcecode_3/0.3.0/sourcecode_3-0.3.0.jar"
+                        },
+                        {
+                            "name": "sourcecode_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/sourcecode_3/0.3.0/sourcecode_3-0.3.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.typelevel",
+                    "name": "vault_3",
+                    "version": "3.5.0",
+                    "artifacts": [
+                        {
+                            "name": "vault_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/vault_3/3.5.0/vault_3-3.5.0.jar"
+                        },
+                        {
+                            "name": "vault_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/vault_3/3.5.0/vault_3-3.5.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.lihaoyi",
+                    "name": "scalatags_3",
+                    "version": "0.12.0",
+                    "artifacts": [
+                        {
+                            "name": "scalatags_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/scalatags_3/0.12.0/scalatags_3-0.12.0.jar"
+                        },
+                        {
+                            "name": "scalatags_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/scalatags_3/0.12.0/scalatags_3-0.12.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.http4s",
+                    "name": "http4s-dsl_3",
+                    "version": "0.23.26",
+                    "artifacts": [
+                        {
+                            "name": "http4s-dsl_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-dsl_3/0.23.26/http4s-dsl_3-0.23.26.jar"
+                        },
+                        {
+                            "name": "http4s-dsl_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-dsl_3/0.23.26/http4s-dsl_3-0.23.26-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.scala-lang",
+                    "name": "scala3-library_3",
+                    "version": "3.4.1",
+                    "artifacts": [
+                        {
+                            "name": "scala3-library_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.4.1/scala3-library_3-3.4.1.jar"
+                        },
+                        {
+                            "name": "scala3-library_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.4.1/scala3-library_3-3.4.1-sources.jar"
+                        },
+                        {
+                            "name": "scala3-library_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.4.1/scala3-library_3-3.4.1-sources.jar"
+                        },
+                        {
+                            "name": "scala3-library_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala3-library_3/3.4.1/scala3-library_3-3.4.1.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.circe",
+                    "name": "circe-numbers_3",
+                    "version": "0.14.6",
+                    "artifacts": [
+                        {
+                            "name": "circe-numbers_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/io/circe/circe-numbers_3/0.14.6/circe-numbers_3-0.14.6.jar"
+                        },
+                        {
+                            "name": "circe-numbers_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/io/circe/circe-numbers_3/0.14.6/circe-numbers_3-0.14.6-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.slf4j",
+                    "name": "slf4j-api",
+                    "version": "1.7.36",
+                    "artifacts": [
+                        {
+                            "name": "slf4j-api",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36.jar"
+                        },
+                        {
+                            "name": "slf4j-api",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/slf4j/slf4j-api/1.7.36/slf4j-api-1.7.36-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.http4s",
+                    "name": "http4s-ember-core_3",
+                    "version": "0.23.26",
+                    "artifacts": [
+                        {
+                            "name": "http4s-ember-core_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-ember-core_3/0.23.26/http4s-ember-core_3-0.23.26.jar"
+                        },
+                        {
+                            "name": "http4s-ember-core_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-ember-core_3/0.23.26/http4s-ember-core_3-0.23.26-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "io.circe",
+                    "name": "circe-core_3",
+                    "version": "0.14.6",
+                    "artifacts": [
+                        {
+                            "name": "circe-core_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/io/circe/circe-core_3/0.14.6/circe-core_3-0.14.6.jar"
+                        },
+                        {
+                            "name": "circe-core_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/io/circe/circe-core_3/0.14.6/circe-core_3-0.14.6-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.typelevel",
+                    "name": "cats-parse_3",
+                    "version": "1.0.0",
+                    "artifacts": [
+                        {
+                            "name": "cats-parse_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-parse_3/1.0.0/cats-parse_3-1.0.0.jar"
+                        },
+                        {
+                            "name": "cats-parse_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-parse_3/1.0.0/cats-parse_3-1.0.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.http4s",
+                    "name": "http4s-ember-server_3",
+                    "version": "0.23.26",
+                    "artifacts": [
+                        {
+                            "name": "http4s-ember-server_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-ember-server_3/0.23.26/http4s-ember-server_3-0.23.26.jar"
+                        },
+                        {
+                            "name": "http4s-ember-server_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-ember-server_3/0.23.26/http4s-ember-server_3-0.23.26-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.scodec",
+                    "name": "scodec-bits_3",
+                    "version": "1.1.38",
+                    "artifacts": [
+                        {
+                            "name": "scodec-bits_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scodec/scodec-bits_3/1.1.38/scodec-bits_3-1.1.38.jar"
+                        },
+                        {
+                            "name": "scodec-bits_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scodec/scodec-bits_3/1.1.38/scodec-bits_3-1.1.38-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.typelevel",
+                    "name": "case-insensitive_3",
+                    "version": "1.4.0",
+                    "artifacts": [
+                        {
+                            "name": "case-insensitive_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/case-insensitive_3/1.4.0/case-insensitive_3-1.4.0.jar"
+                        },
+                        {
+                            "name": "case-insensitive_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/case-insensitive_3/1.4.0/case-insensitive_3-1.4.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.typelevel",
+                    "name": "cats-core_3",
+                    "version": "2.10.0",
+                    "artifacts": [
+                        {
+                            "name": "cats-core_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-core_3/2.10.0/cats-core_3-2.10.0.jar"
+                        },
+                        {
+                            "name": "cats-core_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-core_3/2.10.0/cats-core_3-2.10.0-sources.jar"
+                        },
+                        {
+                            "name": "cats-core_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-core_3/2.10.0/cats-core_3-2.10.0-sources.jar"
+                        },
+                        {
+                            "name": "cats-core_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-core_3/2.10.0/cats-core_3-2.10.0.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.typelevel",
+                    "name": "log4cats-slf4j_3",
+                    "version": "2.6.0",
+                    "artifacts": [
+                        {
+                            "name": "log4cats-slf4j_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/log4cats-slf4j_3/2.6.0/log4cats-slf4j_3-2.6.0.jar"
+                        },
+                        {
+                            "name": "log4cats-slf4j_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/log4cats-slf4j_3/2.6.0/log4cats-slf4j_3-2.6.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.twitter",
+                    "name": "hpack",
+                    "version": "1.0.2",
+                    "artifacts": [
+                        {
+                            "name": "hpack",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/twitter/hpack/1.0.2/hpack-1.0.2.jar"
+                        },
+                        {
+                            "name": "hpack",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/twitter/hpack/1.0.2/hpack-1.0.2-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.comcast",
+                    "name": "ip4s-core_3",
+                    "version": "3.5.0",
+                    "artifacts": [
+                        {
+                            "name": "ip4s-core_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/comcast/ip4s-core_3/3.5.0/ip4s-core_3-3.5.0.jar"
+                        },
+                        {
+                            "name": "ip4s-core_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/comcast/ip4s-core_3/3.5.0/ip4s-core_3-3.5.0-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.http4s",
+                    "name": "http4s-crypto_3",
+                    "version": "0.2.4",
+                    "artifacts": [
+                        {
+                            "name": "http4s-crypto_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-crypto_3/0.2.4/http4s-crypto_3-0.2.4.jar"
+                        },
+                        {
+                            "name": "http4s-crypto_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-crypto_3/0.2.4/http4s-crypto_3-0.2.4-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.http4s",
+                    "name": "http4s-scalatags_3",
+                    "version": "0.25.2",
+                    "artifacts": [
+                        {
+                            "name": "http4s-scalatags_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-scalatags_3/0.25.2/http4s-scalatags_3-0.25.2.jar"
+                        },
+                        {
+                            "name": "http4s-scalatags_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/http4s/http4s-scalatags_3/0.25.2/http4s-scalatags_3-0.25.2-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.scala-lang",
+                    "name": "scala-library",
+                    "version": "2.13.12",
+                    "artifacts": [
+                        {
+                            "name": "scala-library",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.12/scala-library-2.13.12.jar"
+                        },
+                        {
+                            "name": "scala-library",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.12/scala-library-2.13.12-sources.jar"
+                        },
+                        {
+                            "name": "scala-library",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/scala-lang/scala-library/2.13.12/scala-library-2.13.12.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "org.typelevel",
+                    "name": "cats-effect-std_3",
+                    "version": "3.5.4",
+                    "artifacts": [
+                        {
+                            "name": "cats-effect-std_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-effect-std_3/3.5.4/cats-effect-std_3-3.5.4.jar"
+                        },
+                        {
+                            "name": "cats-effect-std_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/org/typelevel/cats-effect-std_3/3.5.4/cats-effect-std_3-3.5.4-sources.jar"
+                        }
+                    ]
+                },
+                {
+                    "organization": "com.lihaoyi",
+                    "name": "geny_3",
+                    "version": "1.0.0",
+                    "artifacts": [
+                        {
+                            "name": "geny_3",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/geny_3/1.0.0/geny_3-1.0.0.jar"
+                        },
+                        {
+                            "name": "geny_3",
+                            "classifier": "sources",
+                            "path": "/home/vscode/.cache/coursier/v1/https/repo1.maven.org/maven2/com/lihaoyi/geny_3/1.0.0/geny_3-1.0.0-sources.jar"
+                        }
+                    ]
+                }
+            ]
+        },
+        "tags": [
+            "library"
+        ]
+    }
+}
