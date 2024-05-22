@@ -25,6 +25,7 @@
     "ghcr.io/devcontainers/features/java:1": {
       "version": 17
     },
+    "ghcr.io/devcontainers-contrib/features/scalacli-sdkman:2":{},
     "./features/mill": {}
   //   //, "ghcr.io/devcontainers-contrib/features/scalacli-sdkman:2": {}
   },
