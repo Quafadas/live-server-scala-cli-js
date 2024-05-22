@@ -13,7 +13,8 @@ object HttpProxy:
 
   def servers[F[_]: MonadCancelThrow: Random](
       c: ProxyConfig.Equilibrium,
-      client: Client[F]
+      client: Client[F],
+      pathPrefix: String
   ): NonEmptyMap[Port, HttpRoutes[F]] =
     val upstreams = c.http.upstreams.groupMapReduce(_.name)(_.servers) { case (a, b) => a.concatNel(b) }
     c.http.servers
@@ -21,7 +22,8 @@ object HttpProxy:
       .map { servers =>
 
         val routes: HttpRoutes[F] = HttpRoutes.of { case (req: Request[F]) =>
-          val pathRendered = req.uri.path.renderString
+          val pathRendered = pathPrefix + req.uri.path.renderString
+          println(pathRendered)
           val host = req.headers.get[Host].map(_.host).getOrElse("") // Host set otherwise empty string
           val newServers = servers.filter(_.serverNames.contains(host))
 

@@ -22,7 +22,8 @@ object project extends ScalaModule with PublishModule with ScalafmtModule {
     ivy"com.monovore::decline::2.4.1",
     ivy"com.monovore::decline-effect::2.4.1",
     ivy"com.lihaoyi::os-lib:0.10.1",
-    ivy"io.circe::circe-yaml::0.15.1"
+    ivy"io.circe::circe-yaml::0.15.1",
+
   )
 
   def artifactName = "live-server-scala-cli-js"
@@ -31,10 +32,11 @@ object project extends ScalaModule with PublishModule with ScalafmtModule {
 
   object test extends ScalaTests with TestModule.Munit {
     def ivyDeps = super.ivyDeps() ++ project.ivyDeps() ++ Seq(
-      ivy"org.scalameta::munit::1.0.0-M11",
+      ivy"org.scalameta::munit::1.0.0",
       ivy"com.microsoft.playwright:playwright:${playwrightVersion.pwV}",
       ivy"com.microsoft.playwright:driver-bundle:${playwrightVersion.pwV}",
-      ivy"org.typelevel::munit-cats-effect::2.0.0-M1"
+      ivy"org.typelevel::munit-cats-effect::2.0.0-M1",
+      ivy"com.lihaoyi::requests::0.8.2"
     )
   }
 

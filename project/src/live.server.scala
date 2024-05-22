@@ -44,6 +44,7 @@ import scalatags.Text.styles
 import cats.implicits.*
 import com.monovore.decline.*
 import com.monovore.decline.effect.*
+import ProxyConfig.Equilibrium
 
 sealed trait FrontendEvent derives Encoder.AsObject
 
@@ -248,38 +249,60 @@ object LiveServer
     .validate("Must be a directory")(s => os.isDir(os.Path(s)))
 
   val portOpt = Opts
-    .option[Int]("port", "The port yo want to run the server on - e.g. 8085")
+    .option[Int]("port", "The port yo want to run the server on - e.g. 3000")
     .withDefault(3000)
     .validate("Port must be between 1 and 65535")(i => i > 0 && i < 65535)
     .map(i => Port.fromInt(i).get)
+
+  val proxyPortTargetOpt = Opts
+    .option[Int]("proxy-target-port", "The port you want to forward api requests to - e.g. 8080")
+    .orNone
+    .validate("Proxy Port must be between 1 and 65535")(iOpt => iOpt.fold(true)(i => i > 0 && i < 65535))
+    .map(i => i.flatMap(Port.fromInt))
+
+  val proxyPathMatchPrefix = Opts
+    .option[String]("proxy-prefix-path", "Match routes starting with this prefix - e.g. /api")
+    .orNone
 
   override def main: Opts[IO[ExitCode]] =
 
     given R: Random[IO] = Random.javaUtilConcurrentThreadLocalRandom[IO]
 
-    (baseDirOpt, outDirOpt, stylesDirOpt, portOpt).mapN { (baseDir, outDir, stylesDir, port) =>
+    (baseDirOpt, outDirOpt, stylesDirOpt, portOpt, proxyPortTargetOpt, proxyPathMatchPrefix).mapN {
+      (baseDir, outDir, stylesDir, port, proxyTarget, pathPrefix) =>
+        // val pathPrefix = "/api"
+        val proxyConfig = proxyTarget
+          .zip(pathPrefix)
+          .traverse { (pt, prfx) =>
+            ProxyConfig.loadYaml[IO](makeProxyConfig(port, pt, prfx)).toResource
+          }
 
-      val proxyConfig = ProxyConfig.loadYaml[IO](makeProxyConfig(port"3000", port"8080", "/api")).toResource
+        val server = for
+          client <- EmberClientBuilder.default[IO].build
+          proxyRoutes: HttpRoutes[IO] <- proxyConfig.map {
+            case Some(pc) =>
+              println("setup proxy server")
+              HttpProxy.servers(pc, client, pathPrefix.getOrElse(???)).head._2
+            case None =>
+              println("no routes setup")
+              HttpRoutes.empty[IO]
+          }
+          // proxyRoutes: HttpRoutes[IO] = HttpProxy.servers(pc, client).head._2
 
-      val server = for
-        client <- EmberClientBuilder.default[IO].build
-        pc <- proxyConfig
-        proxyRoutes: HttpRoutes[IO] = HttpProxy.servers(pc, client).head._2
+          _ <- IO.println(s"Start dev server on https://localhost:$port").toResource
 
-        _ <- IO.println(s"Start dev server on https://localhost:$port").toResource
+          refreshPub <- refreshTopic
+          _ <- buildRunner(refreshPub, fs2.io.file.Path(baseDir), fs2.io.file.Path(outDir))
+          routes <- routes(outDir.toString(), refreshPub, stylesDir, proxyRoutes)
+          (app, mr, ref) = routes
+          _ <- seedMapOnStart(outDir, mr)
+          _ <- seedMapOnStart(stylesDir, mr)
+          _ <- fileWatcher(fs2.io.file.Path(outDir), mr)
+          _ <- fileWatcher(fs2.io.file.Path(stylesDir), mr)
+          server <- buildServer(app, port)
+        yield server
 
-        refreshPub <- refreshTopic
-        _ <- buildRunner(refreshPub, fs2.io.file.Path(baseDir), fs2.io.file.Path(outDir))
-        routes <- routes(outDir.toString(), refreshPub, stylesDir, proxyRoutes)
-        (app, mr, ref) = routes
-        _ <- seedMapOnStart(outDir, mr)
-        _ <- seedMapOnStart(stylesDir, mr)
-        _ <- fileWatcher(fs2.io.file.Path(outDir), mr)
-        _ <- fileWatcher(fs2.io.file.Path(stylesDir), mr)
-        server <- buildServer(app, port)
-      yield server
-
-      server.use(_ => IO.never).as(ExitCode.Success)
+        server.use(_ => IO.never).as(ExitCode.Success)
     }
   end main
 end LiveServer

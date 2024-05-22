@@ -10,7 +10,14 @@ import scala.concurrent.Future
 
 import cats.effect.unsafe.implicits.global
 import scalatags.Text.styles
+import cats.effect.IO
 
+import com.comcast.ip4s.port
+import com.comcast.ip4s.Port
+
+import org.http4s.dsl.io.*
+import org.http4s.ember.server.EmberServerBuilder
+import org.http4s.HttpRoutes
 /*
 Run
 cs launch com.microsoft.playwright:playwright:1.41.1 -M "com.microsoft.playwright.CLI" -- install --with-deps
@@ -32,6 +39,16 @@ class PlaywrightTest extends munit.FunSuite:
     browser = pw.chromium().launch();
     page = browser.newPage();
   end beforeAll
+
+  override def beforeEach(context: BeforeEach): Unit =
+    if os.exists(testDir) then os.remove.all(os.pwd / "testDir")
+    os.makeDir.all(outDir)
+    os.makeDir.all(styleDir)
+
+    os.write.over(testDir / "hello.scala", helloWorldCode("Hello"))
+    os.write.over(styleDir / "styles.less", "")
+    os.proc("scala-cli", "compile", testDir.toString).call(cwd = testDir)
+  end beforeEach
 
   test("incremental") {
 
@@ -69,6 +86,74 @@ class PlaywrightTest extends munit.FunSuite:
     os.write.append(styleDir / "styles.less", "h1 { color: red; }")
     assertThat(page.locator("h1")).hasCSS("color", "rgb(255, 0, 0)")
 
+  }
+
+  test("no proxy server") {
+    LiveServer
+      .run(
+        List(
+          "--project-dir",
+          testDir.toString,
+          "--out-dir",
+          outDir.toString,
+          "--styles-dir",
+          styleDir.toString,
+          "--port",
+          port.toString
+        )
+      )
+      .unsafeToFuture()
+
+    Thread.sleep(4000) // give the thing time to start.
+
+    val out = requests.get(s"http://localhost:$port/api/hello", check = false)
+    assertEquals(out.statusCode, 404)
+  }
+
+  test("proxy server".only) {
+    val backendPort = 8089
+    // use http4s to instantiate a simple server that responds to /api/hello with 200, use Http4sEmberServer
+    val backend = EmberServerBuilder
+      .default[IO]
+      .withHttpApp(
+        HttpRoutes
+          .of[IO] { case GET -> Root / "api" / "hello" =>
+            Ok("hello world")
+          }
+          .orNotFound
+      )
+      .withPort(Port.fromInt(backendPort).get)
+      .build
+      .allocated
+      .unsafeToFuture()
+
+    LiveServer
+      .run(
+        List(
+          "--project-dir",
+          testDir.toString,
+          "--out-dir",
+          outDir.toString,
+          "--styles-dir",
+          styleDir.toString,
+          "--port",
+          port.toString,
+          "--proxy-target-port",
+          backendPort.toString,
+          "--proxy-prefix-path",
+          "/api"
+        )
+      )
+      .unsafeToFuture()
+
+    Thread.sleep(500) // give the thing time to start.
+
+    val out = requests.get(s"http://localhost:$port/api/hello", check = false)
+    assertEquals(out.statusCode, 200)
+    assertEquals(out.text(), "hello world")
+
+    val outFail = requests.get(s"http://localhost:$port/api/nope", check = false)
+    assertEquals(outFail.statusCode, 404)
   }
 
   override def afterAll(): Unit =
