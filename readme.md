@@ -3,9 +3,13 @@
 Try and break the dependance on node / npm completely whilst retaining a sane developer experience for browser based scala-js development.
 
 ## Goals
+
+Replicate the "experience" of using vite with scala JS. 
+
 - Live reload / link on change
 - Hot application of style (no page reload)
-- Proxy server (TODO)
+- Proxy server
+- page open on start
 
 ## Contraints
 
@@ -14,8 +18,8 @@ Try and break the dependance on node / npm completely whilst retaining a sane de
 - Third party ESModules via import map rather than npm
 - Styles through LESS
 
-## Quickstart
+## Contributing
 
-```sh
+CI builds a container image which is ready to roll. 
 
 ```
