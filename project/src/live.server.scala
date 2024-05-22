@@ -12,11 +12,15 @@ import org.http4s.implicits.*
 import org.http4s.server.Router
 import com.comcast.ip4s.host
 import com.comcast.ip4s.port
+import com.comcast.ip4s.Port
 import org.http4s.HttpApp
 import org.http4s.server.staticcontent.*
 import cats.effect.*
 
 import cats.syntax.all.*
+
+import org.http4s.ember.client.EmberClientBuilder
+import org.http4s.ember.server.EmberServerBuilder
 
 import scala.concurrent.duration.*
 import org.http4s.Request
@@ -37,17 +41,41 @@ import _root_.io.circe.Encoder
 import cats.syntax.strong
 import fs2.concurrent.Topic
 import scalatags.Text.styles
+import cats.implicits.*
+import com.monovore.decline.*
+import com.monovore.decline.effect.*
 
 sealed trait FrontendEvent derives Encoder.AsObject
 
 case class KeepAlive() extends FrontendEvent derives Encoder.AsObject
 case class PageRefresh() extends FrontendEvent derives Encoder.AsObject
 
-object LiveServer extends IOApp:
+def makeProxyConfig(frontendPort: Port, proxyTo: Port, matcher: String) = s"""
+http:
+  servers:
+    - listen: $frontendPort
+      serverNames:
+        - localhost
+      locations:
+        - matcher: $matcher
+          proxyPass: http://$$backend
+
+  upstreams:
+    - name: backend
+      servers:
+        - host: localhost
+          port: $proxyTo
+          weight: 5
+"""
+
+object LiveServer
+    extends CommandIOApp(
+      name = "LiveServer",
+      header = "Scala JS live server",
+      version = "0.0.1"
+    ):
 
   private val refreshTopic = Topic[IO, String].toResource
-
-  private val port = port"8085"
 
   private def buildRunner(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, outDir: fs2.io.file.Path) =
     ProcessBuilder(
@@ -145,10 +173,11 @@ object LiveServer extends IOApp:
       .background
   end fileWatcher
 
-  private def routes(
+  def routes(
       stringPath: String,
       refreshTopic: Topic[IO, String],
-      stylesPath: String
+      stylesPath: String,
+      proxyRoutes: HttpRoutes[IO]
   ): Resource[IO, (HttpApp[IO], MapRef[IO, String, Option[String]], Ref[IO, Map[String, String]])] =
     Resource.eval(
       for
@@ -180,11 +209,11 @@ object LiveServer extends IOApp:
               )
           }
 
-        (overrides.combineK(staticFiles).combineK(styles).orNotFound, mr, ref)
+        (overrides.combineK(staticFiles).combineK(styles).combineK(proxyRoutes).orNotFound, mr, ref)
     )
   end routes
 
-  private def buildServer(httpApp: HttpApp[IO]) = EmberServerBuilder
+  private def buildServer(httpApp: HttpApp[IO], port: Port) = EmberServerBuilder
     .default[IO]
     .withHttp2
     .withHost(host"localhost")
@@ -193,30 +222,64 @@ object LiveServer extends IOApp:
     .withShutdownTimeout(10.milli)
     .build
 
-  /*
-          args(0) is the base directory
-          args(1) is the output directory
-          args(2) is the styles directory (contains *.less files)
-   */
-  override def run(args: List[String]): IO[ExitCode] =
-    println("args || " + args.mkString(","))
-    val baseDir = args.head
-    val outDir = args(1)
-    val stylesDir = args(2)
-    val server = for
-      _ <- IO.println(s"Start dev server on https://localhost:$port").toResource
-      refreshPub <- refreshTopic
-      _ <- buildRunner(refreshPub, fs2.io.file.Path(baseDir), fs2.io.file.Path(outDir))
-      routes <- routes(outDir.toString(), refreshPub, stylesDir)
-      (app, mr, ref) = routes
-      _ <- seedMapOnStart(outDir, mr)
-      _ <- seedMapOnStart(stylesDir, mr)
-      _ <- fileWatcher(fs2.io.file.Path(outDir), mr)
-      _ <- fileWatcher(fs2.io.file.Path(stylesDir), mr)
-      server <- buildServer(app)
-    yield server
+  // override def main: Opts[IO[ExitCode]] =
+  //   (showProcessesOpts orElse buildOpts).map {
+  //     case ShowProcesses(all)           => ???
+  //     case BuildImage(dockerFile, path) => ???
+  //   }
 
-    server.use(_ => IO.never).as(ExitCode.Success)
+  val baseDirOpt =
+    Opts
+      .option[String]("project-dir", "The fully qualified location of your project - e.g. c:/temp/helloScalaJS")
+      .withDefault(os.pwd.toString())
+      .validate("Must be a directory")(s => os.isDir(os.Path(s)))
 
-  end run
+  val outDirOpt = Opts
+    .option[String]("out-dir", "Where the compiled JS will end up - e.g. c:/temp/helloScalaJS/.out")
+    .withDefault((os.pwd / ".out").toString())
+    .validate("Must be a directory")(s => os.isDir(os.Path(s)))
+
+  val stylesDirOpt = Opts
+    .option[String](
+      "styles-dir",
+      "A fully qualified path to your styles directory with LESS files in - e.g. c:/temp/helloScalaJS/styles"
+    )
+    .withDefault((os.pwd / "styles").toString())
+    .validate("Must be a directory")(s => os.isDir(os.Path(s)))
+
+  val portOpt = Opts
+    .option[Int]("port", "The port yo want to run the server on - e.g. 8085")
+    .withDefault(3000)
+    .validate("Port must be between 1 and 65535")(i => i > 0 && i < 65535)
+    .map(i => Port.fromInt(i).get)
+
+  override def main: Opts[IO[ExitCode]] =
+
+    given R: Random[IO] = Random.javaUtilConcurrentThreadLocalRandom[IO]
+
+    (baseDirOpt, outDirOpt, stylesDirOpt, portOpt).mapN { (baseDir, outDir, stylesDir, port) =>
+
+      val proxyConfig = ProxyConfig.loadYaml[IO](makeProxyConfig(port"3000", port"8080", "/api")).toResource
+
+      val server = for
+        client <- EmberClientBuilder.default[IO].build
+        pc <- proxyConfig
+        proxyRoutes: HttpRoutes[IO] = HttpProxy.servers(pc, client).head._2
+
+        _ <- IO.println(s"Start dev server on https://localhost:$port").toResource
+
+        refreshPub <- refreshTopic
+        _ <- buildRunner(refreshPub, fs2.io.file.Path(baseDir), fs2.io.file.Path(outDir))
+        routes <- routes(outDir.toString(), refreshPub, stylesDir, proxyRoutes)
+        (app, mr, ref) = routes
+        _ <- seedMapOnStart(outDir, mr)
+        _ <- seedMapOnStart(stylesDir, mr)
+        _ <- fileWatcher(fs2.io.file.Path(outDir), mr)
+        _ <- fileWatcher(fs2.io.file.Path(stylesDir), mr)
+        server <- buildServer(app, port)
+      yield server
+
+      server.use(_ => IO.never).as(ExitCode.Success)
+    }
+  end main
 end LiveServer

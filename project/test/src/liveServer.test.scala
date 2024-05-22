@@ -18,7 +18,7 @@ before this test, to make sure that the driver bundles are downloaded.
  */
 class PlaywrightTest extends munit.FunSuite:
 
-  val port = 8080
+  val port = 8086
   var pw: Playwright = uninitialized
   var browser: Browser = uninitialized
   var page: Page = uninitialized
@@ -46,16 +46,21 @@ class PlaywrightTest extends munit.FunSuite:
     LiveServer
       .run(
         List(
+          "--project-dir",
           testDir.toString,
+          "--out-dir",
           outDir.toString,
-          styleDir.toString
+          "--styles-dir",
+          styleDir.toString,
+          "--port",
+          port.toString
         )
       )
       .unsafeToFuture()
 
     Thread.sleep(4000) // give the thing time to start.
 
-    page.navigate(s"http://localhost:8085")
+    page.navigate(s"http://localhost:$port")
     assertThat(page.locator("h1")).containsText("HelloWorld");
 
     os.write.over(testDir / "hello.scala", helloWorldCode("Bye"))
