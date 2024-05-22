@@ -110,8 +110,9 @@ class PlaywrightTest extends munit.FunSuite:
     assertEquals(out.statusCode, 404)
   }
 
-  test("proxy server".only) {
+  test("proxy server") {
     val backendPort = 8089
+    val thisTestPort = 3001
     // use http4s to instantiate a simple server that responds to /api/hello with 200, use Http4sEmberServer
     val backend = EmberServerBuilder
       .default[IO]
@@ -137,7 +138,7 @@ class PlaywrightTest extends munit.FunSuite:
           "--styles-dir",
           styleDir.toString,
           "--port",
-          port.toString,
+          thisTestPort.toString,
           "--proxy-target-port",
           backendPort.toString,
           "--proxy-prefix-path",
@@ -148,11 +149,11 @@ class PlaywrightTest extends munit.FunSuite:
 
     Thread.sleep(500) // give the thing time to start.
 
-    val out = requests.get(s"http://localhost:$port/api/hello", check = false)
+    val out = requests.get(s"http://localhost:$thisTestPort/api/hello", check = false)
     assertEquals(out.statusCode, 200)
     assertEquals(out.text(), "hello world")
 
-    val outFail = requests.get(s"http://localhost:$port/api/nope", check = false)
+    val outFail = requests.get(s"http://localhost:$thisTestPort/api/nope", check = false)
     assertEquals(outFail.statusCode, 404)
   }
 
