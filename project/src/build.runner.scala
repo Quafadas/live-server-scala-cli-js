@@ -26,12 +26,19 @@ def buildRunner(
     refreshTopic: Topic[IO, String],
     workDir: fs2.io.file.Path,
     outDir: fs2.io.file.Path,
-    extraBuildArgs: List[String]
+    extraBuildArgs: List[String],
+    millModuleName: Option[String]
 )(
     logger: Scribe[IO]
 ): ResourceIO[IO[OutcomeIO[Unit]]] = tool match
   case scli: ScalaCli => buildRunnerScli(refreshTopic, workDir, outDir, extraBuildArgs)(logger)
-  case m: Mill        => buildRunnerMill(refreshTopic, workDir, "frontend", extraBuildArgs)(logger)
+  case m: Mill =>
+    buildRunnerMill(
+      refreshTopic,
+      workDir,
+      millModuleName.getOrElse(throw new Exception("must have a moduile name when running with mill")),
+      extraBuildArgs
+    )(logger)
 
 def buildRunnerScli(
     refreshTopic: Topic[IO, String],
@@ -109,6 +116,7 @@ def buildRunnerMill(
     .drain
     .background
 
+  // TODO pipe this to stdout so that we can see linker progress / errors.
   val builder = ProcessBuilder(
     "mill",
     List(

@@ -299,6 +299,17 @@ object LiveServer
     )
     .orEmpty
 
+  val millModuleNameOpt: Opts[Option[String]] = Opts
+    .option[String](
+      "mill-module-name",
+      "Extra arguments to pass to the build tool"
+    )
+    .validate("Module name cannot be blank") {
+      case "" => true
+      case _  => false
+    }
+    .orNone
+
   override def main: Opts[IO[ExitCode]] =
     given R: Random[IO] = Random.javaUtilConcurrentThreadLocalRandom[IO]
     (
@@ -311,9 +322,22 @@ object LiveServer
       logLevelOpt,
       buildToolOpt,
       openBrowserAtOpt,
-      extraBuildArgsOpt
+      extraBuildArgsOpt,
+      millModuleNameOpt
     ).mapN {
-      (baseDir, outDir, stylesDir, port, proxyTarget, pathPrefix, lvl, buildTool, openBrowserAt, extraBuildArgs) =>
+      (
+          baseDir,
+          outDir,
+          stylesDir,
+          port,
+          proxyTarget,
+          pathPrefix,
+          lvl,
+          buildTool,
+          openBrowserAt,
+          extraBuildArgs,
+          millModuleName
+      ) =>
 
         scribe
           .Logger
@@ -362,7 +386,8 @@ object LiveServer
             refreshPub,
             fs2.io.file.Path(baseDir),
             fs2.io.file.Path(outDir),
-            extraBuildArgs
+            extraBuildArgs,
+            millModuleName
           )(logger)
 
           routes <- routes(outDir.toString(), refreshPub, stylesDir, proxyRoutes)
