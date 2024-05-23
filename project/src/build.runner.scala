@@ -2,12 +2,20 @@ import fs2.*
 import fs2.concurrent.Topic
 import fs2.io.process.ProcessBuilder
 import fs2.io.process.Processes
+import fs2.io.Watcher
+import fs2.io.Watcher.Event
+import fs2.io.file.Files
 
 import scribe.Scribe
 
 import cats.effect.IO
 import cats.effect.OutcomeIO
 import cats.effect.ResourceIO
+import fs2.io.Watcher.Event.Created
+import fs2.io.Watcher.Event.Deleted
+import fs2.io.Watcher.Event.Modified
+import fs2.io.Watcher.Event.Overflow
+import fs2.io.Watcher.Event.NonStandard
 
 sealed trait BuildTool
 class ScalaCli extends BuildTool
@@ -16,12 +24,12 @@ class Mill extends BuildTool
 def buildRunner(tool: BuildTool, refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, outDir: fs2.io.file.Path)(
     logger: Scribe[IO]
 ): ResourceIO[IO[OutcomeIO[Unit]]] = tool match
-  case scli: ScalaCli => buildRunner(refreshTopic, workDir, outDir)(logger)
-  case m: Mill        => ???
+  case scli: ScalaCli => buildRunnerScli(refreshTopic, workDir, outDir)(logger)
+  case m: Mill        => buildRunnerMill(refreshTopic, workDir, "frontend")(logger)
 
-def buildRunner(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, outDir: fs2.io.file.Path)(
+def buildRunnerScli(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, outDir: fs2.io.file.Path)(
     logger: Scribe[IO]
-) =
+): ResourceIO[IO[OutcomeIO[Unit]]] =
   ProcessBuilder(
     "scala-cli",
     "--power",
@@ -54,3 +62,47 @@ def buildRunner(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, outD
           .drain
     }
     .background
+end buildRunnerScli
+
+def buildRunnerMill(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, moduleName: String)(
+    logger: Scribe[IO]
+): ResourceIO[IO[OutcomeIO[Unit]]] =
+  val watchLinkComplePath = workDir / "out" / moduleName / "fastLinkJS.json"
+
+  val watcher = fs2
+    .Stream
+    .resource(Watcher.default[IO].evalTap(_.watch(watchLinkComplePath.toNioPath)))
+    .flatMap {
+      _.events()
+        .evalTap {
+          (e: Event) =>
+            e match
+              case Created(path, count) => logger.info("fastLinkJs.json was created")
+              case Deleted(path, count) => logger.info("fastLinkJs.json was deleted")
+              case Modified(path, count) =>
+                logger.info("fastLinkJs.json was modified - link successful => trigger a refresh") >>
+                  refreshTopic.publish1("refresh")
+              case Overflow(count)                         => logger.info("overflow")
+              case NonStandard(event, registeredDirectory) => logger.info("non-standard")
+
+        }
+    }
+    .compile
+    .drain
+    .background
+
+  val builder = ProcessBuilder(
+    "mill",
+    "-w",
+    s"$moduleName.fastLinkJS"
+  ).withWorkingDirectory(workDir).spawn[IO].useForever.map(_ => ()).background
+
+  for
+    _ <- logger.trace("Starting buildRunnerMill").toResource
+    _ <- logger.trace(s"watching path $watchLinkComplePath").toResource
+    builder <- builder
+    watcher <- watcher
+  yield builder >> watcher
+  end for
+
+end buildRunnerMill

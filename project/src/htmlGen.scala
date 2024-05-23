@@ -16,7 +16,7 @@ def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean) =
         link(
           rel := "stylesheet/less",
           `type` := "text/css",
-          href := "styles.less"
+          href := "index.less"
         ),
         script(
           raw(
@@ -38,8 +38,9 @@ def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean) =
     ),
     body(
       lessStyle,
-      div(id := "app"),
       script(src := "main.js", `type` := "module"),
+      div(id := "app"),
+      // script(src := "main"),
       script(raw("""const sse = new EventSource('/api/v1/sse');
 sse.addEventListener('message', (e) => {
   const msg = JSON.parse(e.data)

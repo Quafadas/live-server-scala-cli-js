@@ -138,8 +138,8 @@ object LiveServer
                     val serveAt = path.relativize(stringPath.toNioPath)
                     logger.trace(s"deleted $path, removing key") >>
                       mr.unsetKey(serveAt.toString())
-                  case e: Event.Overflow    => IO.println("overflow")
-                  case e: Event.NonStandard => IO.println("non-standard")
+                  case e: Event.Overflow    => logger.info("overflow")
+                  case e: Event.NonStandard => logger.info("non-standard")
             )
       }
       .compile
@@ -172,6 +172,15 @@ object LiveServer
 
         val overrides = HttpRoutes.of[IO] {
           case GET -> Root =>
+            logger.trace("GET /") >>
+              ref.get.flatMap(mp => logger.trace(mp.toString())) >>
+              Ok(
+                (ref
+                  .get
+                  .map(_.toSeq.map((path, hash) => (fs2.io.file.Path(path), hash)))
+                  .map(mods => makeHeader(mods, stylesPath.isDefined)))
+              )
+          case GET -> Root / "index.html" =>
             Ok(
               (ref
                 .get
@@ -229,10 +238,10 @@ object LiveServer
     Opts
       .option[String]("project-dir", "The fully qualified location of your project - e.g. c:/temp/helloScalaJS")
       .withDefault(os.pwd.toString())
-      .validate("Must be a directory")(s => os.isDir(os.Path(s)))
+      .validate("The project directory should be a fully qualified directory")(s => os.isDir(os.Path(s)))
 
   val outDirOpt = Opts
-    .option[String]("out-dir", "Where the compiled JS will end up - e.g. c:/temp/helloScalaJS/.out")
+    .option[String]("out-dir", "Where the compiled JS will be compiled to - e.g. c:/temp/helloScalaJS/.out")
     .withDefault((os.pwd / ".out").toString())
     .validate("Must be a directory")(s => os.isDir(os.Path(s)))
 
@@ -256,16 +265,36 @@ object LiveServer
     .validate("Proxy Port must be between 1 and 65535")(iOpt => iOpt.fold(true)(i => i > 0 && i < 65535))
     .map(i => i.flatMap(Port.fromInt))
 
-  val proxyPathMatchPrefix = Opts
+  val proxyPathMatchPrefixOpt = Opts
     .option[String]("proxy-prefix-path", "Match routes starting with this prefix - e.g. /api")
     .orNone
 
-  override def main: Opts[IO[ExitCode]] =
-    val buildTool = ScalaCli()
-    given R: Random[IO] = Random.javaUtilConcurrentThreadLocalRandom[IO]
+  val buildToolOpt = Opts
+    .option[String]("build-tool", "scala-cli or mill")
+    .validate("Invalid build tool") {
+      case "scala-cli" => true
+      case "mill"      => true
+      case _           => false
+    }
+    .map {
+      _ match
+        case "scala-cli" => ScalaCli()
+        case "mill"      => Mill()
+    }
 
-    (baseDirOpt, outDirOpt, stylesDirOpt, portOpt, proxyPortTargetOpt, proxyPathMatchPrefix, logLevelOpt).mapN {
-      (baseDir, outDir, stylesDir, port, proxyTarget, pathPrefix, lvl) =>
+  override def main: Opts[IO[ExitCode]] =
+    given R: Random[IO] = Random.javaUtilConcurrentThreadLocalRandom[IO]
+    (
+      baseDirOpt,
+      outDirOpt,
+      stylesDirOpt,
+      portOpt,
+      proxyPortTargetOpt,
+      proxyPathMatchPrefixOpt,
+      logLevelOpt,
+      buildToolOpt
+    ).mapN {
+      (baseDir, outDir, stylesDir, port, proxyTarget, pathPrefix, lvl, buildTool) =>
 
         scribe
           .Logger
