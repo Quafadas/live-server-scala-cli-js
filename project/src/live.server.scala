@@ -104,9 +104,11 @@ object LiveServer
           .chunks
           .evalMap(aChunk =>
             if aChunk.toString.contains("node ./") then
-              // IO.println("emit") >>
-              refreshTopic.publish1("hi")
-            else IO.unit
+              logger.trace(s"Detected that linking was successful, emitting refresh event") >>
+                refreshTopic.publish1("refresh")
+            else
+              logger.trace(s"$aChunk :: Linking unfinished") >>
+                IO.unit
           )
           .compile
           .drain
@@ -118,15 +120,15 @@ object LiveServer
     fs2.io.file
       .Files[IO]
       .walk(asFs2)
-      // .filter(_.endsWith(".js"))
       .evalMap { f =>
         Files[IO]
           .isRegularFile(f)
           .ifM(
-            fielHash(f).flatMap(h =>
-              val key = asFs2.relativize(f)
-              mr.setKeyValue(key.toString(), h)
-            ),
+            logger.trace(s"hashing $f") >>
+              fielHash(f).flatMap(h =>
+                val key = asFs2.relativize(f)
+                mr.setKeyValue(key.toString(), h)
+              ),
             IO.unit
           )
       }
@@ -148,28 +150,28 @@ object LiveServer
             e match
               case Event.Created(path, i) =>
                 // if path.endsWith(".js") then
-                fielHash(fs2.io.file.Path(path.toString()))
-                  .flatMap(h =>
-                    val serveAt = path.relativize(stringPath.toNioPath)
-                    // IO.println(s"created $path, $h") >>
-                    mr.setKeyValue(serveAt.toString(), h)
-                  )
+                logger.trace(s"created $path, calculating hash") >>
+                  fielHash(fs2.io.file.Path(path.toString()))
+                    .flatMap(h =>
+                      val serveAt = path.relativize(stringPath.toNioPath)
+                      logger.trace(s"$serveAt :: hash -> $h") >>
+                        mr.setKeyValue(serveAt.toString(), h)
+                    )
               // else IO.unit
               case Event.Modified(path, i) =>
                 // if path.endsWith(".js") then
-                fielHash(fs2.io.file.Path(path.toString()))
-                  .flatMap(h =>
-                    val serveAt = path.relativize(stringPath.toNioPath)
-                    // IO.println(s"modifed $path , $h") >>
-                    mr.setKeyValue(serveAt.toString(), h)
-                  )
+                logger.trace(s"modified $path, calculating hash") >>
+                  fielHash(fs2.io.file.Path(path.toString()))
+                    .flatMap(h =>
+                      val serveAt = path.relativize(stringPath.toNioPath)
+                      logger.trace(s"$serveAt :: hash -> $h") >>
+                        mr.setKeyValue(serveAt.toString(), h)
+                    )
               // else IO.unit
               case Event.Deleted(path, i) =>
-                // if path.endsWith(".js") then
                 val serveAt = path.relativize(stringPath.toNioPath)
-                // IO.println(s"deleted $path") >>
-                mr.unsetKey(serveAt.toString())
-              // else IO.unit
+                logger.trace(s"deleted $path, removing key") >>
+                  mr.unsetKey(serveAt.toString())
               case e: Event.Overflow    => IO.println("overflow")
               case e: Event.NonStandard => IO.println("non-standard")
           )
@@ -338,9 +340,9 @@ object LiveServer
           routes <- routes(outDir.toString(), refreshPub, stylesDir, proxyRoutes)
           (app, mr, ref) = routes
           _ <- seedMapOnStart(outDir, mr)
-          _ <- stylesDir.fold(Resource.unit)(sd => seedMapOnStart(sd, mr))
+          // _ <- stylesDir.fold(Resource.unit)(sd => seedMapOnStart(sd, mr))
           _ <- fileWatcher(fs2.io.file.Path(outDir), mr)
-          _ <- stylesDir.fold(Resource.unit[IO])(sd => fileWatcher(fs2.io.file.Path(sd), mr))
+          // _ <- stylesDir.fold(Resource.unit[IO])(sd => fileWatcher(fs2.io.file.Path(sd), mr))
           server <- buildServer(app, port)
         yield server
 

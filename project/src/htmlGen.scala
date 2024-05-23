@@ -8,7 +8,7 @@ import scalatags.generic.TypedTag
 def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean) =
   val scripts =
     for (m <- modules)
-      yield link(rel := "modulepreload", href := s"${m._1}?hash=${m._2}")
+      yield if m._1.toString.endsWith(".js") then link(rel := "modulepreload", href := s"${m._1}?hash=${m._2}")
 
   val lessStyle: Seq[Modifier] =
     if withStyles then
@@ -20,7 +20,7 @@ def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean) =
         ),
         script(
           raw(
-            raw"""less = {env: "development",async: false,fileAsync: false,functions: {},dumpLineNumbers: "comments",relativeUrls: false};"""
+            raw"""less = {env: "development",async: true,fileAsync: true,dumpLineNumbers: "comments",relativeUrls: false};"""
           )
         ),
         script(src := "https://cdn.jsdelivr.net/npm/less"),
@@ -37,8 +37,8 @@ def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean) =
       scripts
     ),
     body(
-      div(id := "app"),
       lessStyle,
+      div(id := "app"),
       script(src := "main.js", `type` := "module"),
       script(raw(raw"""const sse = new EventSource('/api/v1/sse');
 sse.addEventListener('message', (e) => {
