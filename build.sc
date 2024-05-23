@@ -23,7 +23,7 @@ object project extends ScalaModule with PublishModule with ScalafmtModule {
     ivy"com.monovore::decline-effect::2.4.1",
     ivy"com.lihaoyi::os-lib:0.10.1",
     ivy"io.circe::circe-yaml::0.15.1",
-
+    ivy"com.outr::scribe-cats::3.13.5"
   )
 
   def artifactName = "live-server-scala-cli-js"

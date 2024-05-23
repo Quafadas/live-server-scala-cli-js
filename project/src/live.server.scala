@@ -19,6 +19,9 @@ import cats.effect.*
 
 import cats.syntax.all.*
 
+import scribe.Logging
+import scribe.Level
+
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.ember.server.EmberServerBuilder
 
@@ -77,6 +80,8 @@ object LiveServer
     ):
 
   private val refreshTopic = Topic[IO, String].toResource
+  private val logger = scribe.cats[IO]
+  // val logger = scribe.cats[IO]
 
   private def buildRunner(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, outDir: fs2.io.file.Path) =
     ProcessBuilder(
@@ -236,6 +241,18 @@ object LiveServer
   //     case BuildImage(dockerFile, path) => ???
   //   }
 
+  val logLevelOpt: Opts[String] = Opts
+    .option[String]("log-level", help = "The log level (e.g., info, debug, error)")
+    .withDefault("info")
+    .validate("Invalid log level") {
+      case "info"  => true
+      case "debug" => true
+      case "error" => true
+      case "warn"  => true
+      case "trace" => true
+      case _       => false
+    }
+
   val baseDirOpt =
     Opts
       .option[String]("project-dir", "The fully qualified location of your project - e.g. c:/temp/helloScalaJS")
@@ -275,9 +292,15 @@ object LiveServer
 
     given R: Random[IO] = Random.javaUtilConcurrentThreadLocalRandom[IO]
 
-    (baseDirOpt, outDirOpt, stylesDirOpt, portOpt, proxyPortTargetOpt, proxyPathMatchPrefix).mapN {
-      (baseDir, outDir, stylesDir, port, proxyTarget, pathPrefix) =>
-        // val pathPrefix = "/api"
+    (baseDirOpt, outDirOpt, stylesDirOpt, portOpt, proxyPortTargetOpt, proxyPathMatchPrefix, logLevelOpt).mapN {
+      (baseDir, outDir, stylesDir, port, proxyTarget, pathPrefix, lvl) =>
+
+        scribe.Logger.root
+          .clearHandlers()
+          .clearModifiers()
+          .withHandler(minimumLevel = Some(Level.get(lvl).get))
+          .replace()
+
         val proxyConfig = proxyTarget
           .zip(pathPrefix)
           .traverse { (pt, prfx) =>
@@ -285,18 +308,30 @@ object LiveServer
           }
 
         val server = for
+          _ <- logger
+            .debug(
+              s"baseDir: $baseDir \n outDir: $outDir \n stylesDir: $stylesDir \n port: $port \n proxyTarget: $proxyTarget \n pathPrefix: $pathPrefix"
+            )
+            .toResource
+
           client <- EmberClientBuilder.default[IO].build
-          proxyRoutes: HttpRoutes[IO] <- proxyConfig.map {
+
+          proxyRoutes: HttpRoutes[IO] <- proxyConfig.flatMap {
             case Some(pc) =>
-              println("setup proxy server")
-              HttpProxy.servers(pc, client, pathPrefix.getOrElse(???)).head._2
+              (
+                logger.debug("setup proxy server") >>
+                  IO(HttpProxy.servers[IO](pc, client, pathPrefix.getOrElse(???)).head._2)
+              ).toResource
+
             case None =>
-              println("no proxy set")
-              HttpRoutes.empty[IO]
+              (
+                logger.debug("no proxy set") >>
+                  IO(HttpRoutes.empty[IO])
+              ).toResource
           }
           // proxyRoutes: HttpRoutes[IO] = HttpProxy.servers(pc, client).head._2
 
-          _ <- IO.println(s"Start dev server on https://localhost:$port").toResource
+          _ <- logger.info(s"Start dev server on https://localhost:$port").toResource
 
           refreshPub <- refreshTopic
           _ <- buildRunner(refreshPub, fs2.io.file.Path(baseDir), fs2.io.file.Path(outDir))
