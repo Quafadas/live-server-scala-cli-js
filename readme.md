@@ -27,5 +27,5 @@ CI builds a container image which is ready to roll.
 To run this from a shell, try something like this:
 
 ```sh
-cs launch io.github.quafadas::live-server-scala-cli-js:0.0.6 -- --project-dir /Users/simon/Code/viteless --port 3000 --build-tool scala-cli --out-dir /Users/simon/Code/viteless/out --browse-on-open-at /
+cs launch io.github.quafadas::live-server-scala-cli-js:0.0.7 -- --project-dir /Users/simon/Code/viteless --port 3000 --build-tool scala-cli --out-dir /Users/simon/Code/viteless/out --browse-on-open-at /
 ```
