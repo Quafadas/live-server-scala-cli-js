@@ -292,6 +292,13 @@ object LiveServer
         case "mill"      => Mill()
     }
 
+  val extraBuildArgsOpt: Opts[List[String]] = Opts
+    .options[String](
+      "extra-build-args",
+      "Extra arguments to pass to the build tool"
+    )
+    .orEmpty
+
   override def main: Opts[IO[ExitCode]] =
     given R: Random[IO] = Random.javaUtilConcurrentThreadLocalRandom[IO]
     (
@@ -303,9 +310,10 @@ object LiveServer
       proxyPathMatchPrefixOpt,
       logLevelOpt,
       buildToolOpt,
-      openBrowserAtOpt
+      openBrowserAtOpt,
+      extraBuildArgsOpt
     ).mapN {
-      (baseDir, outDir, stylesDir, port, proxyTarget, pathPrefix, lvl, buildTool, openBrowserAt) =>
+      (baseDir, outDir, stylesDir, port, proxyTarget, pathPrefix, lvl, buildTool, openBrowserAt, extraBuildArgs) =>
 
         scribe
           .Logger
@@ -325,7 +333,7 @@ object LiveServer
         val server = for
           _ <- logger
             .debug(
-              s"baseDir: $baseDir \n outDir: $outDir \n stylesDir: $stylesDir \n port: $port \n proxyTarget: $proxyTarget \n pathPrefix: $pathPrefix"
+              s"baseDir: $baseDir \n outDir: $outDir \n stylesDir: $stylesDir \n port: $port \n proxyTarget: $proxyTarget \n pathPrefix: $pathPrefix \n extraBuildArgs: $extraBuildArgs"
             )
             .toResource
 
@@ -349,7 +357,13 @@ object LiveServer
 
           refreshPub <- refreshTopic
 
-          _ <- buildRunner(buildTool, refreshPub, fs2.io.file.Path(baseDir), fs2.io.file.Path(outDir))(logger)
+          _ <- buildRunner(
+            buildTool,
+            refreshPub,
+            fs2.io.file.Path(baseDir),
+            fs2.io.file.Path(outDir),
+            extraBuildArgs
+          )(logger)
 
           routes <- routes(outDir.toString(), refreshPub, stylesDir, proxyRoutes)
 

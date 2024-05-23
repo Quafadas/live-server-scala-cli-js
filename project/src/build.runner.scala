@@ -21,25 +21,38 @@ sealed trait BuildTool
 class ScalaCli extends BuildTool
 class Mill extends BuildTool
 
-def buildRunner(tool: BuildTool, refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, outDir: fs2.io.file.Path)(
+def buildRunner(
+    tool: BuildTool,
+    refreshTopic: Topic[IO, String],
+    workDir: fs2.io.file.Path,
+    outDir: fs2.io.file.Path,
+    extraBuildArgs: List[String]
+)(
     logger: Scribe[IO]
 ): ResourceIO[IO[OutcomeIO[Unit]]] = tool match
-  case scli: ScalaCli => buildRunnerScli(refreshTopic, workDir, outDir)(logger)
-  case m: Mill        => buildRunnerMill(refreshTopic, workDir, "frontend")(logger)
+  case scli: ScalaCli => buildRunnerScli(refreshTopic, workDir, outDir, extraBuildArgs)(logger)
+  case m: Mill        => buildRunnerMill(refreshTopic, workDir, "frontend", extraBuildArgs)(logger)
 
-def buildRunnerScli(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, outDir: fs2.io.file.Path)(
+def buildRunnerScli(
+    refreshTopic: Topic[IO, String],
+    workDir: fs2.io.file.Path,
+    outDir: fs2.io.file.Path,
+    extraBuildArgs: List[String]
+)(
     logger: Scribe[IO]
 ): ResourceIO[IO[OutcomeIO[Unit]]] =
   ProcessBuilder(
     "scala-cli",
-    "--power",
-    "package",
-    "--js",
-    ".",
-    "-o",
-    outDir.toString(),
-    "-f",
-    "-w"
+    List(
+      "--power",
+      "package",
+      "--js",
+      ".",
+      "-o",
+      outDir.toString(),
+      "-f",
+      "-w"
+    ) ++ extraBuildArgs
   ).withWorkingDirectory(workDir)
     .spawn[IO]
     .use {
@@ -64,7 +77,12 @@ def buildRunnerScli(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, 
     .background
 end buildRunnerScli
 
-def buildRunnerMill(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, moduleName: String)(
+def buildRunnerMill(
+    refreshTopic: Topic[IO, String],
+    workDir: fs2.io.file.Path,
+    moduleName: String,
+    extraBuildArgs: List[String]
+)(
     logger: Scribe[IO]
 ): ResourceIO[IO[OutcomeIO[Unit]]] =
   val watchLinkComplePath = workDir / "out" / moduleName / "fastLinkJS.json"
@@ -93,8 +111,10 @@ def buildRunnerMill(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, 
 
   val builder = ProcessBuilder(
     "mill",
-    "-w",
-    s"$moduleName.fastLinkJS"
+    List(
+      "-w",
+      s"$moduleName.fastLinkJS"
+    ) ++ extraBuildArgs
   ).withWorkingDirectory(workDir).spawn[IO].useForever.map(_ => ()).background
 
   for
