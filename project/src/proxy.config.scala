@@ -3,6 +3,7 @@ import com.comcast.ip4s.*
 import cats.data.NonEmptyList
 import cats.effect.kernel.*
 import cats.syntax.all.*
+
 import io.circe.*
 import io.circe.yaml.parser
 
@@ -62,16 +63,18 @@ object ProxyConfig:
         // TODO support all positions not only tail position
         proxy <- c
           .downField("proxyPass")
-          .as[String](Decoder[String].emap { s =>
-            if !s.contains("$") then s.asRight
-            else
-              s.split('$')
-                .lastOption
-                .toRight("Value doesnt exist in split")
-                .flatMap { variable =>
-                  if upstreams.contains(variable) then s.asRight
-                  else s"Variable $variable not present in upstreams".asLeft
-                }
+          .as[String](Decoder[String].emap {
+            s =>
+              if !s.contains("$") then s.asRight
+              else
+                s.split('$')
+                  .lastOption
+                  .toRight("Value doesnt exist in split")
+                  .flatMap {
+                    variable =>
+                      if upstreams.contains(variable) then s.asRight
+                      else s"Variable $variable not present in upstreams".asLeft
+                  }
 
           })
       yield Location(out, proxy)
@@ -89,9 +92,11 @@ object ProxyConfig:
       def apply(c: HCursor): Decoder.Result[Server] = for
         listen <-
           if !c.downField("listen").failed then
-            c.downField("listen").as[Int].flatMap {
-              Port.fromInt(_).toRight(DecodingFailure("Invalid Port", List.empty))
-            }
+            c.downField("listen")
+              .as[Int]
+              .flatMap {
+                Port.fromInt(_).toRight(DecodingFailure("Invalid Port", List.empty))
+              }
           else port"8080".asRight
         names <- c.downField("serverNames").as[List[String]]
         locations <- c.downField("locations").as[List[Location]](Decoder.decodeList(Location.decoder(upstreams)))

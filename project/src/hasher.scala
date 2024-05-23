@@ -5,7 +5,9 @@ import cats.effect.IO
 val md = MessageDigest.getInstance("MD5")
 
 def fielHash(filePath: fs2.io.file.Path): IO[String] =
-  fs2.io.file
+  fs2
+    .io
+    .file
     .Files[IO]
     .readUtf8Lines(filePath)
     .compile

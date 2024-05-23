@@ -6,8 +6,8 @@ import fs2.io.process.Processes
 import scribe.Scribe
 
 import cats.effect.IO
-import cats.effect.ResourceIO
 import cats.effect.OutcomeIO
+import cats.effect.ResourceIO
 
 sealed trait BuildTool
 class ScalaCli extends BuildTool
@@ -34,21 +34,23 @@ def buildRunner(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, outD
     "-w"
   ).withWorkingDirectory(workDir)
     .spawn[IO]
-    .use { p =>
-      // p.stderr.through(fs2.io.stdout).compile.drain >>
-      p.stderr
-        .through(text.utf8.decode)
-        .debug()
-        .chunks
-        .evalMap(aChunk =>
-          if aChunk.toString.contains("node ./") then
-            logger.trace("Detected that linking was successful, emitting refresh event") >>
-              refreshTopic.publish1("refresh")
-          else
-            logger.trace(s"$aChunk :: Linking unfinished") >>
-              IO.unit
-        )
-        .compile
-        .drain
+    .use {
+      p =>
+        // p.stderr.through(fs2.io.stdout).compile.drain >>
+        p.stderr
+          .through(text.utf8.decode)
+          .debug()
+          .chunks
+          .evalMap(
+            aChunk =>
+              if aChunk.toString.contains("node ./") then
+                logger.trace("Detected that linking was successful, emitting refresh event") >>
+                  refreshTopic.publish1("refresh")
+              else
+                logger.trace(s"$aChunk :: Linking unfinished") >>
+                  IO.unit
+          )
+          .compile
+          .drain
     }
     .background

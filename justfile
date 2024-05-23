@@ -26,4 +26,10 @@ publish:
 setupMill:
   curl -L https://raw.githubusercontent.com/lefou/millw/0.4.11/millw > mill && chmod +x mill
 
+format:
+  mill mill.scalalib.scalafmt.ScalafmtModule/reformatAll __.sources
+
+fix:
+  mill __.fix
+
 gha: setupMill setupPlaywright test

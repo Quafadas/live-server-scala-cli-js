@@ -42,6 +42,7 @@ class PlaywrightTest extends munit.FunSuite:
   // before each test, write in some simple code which should compile and some styles
   override def beforeEach(context: BeforeEach): Unit =
     if os.exists(testDir) then os.remove.all(os.pwd / "testDir")
+    end if
     os.makeDir.all(outDir)
     os.makeDir.all(styleDir)
 
@@ -54,6 +55,7 @@ class PlaywrightTest extends munit.FunSuite:
     val thisTestPort = 3001
 
     if os.exists(testDir) then os.remove.all(os.pwd / "testDir")
+    end if
     os.makeDir.all(outDir)
     os.makeDir.all(styleDir)
 
@@ -120,8 +122,9 @@ class PlaywrightTest extends munit.FunSuite:
       .default[IO]
       .withHttpApp(
         HttpRoutes
-          .of[IO] { case GET -> Root / "api" / "hello" =>
-            Ok("hello world")
+          .of[IO] {
+            case GET -> Root / "api" / "hello" =>
+              Ok("hello world")
           }
           .orNotFound
       )

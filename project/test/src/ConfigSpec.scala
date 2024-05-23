@@ -34,8 +34,9 @@ http:
     ProxyConfig
       .loadYaml[IO](config)
       .attempt
-      .map { e =>
-        assert(e.isRight)
+      .map {
+        e =>
+          assert(e.isRight)
       }
 
   }
