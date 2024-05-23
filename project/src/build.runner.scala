@@ -1,6 +1,5 @@
 import fs2.*
 import fs2.concurrent.Topic
-import fs2.io.Watcher
 import fs2.io.process.ProcessBuilder
 import fs2.io.process.Processes
 

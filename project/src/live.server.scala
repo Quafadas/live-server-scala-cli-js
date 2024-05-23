@@ -29,16 +29,14 @@ import fs2.io.file.Files
 import scribe.Level
 
 import ProxyConfig.Equilibrium
+import _root_.io.circe.*
 import _root_.io.circe.Encoder
+import _root_.io.circe.syntax.*
 import cats.data.Kleisli
 import cats.data.OptionT
 import cats.effect.*
 import cats.effect.std.*
 import cats.implicits.*
-import cats.syntax.all.*
-import io.circe.*
-import io.circe.generic.auto.*
-import io.circe.syntax.*
 
 sealed trait FrontendEvent derives Encoder.AsObject
 
