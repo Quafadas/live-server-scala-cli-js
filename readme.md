@@ -18,6 +18,12 @@ Replicate the "experience" of using vite with scala JS.
 - Third party ESModules via import map rather than npm
 - Styles through LESS
 
+## Assumptions
+
+`cs`, `scala-cli` and `mill` are readily available on the path.
+The entry point for styles is `index.less`, and that file exists in the styles directory. It can link to other style files.
+App must be mounted to a div, with id `app`.
+
 ## Contributing
 
 CI builds a container image which is ready to roll.
@@ -27,5 +33,5 @@ CI builds a container image which is ready to roll.
 To run this from a shell, try something like this:
 
 ```sh
-cs launch io.github.quafadas::live-server-scala-cli-js:0.0.7 -- --project-dir /Users/simon/Code/viteless --port 3000 --build-tool scala-cli --out-dir /Users/simon/Code/viteless/out --browse-on-open-at /
+cs launch io.github.quafadas::live-server-scala-cli-js:0.0.8 -- --project-dir /Users/simon/Code/viteless --port 3000 --build-tool scala-cli --out-dir /Users/simon/Code/viteless/out --browse-on-open-at /
 ```
