@@ -48,40 +48,48 @@ def buildRunnerScli(
 )(
     logger: Scribe[IO]
 ): ResourceIO[IO[OutcomeIO[Unit]]] =
-  ProcessBuilder(
-    "scala-cli",
-    List(
-      "--power",
-      "package",
-      "--js",
-      ".",
-      "-o",
-      outDir.toString(),
-      "-f",
-      "-w"
-    ) ++ extraBuildArgs
-  ).withWorkingDirectory(workDir)
-    .spawn[IO]
-    .use {
-      p =>
-        // p.stderr.through(fs2.io.stdout).compile.drain >>
-        p.stderr
-          .through(text.utf8.decode)
-          .debug()
-          .chunks
-          .evalMap(
-            aChunk =>
-              if aChunk.toString.contains("node ./") then
-                logger.trace("Detected that linking was successful, emitting refresh event") >>
-                  refreshTopic.publish1("refresh")
-              else
-                logger.trace(s"$aChunk :: Linking unfinished") >>
-                  IO.unit
-          )
-          .compile
-          .drain
-    }
-    .background
+  val scalaCliArgs = List(
+    "--power",
+    "package",
+    "--js",
+    ".",
+    "-o",
+    outDir.toString(),
+    "-f",
+    "-w"
+  ) ++ extraBuildArgs
+
+  logger
+    .trace(scalaCliArgs.toString())
+    .toResource
+    .flatMap(
+      _ =>
+        ProcessBuilder(
+          "scala-cli",
+          scalaCliArgs
+        ).withWorkingDirectory(workDir)
+          .spawn[IO]
+          .use {
+            p =>
+              // p.stderr.through(fs2.io.stdout).compile.drain >>
+              p.stderr
+                .through(text.utf8.decode)
+                .debug()
+                .chunks
+                .evalMap(
+                  aChunk =>
+                    if aChunk.toString.contains("node ./") then
+                      logger.trace("Detected that linking was successful, emitting refresh event") >>
+                        refreshTopic.publish1("refresh")
+                    else
+                      logger.trace(s"$aChunk :: Linking unfinished") >>
+                        IO.unit
+                )
+                .compile
+                .drain
+          }
+          .background
+    )
 end buildRunnerScli
 
 def buildRunnerMill(

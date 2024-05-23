@@ -304,9 +304,9 @@ object LiveServer
       "mill-module-name",
       "Extra arguments to pass to the build tool"
     )
-    .validate("Module name cannot be blank") {
-      case "" => true
-      case _  => false
+    .validate("mill module name cannot be blank") {
+      case "" => false
+      case _  => true
     }
     .orNone
 
