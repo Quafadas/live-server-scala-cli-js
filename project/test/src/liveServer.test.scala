@@ -25,7 +25,6 @@ before this test, to make sure that the driver bundles are downloaded.
  */
 class PlaywrightTest extends munit.FunSuite:
 
-  val port = 8086
   var pw: Playwright = uninitialized
   var browser: Browser = uninitialized
   var page: Page = uninitialized
@@ -40,6 +39,7 @@ class PlaywrightTest extends munit.FunSuite:
     page = browser.newPage();
   end beforeAll
 
+  // before each test, write in some simple code which should compile and some styles
   override def beforeEach(context: BeforeEach): Unit =
     if os.exists(testDir) then os.remove.all(os.pwd / "testDir")
     os.makeDir.all(outDir)
@@ -51,6 +51,7 @@ class PlaywrightTest extends munit.FunSuite:
   end beforeEach
 
   test("incremental") {
+    val thisTestPort = 3001
 
     if os.exists(testDir) then os.remove.all(os.pwd / "testDir")
     os.makeDir.all(outDir)
@@ -70,14 +71,14 @@ class PlaywrightTest extends munit.FunSuite:
           "--styles-dir",
           styleDir.toString,
           "--port",
-          port.toString
+          thisTestPort.toString
         )
       )
       .unsafeToFuture()
 
     Thread.sleep(4000) // give the thing time to start.
 
-    page.navigate(s"http://localhost:$port")
+    page.navigate(s"http://localhost:$thisTestPort")
     assertThat(page.locator("h1")).containsText("HelloWorld");
 
     os.write.over(testDir / "hello.scala", helloWorldCode("Bye"))
@@ -89,6 +90,7 @@ class PlaywrightTest extends munit.FunSuite:
   }
 
   test("no proxy server") {
+    val thisTestPort = 3000
     LiveServer
       .run(
         List(
@@ -99,20 +101,20 @@ class PlaywrightTest extends munit.FunSuite:
           "--styles-dir",
           styleDir.toString,
           "--port",
-          port.toString
+          thisTestPort.toString
         )
       )
       .unsafeToFuture()
 
     Thread.sleep(4000) // give the thing time to start.
 
-    val out = requests.get(s"http://localhost:$port/api/hello", check = false)
+    val out = requests.get(s"http://localhost:$thisTestPort/api/hello", check = false)
     assertEquals(out.statusCode, 404)
   }
 
   test("proxy server") {
     val backendPort = 8089
-    val thisTestPort = 3001
+    val thisTestPort = 3005
     // use http4s to instantiate a simple server that responds to /api/hello with 200, use Http4sEmberServer
     val backend = EmberServerBuilder
       .default[IO]
@@ -155,6 +157,55 @@ class PlaywrightTest extends munit.FunSuite:
 
     val outFail = requests.get(s"http://localhost:$thisTestPort/api/nope", check = false)
     assertEquals(outFail.statusCode, 404)
+  }
+
+  test("no styles") {
+    val thisTestPort = 3002
+    LiveServer
+      .run(
+        List(
+          "--project-dir",
+          testDir.toString,
+          "--out-dir",
+          outDir.toString,
+          "--port",
+          thisTestPort.toString
+        )
+      )
+      .unsafeToFuture()
+
+    Thread.sleep(1000)
+
+    val out = requests.get(s"http://localhost:$thisTestPort", check = false)
+    assertEquals(out.statusCode, 200)
+    assert(!out.text().contains("less"))
+
+  }
+
+  test("with styles") {
+    val thisTestPort = 3003
+    LiveServer
+      .run(
+        List(
+          "--project-dir",
+          testDir.toString,
+          "--out-dir",
+          outDir.toString,
+          "--port",
+          thisTestPort.toString,
+          "--styles-dir",
+          styleDir.toString
+        )
+      )
+      .unsafeToFuture()
+
+    Thread.sleep(1000)
+
+    val out = requests.get(s"http://localhost:$thisTestPort", check = false)
+    assertEquals(out.statusCode, 200)
+    assert(out.text().contains("src=\"https://cdn.jsdelivr.net/npm/less"))
+    assert(out.text().contains("less.watch()"))
+
   }
 
   override def afterAll(): Unit =

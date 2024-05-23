@@ -23,7 +23,6 @@ object HttpProxy:
 
         val routes: HttpRoutes[F] = HttpRoutes.of { case (req: Request[F]) =>
           val pathRendered = pathPrefix + req.uri.path.renderString
-          println(pathRendered)
           val host = req.headers.get[Host].map(_.host).getOrElse("") // Host set otherwise empty string
           val newServers = servers.filter(_.serverNames.contains(host))
 

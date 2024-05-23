@@ -177,7 +177,7 @@ object LiveServer
   def routes(
       stringPath: String,
       refreshTopic: Topic[IO, String],
-      stylesPath: String,
+      stylesPath: Option[String],
       proxyRoutes: HttpRoutes[IO]
   ): Resource[IO, (HttpApp[IO], MapRef[IO, String, Option[String]], Ref[IO, Map[String, String]])] =
     Resource.eval(
@@ -189,14 +189,21 @@ object LiveServer
           "" -> fileService[IO](FileService.Config(stringPath))
         )
 
-        val styles = Router(
-          "" -> fileService[IO](FileService.Config(stylesPath))
-        )
+        val styles =
+          stylesPath.fold(HttpRoutes.empty[IO])(path =>
+            Router(
+              "" -> fileService[IO](FileService.Config(path))
+            )
+          )
 
         val overrides = HttpRoutes
           .of[IO] {
             case GET -> Root =>
-              Ok((ref.get.map(_.toSeq.map((path, hash) => (fs2.io.file.Path(path), hash))).map(makeHeader)))
+              Ok(
+                (ref.get
+                  .map(_.toSeq.map((path, hash) => (fs2.io.file.Path(path), hash)))
+                  .map(mods => makeHeader(mods, stylesPath.isDefined)))
+              )
             case GET -> Root / "all" =>
               ref.get.flatMap { m =>
                 Ok(m.toString)
@@ -245,8 +252,8 @@ object LiveServer
       "styles-dir",
       "A fully qualified path to your styles directory with LESS files in - e.g. c:/temp/helloScalaJS/styles"
     )
-    .withDefault((os.pwd / "styles").toString())
-    .validate("Must be a directory")(s => os.isDir(os.Path(s)))
+    .orNone
+    .validate("Must be a directory")(sOpt => sOpt.fold(true)(s => os.isDir(os.Path(s))))
 
   val portOpt = Opts
     .option[Int]("port", "The port yo want to run the server on - e.g. 3000")
@@ -284,7 +291,7 @@ object LiveServer
               println("setup proxy server")
               HttpProxy.servers(pc, client, pathPrefix.getOrElse(???)).head._2
             case None =>
-              println("no routes setup")
+              println("no proxy set")
               HttpRoutes.empty[IO]
           }
           // proxyRoutes: HttpRoutes[IO] = HttpProxy.servers(pc, client).head._2
@@ -296,9 +303,9 @@ object LiveServer
           routes <- routes(outDir.toString(), refreshPub, stylesDir, proxyRoutes)
           (app, mr, ref) = routes
           _ <- seedMapOnStart(outDir, mr)
-          _ <- seedMapOnStart(stylesDir, mr)
+          _ <- stylesDir.fold(Resource.unit)(sd => seedMapOnStart(sd, mr))
           _ <- fileWatcher(fs2.io.file.Path(outDir), mr)
-          _ <- fileWatcher(fs2.io.file.Path(stylesDir), mr)
+          _ <- stylesDir.fold(Resource.unit[IO])(sd => fileWatcher(fs2.io.file.Path(sd), mr))
           server <- buildServer(app, port)
         yield server
 
