@@ -6,6 +6,18 @@ import fs2.io.process.Processes
 import scribe.Scribe
 
 import cats.effect.IO
+import cats.effect.ResourceIO
+import cats.effect.OutcomeIO
+
+sealed trait BuildTool
+class ScalaCli extends BuildTool
+class Mill extends BuildTool
+
+def buildRunner(tool: BuildTool, refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, outDir: fs2.io.file.Path)(
+    logger: Scribe[IO]
+): ResourceIO[IO[OutcomeIO[Unit]]] = tool match
+  case scli: ScalaCli => buildRunner(refreshTopic, workDir, outDir)(logger)
+  case m: Mill        => ???
 
 def buildRunner(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, outDir: fs2.io.file.Path)(
     logger: Scribe[IO]

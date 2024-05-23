@@ -77,17 +77,19 @@ object LiveServer
     fs2.io.file
       .Files[IO]
       .walk(asFs2)
-      .evalMap { f =>
-        Files[IO]
-          .isRegularFile(f)
-          .ifM(
-            logger.trace(s"hashing $f") >>
-              fielHash(f).flatMap(h =>
-                val key = asFs2.relativize(f)
-                mr.setKeyValue(key.toString(), h)
-              ),
-            IO.unit
-          )
+      .evalMap {
+        f =>
+          Files[IO]
+            .isRegularFile(f)
+            .ifM(
+              logger.trace(s"hashing $f") >>
+                fielHash(f).flatMap(
+                  h =>
+                    val key = asFs2.relativize(f)
+                    mr.setKeyValue(key.toString(), h)
+                ),
+              IO.unit
+            )
       }
       .compile
       .drain
@@ -101,37 +103,41 @@ object LiveServer
   ): ResourceIO[IO[OutcomeIO[Unit]]] =
     fs2.Stream
       .resource(Watcher.default[IO].evalTap(_.watch(stringPath.toNioPath)))
-      .flatMap { w =>
-        w.events()
-          .evalTap((e: Event) =>
-            e match
-              case Event.Created(path, i) =>
-                // if path.endsWith(".js") then
-                logger.trace(s"created $path, calculating hash") >>
-                  fielHash(fs2.io.file.Path(path.toString()))
-                    .flatMap(h =>
-                      val serveAt = path.relativize(stringPath.toNioPath)
-                      logger.trace(s"$serveAt :: hash -> $h") >>
-                        mr.setKeyValue(serveAt.toString(), h)
-                    )
-              // else IO.unit
-              case Event.Modified(path, i) =>
-                // if path.endsWith(".js") then
-                logger.trace(s"modified $path, calculating hash") >>
-                  fielHash(fs2.io.file.Path(path.toString()))
-                    .flatMap(h =>
-                      val serveAt = path.relativize(stringPath.toNioPath)
-                      logger.trace(s"$serveAt :: hash -> $h") >>
-                        mr.setKeyValue(serveAt.toString(), h)
-                    )
-              // else IO.unit
-              case Event.Deleted(path, i) =>
-                val serveAt = path.relativize(stringPath.toNioPath)
-                logger.trace(s"deleted $path, removing key") >>
-                  mr.unsetKey(serveAt.toString())
-              case e: Event.Overflow    => IO.println("overflow")
-              case e: Event.NonStandard => IO.println("non-standard")
-          )
+      .flatMap {
+        w =>
+          w.events()
+            .evalTap(
+              (e: Event) =>
+                e match
+                  case Event.Created(path, i) =>
+                    // if path.endsWith(".js") then
+                    logger.trace(s"created $path, calculating hash") >>
+                      fielHash(fs2.io.file.Path(path.toString()))
+                        .flatMap(
+                          h =>
+                            val serveAt = path.relativize(stringPath.toNioPath)
+                            logger.trace(s"$serveAt :: hash -> $h") >>
+                              mr.setKeyValue(serveAt.toString(), h)
+                        )
+                  // else IO.unit
+                  case Event.Modified(path, i) =>
+                    // if path.endsWith(".js") then
+                    logger.trace(s"modified $path, calculating hash") >>
+                      fielHash(fs2.io.file.Path(path.toString()))
+                        .flatMap(
+                          h =>
+                            val serveAt = path.relativize(stringPath.toNioPath)
+                            logger.trace(s"$serveAt :: hash -> $h") >>
+                              mr.setKeyValue(serveAt.toString(), h)
+                        )
+                  // else IO.unit
+                  case Event.Deleted(path, i) =>
+                    val serveAt = path.relativize(stringPath.toNioPath)
+                    logger.trace(s"deleted $path, removing key") >>
+                      mr.unsetKey(serveAt.toString())
+                  case e: Event.Overflow    => IO.println("overflow")
+                  case e: Event.NonStandard => IO.println("non-standard")
+            )
       }
       .compile
       .drain
@@ -154,10 +160,11 @@ object LiveServer
         )
 
         val styles =
-          stylesPath.fold(HttpRoutes.empty[IO])(path =>
-            Router(
-              "" -> fileService[IO](FileService.Config(path))
-            )
+          stylesPath.fold(HttpRoutes.empty[IO])(
+            path =>
+              Router(
+                "" -> fileService[IO](FileService.Config(path))
+              )
           )
 
         val overrides = HttpRoutes
@@ -169,8 +176,9 @@ object LiveServer
                   .map(mods => makeHeader(mods, stylesPath.isDefined)))
               )
             case GET -> Root / "all" =>
-              ref.get.flatMap { m =>
-                Ok(m.toString)
+              ref.get.flatMap {
+                m =>
+                  Ok(m.toString)
               }
             case GET -> Root / "api" / "v1" / "sse" =>
               val keepAlive = fs2.Stream.fixedRate[IO](10.seconds).as(KeepAlive())
@@ -260,42 +268,42 @@ object LiveServer
           .withHandler(minimumLevel = Some(Level.get(lvl).get))
           .replace()
 
-        val proxyConfig = proxyTarget
+        val proxyConfig: Resource[IO, Option[Equilibrium]] = proxyTarget
           .zip(pathPrefix)
-          .traverse { (pt, prfx) =>
-            ProxyConfig.loadYaml[IO](makeProxyConfig(port, pt, prfx)).toResource
+          .traverse {
+            (pt, prfx) =>
+              ProxyConfig.loadYaml[IO](makeProxyConfig(port, pt, prfx)).toResource
           }
 
         val server = for
-          _ <- logger
-            .debug(
+          _ <- logger.debug(
               s"baseDir: $baseDir \n outDir: $outDir \n stylesDir: $stylesDir \n port: $port \n proxyTarget: $proxyTarget \n pathPrefix: $pathPrefix"
-            )
-            .toResource
+            ).toResource
 
           client <- EmberClientBuilder.default[IO].build
 
           proxyRoutes: HttpRoutes[IO] <- proxyConfig.flatMap {
-            case Some(pc) =>
-              (
+            case Some(pc) => {
                 logger.debug("setup proxy server") >>
                   IO(HttpProxy.servers[IO](pc, client, pathPrefix.getOrElse(???)).head._2)
-              ).toResource
+              }.toResource
 
-            case None =>
-              (
+            case None => (
                 logger.debug("no proxy set") >>
                   IO(HttpRoutes.empty[IO])
               ).toResource
           }
-          // proxyRoutes: HttpRoutes[IO] = HttpProxy.servers(pc, client).head._2
 
           _ <- logger.info(s"Start dev server on https://localhost:$port").toResource
 
           refreshPub <- refreshTopic
+
           _ <- buildRunner(refreshPub, fs2.io.file.Path(baseDir), fs2.io.file.Path(outDir))(logger)
+
           routes <- routes(outDir.toString(), refreshPub, stylesDir, proxyRoutes)
+
           (app, mr, ref) = routes
+
           _ <- seedMapOnStart(outDir, mr)
           // _ <- stylesDir.fold(Resource.unit)(sd => seedMapOnStart(sd, mr))
           _ <- fileWatcher(fs2.io.file.Path(outDir), mr)
