@@ -2,6 +2,8 @@
 
 Try and break the dependance on node / npm completely whilst retaining a sane developer experience for browser based scala-js development.
 
+[Blogpost](https://quafadas.github.io/Whimsy/2024/05/22/Viteless.html)
+
 ## Goals
 
 Replicate the "experience" of using vite with scala JS.
