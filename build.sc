@@ -1,5 +1,6 @@
 import $ivy.`io.github.quafadas::millSite::0.0.19`
 import $ivy.`de.tototec::de.tobiasroeser.mill.vcs.version::0.4.0`
+import $ivy.`com.goyeau::mill-scalafix::0.4.0`
 import $file.playwrightVersion // used to cache in GHA
 
 import io.github.quafadas.millSite._
@@ -7,8 +8,9 @@ import mill._, scalalib._, publish._
 import mill.scalalib.scalafmt.ScalafmtModule
 import de.tobiasroeser.mill.vcs.version._
 
+import com.goyeau.mill.scalafix.ScalafixModule
 
-object project extends ScalaModule with PublishModule with ScalafmtModule {
+object project extends ScalaModule with PublishModule with ScalafmtModule with ScalafixModule  {
   def scalaVersion = "3.4.1"
   def ivyDeps = super.ivyDeps() ++ Seq(
     ivy"org.http4s::http4s-ember-server::0.23.26",

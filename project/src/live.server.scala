@@ -83,38 +83,6 @@ object LiveServer
   private val logger = scribe.cats[IO]
   // val logger = scribe.cats[IO]
 
-  private def buildRunner(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, outDir: fs2.io.file.Path) =
-    ProcessBuilder(
-      "scala-cli",
-      "--power",
-      "package",
-      "--js",
-      ".",
-      "-o",
-      outDir.toString(),
-      "-f",
-      "-w"
-    ).withWorkingDirectory(workDir)
-      .spawn[IO]
-      .use { p =>
-        // p.stderr.through(fs2.io.stdout).compile.drain >>
-        p.stderr
-          .through(text.utf8.decode)
-          .debug()
-          .chunks
-          .evalMap(aChunk =>
-            if aChunk.toString.contains("node ./") then
-              logger.trace(s"Detected that linking was successful, emitting refresh event") >>
-                refreshTopic.publish1("refresh")
-            else
-              logger.trace(s"$aChunk :: Linking unfinished") >>
-                IO.unit
-          )
-          .compile
-          .drain
-      }
-      .background
-
   private def seedMapOnStart(stringPath: String, mr: MapRef[IO, String, Option[String]]) =
     val asFs2 = fs2.io.file.Path(stringPath)
     fs2.io.file
@@ -336,7 +304,7 @@ object LiveServer
           _ <- logger.info(s"Start dev server on https://localhost:$port").toResource
 
           refreshPub <- refreshTopic
-          _ <- buildRunner(refreshPub, fs2.io.file.Path(baseDir), fs2.io.file.Path(outDir))
+          _ <- buildRunner(refreshPub, fs2.io.file.Path(baseDir), fs2.io.file.Path(outDir))(logger)
           routes <- routes(outDir.toString(), refreshPub, stylesDir, proxyRoutes)
           (app, mr, ref) = routes
           _ <- seedMapOnStart(outDir, mr)

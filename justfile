@@ -12,7 +12,7 @@ test:
   mill project.test
 
 jvmServe:
-  mill project.run --project-dir /Users/simon/Code/helloScalaJs --out-dir /Users/simon/Code/helloScalaJs/out --styles-dir /Users/simon/Code/helloScalaJs/styles --log-level debug
+  mill project.run --project-dir /Users/simon/Code/helloScalaJs --out-dir /Users/simon/Code/helloScalaJs/out --styles-dir /Users/simon/Code/helloScalaJs/styles --log-level info
 
 jvmServeNoStyles:
   mill project.run --project-dir /Users/simon/Code/helloScalaJs --out-dir /Users/simon/Code/helloScalaJs/out
