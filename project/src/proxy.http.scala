@@ -1,13 +1,16 @@
-import cats.*
-import cats.syntax.all.*
-import cats.data.*
-import cats.effect.kernel.*
 import org.http4s.*
 import org.http4s.client.Client
-import org.http4s.headers.{Host, `X-Forwarded-For`}
+import org.http4s.headers.Host
+import org.http4s.headers.`X-Forwarded-For`
+
 import com.comcast.ip4s.Port
+
 import ProxyConfig.Location
+import cats.*
+import cats.data.*
+import cats.effect.kernel.*
 import cats.effect.std.Random
+import cats.syntax.all.*
 
 object HttpProxy:
 

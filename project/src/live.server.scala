@@ -1,53 +1,44 @@
 // write a basic http4s server
 
-import io.circe.*
-import io.circe.generic.auto.*
-import io.circe.syntax.{*, given}
+import scala.concurrent.duration.*
 
-import cats.effect.*
-import org.http4s.HttpRoutes
-import org.http4s.dsl.io.*
-import org.http4s.ember.server.EmberServerBuilder
-import org.http4s.implicits.*
-import org.http4s.server.Router
-import com.comcast.ip4s.host
-import com.comcast.ip4s.port
-import com.comcast.ip4s.Port
 import org.http4s.HttpApp
-import org.http4s.server.staticcontent.*
-import cats.effect.*
-
-import cats.syntax.all.*
-
-import scribe.Logging
-import scribe.Level
-
+import org.http4s.HttpRoutes
+import org.http4s.Request
+import org.http4s.Response
+import org.http4s.ServerSentEvent
+import org.http4s.dsl.io.*
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.ember.server.EmberServerBuilder
-
-import scala.concurrent.duration.*
-import org.http4s.Request
-import cats.effect.std.*
-import org.http4s.Http
-import org.http4s.Response
-import cats.data.OptionT
-import cats.data.Kleisli
+import org.http4s.implicits.*
 import org.http4s.scalatags.*
-import fs2.*
-import fs2.io.process.{Processes, ProcessBuilder}
-import fs2.io.Watcher
-import fs2.io.file.Files
-import fs2.io.Watcher.Event
-import org.http4s.ServerSentEvent
-import _root_.io.circe.Encoder
+import org.http4s.server.Router
+import org.http4s.server.staticcontent.*
 
-import cats.syntax.strong
-import fs2.concurrent.Topic
-import scalatags.Text.styles
-import cats.implicits.*
+import com.comcast.ip4s.Port
+import com.comcast.ip4s.host
 import com.monovore.decline.*
 import com.monovore.decline.effect.*
+
+import fs2.*
+import fs2.concurrent.Topic
+import fs2.io.Watcher
+import fs2.io.Watcher.Event
+import fs2.io.file.Files
+
+import scribe.Level
+
 import ProxyConfig.Equilibrium
+import _root_.io.circe.Encoder
+import cats.data.Kleisli
+import cats.data.OptionT
+import cats.effect.*
+import cats.effect.std.*
+import cats.implicits.*
+import cats.syntax.all.*
+import io.circe.*
+import io.circe.generic.auto.*
+import io.circe.syntax.*
 
 sealed trait FrontendEvent derives Encoder.AsObject
 

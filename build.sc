@@ -11,7 +11,7 @@ import de.tobiasroeser.mill.vcs.version._
 import com.goyeau.mill.scalafix.ScalafixModule
 
 object project extends ScalaModule with PublishModule with ScalafmtModule with ScalafixModule  {
-  def scalaVersion = "3.4.1"
+  def scalaVersion = "3.4.2"
   def ivyDeps = super.ivyDeps() ++ Seq(
     ivy"org.http4s::http4s-ember-server::0.23.26",
     ivy"org.http4s::http4s-ember-client::0.23.26",
@@ -30,6 +30,7 @@ object project extends ScalaModule with PublishModule with ScalafmtModule with S
 
   def artifactName = "live-server-scala-cli-js"
 
+  override def scalacOptions: Target[Seq[String]] = super.scalacOptions() ++ Seq("-Wunused:all")
   def publishVersion = VcsVersion.vcsState().format()
 
   object test extends ScalaTests with TestModule.Munit {

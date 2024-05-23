@@ -1,6 +1,6 @@
 import scalatags.Text.all.*
+
 import fs2.io.file.Path
-import scalatags.generic.TypedTag
 
 /*
  * create an html template with that has a head, which includes script tags, that have modulepreload enabled
@@ -20,7 +20,7 @@ def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean) =
         ),
         script(
           raw(
-            raw"""less = {env: "development",async: true,fileAsync: true,dumpLineNumbers: "comments",relativeUrls: false};"""
+            """less = {env: "development",async: true,fileAsync: true,dumpLineNumbers: "comments",relativeUrls: false};"""
           )
         ),
         script(src := "https://cdn.jsdelivr.net/npm/less"),
@@ -40,7 +40,7 @@ def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean) =
       lessStyle,
       div(id := "app"),
       script(src := "main.js", `type` := "module"),
-      script(raw(raw"""const sse = new EventSource('/api/v1/sse');
+      script(raw("""const sse = new EventSource('/api/v1/sse');
 sse.addEventListener('message', (e) => {
   const msg = JSON.parse(e.data)
 

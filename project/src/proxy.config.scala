@@ -1,9 +1,10 @@
+import com.comcast.ip4s.*
+
+import cats.data.NonEmptyList
 import cats.effect.kernel.*
 import cats.syntax.all.*
-import com.comcast.ip4s.*
 import io.circe.*
 import io.circe.yaml.parser
-import cats.data.NonEmptyList
 
 object ProxyConfig:
 

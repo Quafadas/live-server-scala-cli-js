@@ -1,12 +1,12 @@
 import fs2.*
-import fs2.io.process.{Processes, ProcessBuilder}
-import fs2.io.Watcher
-import fs2.io.file.Files
-import fs2.io.Watcher.Event
 import fs2.concurrent.Topic
+import fs2.io.Watcher
+import fs2.io.process.ProcessBuilder
+import fs2.io.process.Processes
+
+import scribe.Scribe
 
 import cats.effect.IO
-import scribe.Scribe
 
 def buildRunner(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, outDir: fs2.io.file.Path)(
     logger: Scribe[IO]
@@ -31,7 +31,7 @@ def buildRunner(refreshTopic: Topic[IO, String], workDir: fs2.io.file.Path, outD
         .chunks
         .evalMap(aChunk =>
           if aChunk.toString.contains("node ./") then
-            logger.trace(s"Detected that linking was successful, emitting refresh event") >>
+            logger.trace("Detected that linking was successful, emitting refresh event") >>
               refreshTopic.publish1("refresh")
           else
             logger.trace(s"$aChunk :: Linking unfinished") >>

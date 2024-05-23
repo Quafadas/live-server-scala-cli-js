@@ -1,5 +1,6 @@
-import cats.effect.IO
 import java.security.MessageDigest
+
+import cats.effect.IO
 
 val md = MessageDigest.getInstance("MD5")
 
