@@ -258,7 +258,7 @@ def interactiveApp =
   val hiVar = Var("World")
   div(
     h1(
-      "$greet",
+      s"$greet",
       child.text <-- hiVar.signal
     ),
     p("This is a simple example of a Laminar app."),

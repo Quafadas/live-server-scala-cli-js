@@ -4,7 +4,7 @@ Try and break the dependance on node / npm completely whilst retaining a sane de
 
 ## Goals
 
-Replicate the "experience" of using vite with scala JS. 
+Replicate the "experience" of using vite with scala JS.
 
 - Live reload / link on change
 - Hot application of style (no page reload)
@@ -20,6 +20,12 @@ Replicate the "experience" of using vite with scala JS.
 
 ## Contributing
 
-CI builds a container image which is ready to roll. 
+CI builds a container image which is ready to roll.
 
+## Example command
+
+To run this from a shell, try something like this:
+
+```sh
+cs launch io.github.quafadas::live-server-scala-cli-js:0.0.6 -- --project-dir /Users/simon/Code/viteless --port 3000 --build-tool scala-cli --out-dir /Users/simon/Code/viteless/out --browse-on-open-at /
 ```

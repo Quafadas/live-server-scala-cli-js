@@ -39,6 +39,8 @@ import _root_.io.circe.Encoder
 import _root_.io.circe.syntax.*
 
 import ProxyConfig.Equilibrium
+import java.awt.Desktop
+import java.net.URI
 
 sealed trait FrontendEvent derives Encoder.AsObject
 
@@ -234,6 +236,14 @@ object LiveServer
       case _       => false
     }
 
+  val openBrowserAtOpt =
+    Opts
+      .option[String](
+        "browse-on-open-at",
+        "A suffix to localhost where we'll open a browser window on server start - e.g. /ui/greatPage OR just `/` for root "
+      )
+      .orNone
+
   val baseDirOpt =
     Opts
       .option[String]("project-dir", "The fully qualified location of your project - e.g. c:/temp/helloScalaJS")
@@ -292,9 +302,10 @@ object LiveServer
       proxyPortTargetOpt,
       proxyPathMatchPrefixOpt,
       logLevelOpt,
-      buildToolOpt
+      buildToolOpt,
+      openBrowserAtOpt
     ).mapN {
-      (baseDir, outDir, stylesDir, port, proxyTarget, pathPrefix, lvl, buildTool) =>
+      (baseDir, outDir, stylesDir, port, proxyTarget, pathPrefix, lvl, buildTool, openBrowserAt) =>
 
         scribe
           .Logger
@@ -349,6 +360,19 @@ object LiveServer
           _ <- fileWatcher(fs2.io.file.Path(outDir), mr)
           // _ <- stylesDir.fold(Resource.unit[IO])(sd => fileWatcher(fs2.io.file.Path(sd), mr))
           server <- buildServer(app, port)
+
+          - <- IO {
+            openBrowserAt match
+              case None => logger.trace("No openBrowserAt flag set, so no browser will be opened")
+              case Some(value) =>
+                val openAt = URI(s"http://localhost:$port$value")
+                logger.info(s"Attemptiong to open browser to $openAt") >>
+                  IO(
+                    if Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE) then
+                      IO(Desktop.getDesktop().browse(openAt))
+                    else logger.error("Desktop not supported, so can't open browser")
+                  ).flatten
+          }.flatten.toResource
         yield server
 
         server.use(_ => IO.never).as(ExitCode.Success)
