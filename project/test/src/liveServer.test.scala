@@ -47,7 +47,7 @@ class PlaywrightTest extends munit.FunSuite:
     os.makeDir.all(styleDir)
 
     os.write.over(testDir / "hello.scala", helloWorldCode("Hello"))
-    os.write.over(styleDir / "styles.less", "")
+    os.write.over(styleDir / "index.less", "")
     os.proc("scala-cli", "compile", testDir.toString).call(cwd = testDir)
   end beforeEach
 
@@ -60,12 +60,14 @@ class PlaywrightTest extends munit.FunSuite:
     os.makeDir.all(styleDir)
 
     os.write.over(testDir / "hello.scala", helloWorldCode("Hello"))
-    os.write.over(styleDir / "styles.less", "")
+    os.write.over(styleDir / "index.less", "")
     os.proc("scala-cli", "compile", testDir.toString).call(cwd = testDir)
 
     LiveServer
       .run(
         List(
+          "--build-tool",
+          "scala-cli",
           "--project-dir",
           testDir.toString,
           "--out-dir",
@@ -86,7 +88,7 @@ class PlaywrightTest extends munit.FunSuite:
     os.write.over(testDir / "hello.scala", helloWorldCode("Bye"))
     assertThat(page.locator("h1")).containsText("ByeWorld");
 
-    os.write.append(styleDir / "styles.less", "h1 { color: red; }")
+    os.write.append(styleDir / "index.less", "h1 { color: red; }")
     assertThat(page.locator("h1")).hasCSS("color", "rgb(255, 0, 0)")
 
   }
@@ -96,6 +98,8 @@ class PlaywrightTest extends munit.FunSuite:
     LiveServer
       .run(
         List(
+          "--build-tool",
+          "scala-cli",
           "--project-dir",
           testDir.toString,
           "--out-dir",
@@ -136,6 +140,8 @@ class PlaywrightTest extends munit.FunSuite:
     LiveServer
       .run(
         List(
+          "--build-tool",
+          "scala-cli",
           "--project-dir",
           testDir.toString,
           "--out-dir",
@@ -167,6 +173,8 @@ class PlaywrightTest extends munit.FunSuite:
     LiveServer
       .run(
         List(
+          "--build-tool",
+          "scala-cli",
           "--project-dir",
           testDir.toString,
           "--out-dir",
@@ -190,6 +198,8 @@ class PlaywrightTest extends munit.FunSuite:
     LiveServer
       .run(
         List(
+          "--build-tool",
+          "scala-cli",
           "--project-dir",
           testDir.toString,
           "--out-dir",
