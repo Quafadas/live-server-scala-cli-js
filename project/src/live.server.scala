@@ -43,6 +43,12 @@ import java.awt.Desktop
 import java.net.URI
 import org.http4s.Header
 
+import cats.effect.*
+import org.http4s.*
+import org.http4s.dsl.io.*
+import org.http4s.implicits.*
+import org.typelevel.ci.CIStringSyntax
+
 sealed trait FrontendEvent derives Encoder.AsObject
 
 case class KeepAlive() extends FrontendEvent derives Encoder.AsObject
@@ -89,12 +95,13 @@ object LiveServer
           Files[IO]
             .isRegularFile(f)
             .ifM(
-              logger.trace(s"hashing $f") >>
-                fielHash(f).flatMap(
-                  h =>
-                    val key = asFs2.relativize(f)
+              // logger.trace(s"hashing $f") >>
+              fielHash(f).flatMap(
+                h =>
+                  val key = asFs2.relativize(f)
+                  logger.trace(s"hashing $f to put at $key with hash : $h") >>
                     mr.setKeyValue(key.toString(), h)
-                ),
+              ),
               IO.unit
             )
       }
@@ -122,7 +129,7 @@ object LiveServer
                     logger.trace(s"created $path, calculating hash") >>
                       fielHash(fs2.io.file.Path(path.toString())).flatMap(
                         h =>
-                          val serveAt = path.relativize(stringPath.toNioPath)
+                          val serveAt = stringPath.relativize(fs2.io.file.Path(path.toString()))
                           logger.trace(s"$serveAt :: hash -> $h") >>
                             mr.setKeyValue(serveAt.toString(), h)
                       )
@@ -132,14 +139,14 @@ object LiveServer
                     logger.trace(s"modified $path, calculating hash") >>
                       fielHash(fs2.io.file.Path(path.toString())).flatMap(
                         h =>
-                          val serveAt = path.relativize(stringPath.toNioPath)
+                          val serveAt = stringPath.relativize(fs2.io.file.Path(path.toString()))
                           logger.trace(s"$serveAt :: hash -> $h") >>
                             mr.setKeyValue(serveAt.toString(), h)
                       )
                   // else IO.unit
                   case Event.Deleted(path, i) =>
-                    val serveAt = path.relativize(stringPath.toNioPath)
-                    logger.trace(s"deleted $path, removing key") >>
+                    val serveAt = stringPath.relativize(fs2.io.file.Path(path.toString()))
+                    logger.trace(s"deleted $path, removing key $serveAt") >>
                       mr.unsetKey(serveAt.toString())
                   case e: Event.Overflow    => logger.info("overflow")
                   case e: Event.NonStandard => logger.info("non-standard")
@@ -149,6 +156,25 @@ object LiveServer
       .drain
       .background
   end fileWatcher
+
+  object ETagMiddleware:
+
+    def apply(service: HttpRoutes[IO]): HttpRoutes[IO] = Kleisli {
+      (req: Request[IO]) =>
+        req.headers.get(ci"If-None-Match") match
+          case Some(header) =>
+            req.uri.query.params.get("hash") match
+              case Some(hash) =>
+                OptionT.liftF(logger.debug(s"Hash  : $hash")) >>
+                  service(req)
+              case None =>
+                OptionT.liftF(logger.debug("No hash in query")) >>
+                  OptionT.liftF(NotModified())
+          case _ =>
+            OptionT.liftF(logger.debug("No headers in query")) >>
+              service(req)
+    }
+  end ETagMiddleware
 
   def routes(
       stringPath: String,
@@ -193,6 +219,7 @@ object LiveServer
           case GET -> Root / "all" =>
             ref
               .get
+              .flatTap(m => logger.trace(m.toString))
               .flatMap {
                 m =>
                   Ok(m.toString)
@@ -205,8 +232,8 @@ object LiveServer
                 .map(msg => ServerSentEvent(Some(msg.asJson.noSpaces)))
             )
         }
-
-        (overrides.combineK(staticFiles).combineK(styles).combineK(proxyRoutes).orNotFound, mr, ref)
+        val app = overrides.combineK(staticFiles).combineK(styles).combineK(proxyRoutes).orNotFound
+        (app, mr, ref)
     )
   end routes
 
@@ -424,6 +451,7 @@ object LiveServer
             millModuleName
           )(logger)
           indexHtmlTemplate = externalIndexHtmlTemplate.getOrElse(vanillaTemplate(stylesDir.isDefined).render)
+
           routes <- routes(outDir.toString(), refreshPub, stylesDir, proxyRoutes, indexHtmlTemplate)
 
           (app, mr, ref) = routes
