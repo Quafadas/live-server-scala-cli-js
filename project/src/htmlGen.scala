@@ -95,6 +95,10 @@ end makeHeader
 
 def vanillaTemplate(withStyles: Boolean) = html(
   head(
+    meta(
+      httpEquiv := "Cache-control",
+      content := "no-cache, no-store, must-revalidate"
+    )
   ),
   body(
     lessStyle(withStyles),
