@@ -41,6 +41,7 @@ import _root_.io.circe.syntax.*
 import ProxyConfig.Equilibrium
 import java.awt.Desktop
 import java.net.URI
+import org.http4s.Header
 
 sealed trait FrontendEvent derives Encoder.AsObject
 
@@ -153,7 +154,8 @@ object LiveServer
       stringPath: String,
       refreshTopic: Topic[IO, String],
       stylesPath: Option[String],
-      proxyRoutes: HttpRoutes[IO]
+      proxyRoutes: HttpRoutes[IO],
+      indexHtmlTemplate: String
   ): Resource[IO, (HttpApp[IO], MapRef[IO, String, Option[String]], Ref[IO, Map[String, String]])] =
     Resource.eval(
       for
@@ -173,12 +175,11 @@ object LiveServer
           )
 
         val makeIndex = ref.get.flatMap(mp => logger.trace(mp.toString())) >>
-          Ok(
-            (ref
-              .get
-              .map(_.toSeq.map((path, hash) => (fs2.io.file.Path(path), hash)))
-              .map(mods => makeHeader(mods, stylesPath.isDefined)))
-          )
+          (ref
+            .get
+            .map(_.toSeq.map((path, hash) => (fs2.io.file.Path(path), hash)))
+            .map(mods => injectModulePreloads(mods, indexHtmlTemplate)))
+            .map(html => Response[IO]().withEntity(html).withHeaders(Header("Cache-Control", "no-cache")))
 
         val overrides = HttpRoutes.of[IO] {
           case GET -> Root =>
@@ -306,7 +307,7 @@ object LiveServer
         "The file _MUST_ have the EXACT string <script __REPLACE_WITH_MODULE_HEADERS__\\> in the header tag/>"
     )
     .validate(
-      "index.html must be a file, with a .html extension, and must contain the exact script tag <script __REPLACE_WITH_MODULE_HEADERS__/> template cannot be blank"
+      "index.html must be a file, with a .html extension, and must contain <head> </head> and <body> </body> tags"
     ) {
       path =>
         os.isFile(os.Path(path)) match
@@ -315,7 +316,11 @@ object LiveServer
             val f = os.Path(path)
             f.ext match
               case "html" =>
-                os.read.lines(f).exists(_.contains("<script __REPLACE_WITH_MODULE_HEADERS__/>"))
+                val content = os.read(f)
+                content.contains("</head>") && content.contains("</body>") && content.contains("<head>") && content
+                  .contains(
+                    "<body>"
+                  )
               case _ => false
             end match
 
@@ -365,7 +370,7 @@ object LiveServer
           openBrowserAt,
           extraBuildArgs,
           millModuleName,
-          indexHtmlTemplate
+          externalIndexHtmlTemplate
       ) =>
 
         scribe
@@ -406,7 +411,7 @@ object LiveServer
               ).toResource
           }
 
-          _ <- logger.info(s"Start dev server on https://localhost:$port").toResource
+          _ <- logger.info(s"Start dev server on http://localhost:$port").toResource
 
           refreshPub <- refreshTopic
 
@@ -418,8 +423,8 @@ object LiveServer
             extraBuildArgs,
             millModuleName
           )(logger)
-
-          routes <- routes(outDir.toString(), refreshPub, stylesDir, proxyRoutes)
+          indexHtmlTemplate = externalIndexHtmlTemplate.getOrElse(vanillaTemplate(stylesDir.isDefined).render)
+          routes <- routes(outDir.toString(), refreshPub, stylesDir, proxyRoutes, indexHtmlTemplate)
 
           (app, mr, ref) = routes
 

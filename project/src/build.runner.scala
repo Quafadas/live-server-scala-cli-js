@@ -36,7 +36,7 @@ def buildRunner(
     buildRunnerMill(
       refreshTopic,
       workDir,
-      millModuleName.getOrElse(throw new Exception("must have a moduile name when running with mill")),
+      millModuleName.getOrElse(throw new Exception("must have a module name when running with mill")),
       extraBuildArgs
     )(logger)
 
