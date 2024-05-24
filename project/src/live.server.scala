@@ -172,23 +172,23 @@ object LiveServer
               )
           )
 
+        val makeIndex = ref.get.flatMap(mp => logger.trace(mp.toString())) >>
+          Ok(
+            (ref
+              .get
+              .map(_.toSeq.map((path, hash) => (fs2.io.file.Path(path), hash)))
+              .map(mods => makeHeader(mods, stylesPath.isDefined)))
+          )
+
         val overrides = HttpRoutes.of[IO] {
           case GET -> Root =>
             logger.trace("GET /") >>
-              ref.get.flatMap(mp => logger.trace(mp.toString())) >>
-              Ok(
-                (ref
-                  .get
-                  .map(_.toSeq.map((path, hash) => (fs2.io.file.Path(path), hash)))
-                  .map(mods => makeHeader(mods, stylesPath.isDefined)))
-              )
+              makeIndex
+
           case GET -> Root / "index.html" =>
-            Ok(
-              (ref
-                .get
-                .map(_.toSeq.map((path, hash) => (fs2.io.file.Path(path), hash)))
-                .map(mods => makeHeader(mods, stylesPath.isDefined)))
-            )
+            logger.trace("GET /index.html") >>
+              makeIndex
+
           case GET -> Root / "all" =>
             ref
               .get
@@ -299,6 +299,33 @@ object LiveServer
     )
     .orEmpty
 
+  val indexHtmlTemplateOpt: Opts[Option[String]] = Opts
+    .option[String](
+      "path-to-index-html-template",
+      "a path to a file which contains the index.html template you want to use. \n" +
+        "The file _MUST_ have the EXACT string <script __REPLACE_WITH_MODULE_HEADERS__\\> in the header tag/>"
+    )
+    .validate(
+      "index.html must be a file, with a .html extension, and must contain the exact script tag <script __REPLACE_WITH_MODULE_HEADERS__/> template cannot be blank"
+    ) {
+      path =>
+        os.isFile(os.Path(path)) match
+          case false => false
+          case true =>
+            val f = os.Path(path)
+            f.ext match
+              case "html" =>
+                os.read.lines(f).exists(_.contains("<script __REPLACE_WITH_MODULE_HEADERS__/>"))
+              case _ => false
+            end match
+
+    }
+    .map {
+      path =>
+        os.read(os.Path(path))
+    }
+    .orNone
+
   val millModuleNameOpt: Opts[Option[String]] = Opts
     .option[String](
       "mill-module-name",
@@ -323,7 +350,8 @@ object LiveServer
       buildToolOpt,
       openBrowserAtOpt,
       extraBuildArgsOpt,
-      millModuleNameOpt
+      millModuleNameOpt,
+      indexHtmlTemplateOpt
     ).mapN {
       (
           baseDir,
@@ -336,7 +364,8 @@ object LiveServer
           buildTool,
           openBrowserAt,
           extraBuildArgs,
-          millModuleName
+          millModuleName,
+          indexHtmlTemplate
       ) =>
 
         scribe

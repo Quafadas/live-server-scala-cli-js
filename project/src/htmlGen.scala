@@ -5,10 +5,27 @@ import fs2.io.file.Path
 /*
  * create an html template with that has a head, which includes script tags, that have modulepreload enabled
  */
+
+// def generateHtml(modules: Seq[(Path, String)]) = (template: String => String) =>
+//   template(makeHeader(modules, true).render)
+
+def injectModulePreloads(modules: Seq[(Path, String)], template: String) =
+  val modulesStrings =
+    for
+      m <- modules
+      if m._1.toString.endsWith(".js")
+    yield link(rel := "modulepreload", href := s"${m._1}?hash=${m._2}").render
+
+  // template(makeHeader(modules, true).render)
+  modulesStrings
+end injectModulePreloads
+
 def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean) =
   val scripts =
-    for (m <- modules)
-      yield if m._1.toString.endsWith(".js") then link(rel := "modulepreload", href := s"${m._1}?hash=${m._2}")
+    for
+      m <- modules
+      if m._1.toString.endsWith(".js")
+    yield link(rel := "modulepreload", href := s"${m._1}?hash=${m._2}")
 
   val lessStyle: Seq[Modifier] =
     if withStyles then
