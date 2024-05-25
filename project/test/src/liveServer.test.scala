@@ -10,7 +10,6 @@ import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
-import com.microsoft.playwright.Locator.WaitForOptions
 import com.microsoft.playwright.assertions.LocatorAssertions.ContainsTextOptions
 
 /*
@@ -78,7 +77,7 @@ class PlaywrightTest extends munit.FunSuite:
         )
         .unsafeToFuture()
 
-      Thread.sleep(500)
+      Thread.sleep(1500)
       val increaseTimeout = ContainsTextOptions()
       increaseTimeout.setTimeout(30000)
 
@@ -114,7 +113,7 @@ class PlaywrightTest extends munit.FunSuite:
         )
         .unsafeToFuture()
 
-      Thread.sleep(4000) // give the thing time to start.
+      Thread.sleep(1000) // give the thing time to start.
 
       val out = requests.get(s"http://localhost:$thisTestPort/api/hello", check = false)
       assertEquals(out.statusCode, 404)
@@ -161,7 +160,7 @@ class PlaywrightTest extends munit.FunSuite:
         )
         .unsafeToFuture()
 
-      Thread.sleep(4000) // give the thing time to start.
+      Thread.sleep(1000) // give the thing time to start.
 
       val out = requests.get(s"http://localhost:$thisTestPort/api/hello", check = false)
       assertEquals(out.statusCode, 200)
