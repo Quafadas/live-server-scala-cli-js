@@ -48,6 +48,8 @@ import org.http4s.*
 import org.http4s.dsl.io.*
 import org.http4s.implicits.*
 import org.typelevel.ci.CIStringSyntax
+import org.http4s.headers.ETag
+import org.http4s.client.Client
 
 sealed trait FrontendEvent derives Encoder.AsObject
 
@@ -79,163 +81,7 @@ object LiveServer
       version = "0.0.1"
     ):
 
-  private val refreshTopic = Topic[IO, String].toResource
   private val logger = scribe.cats[IO]
-  // val logger = scribe.cats[IO]
-
-  private def seedMapOnStart(stringPath: String, mr: MapRef[IO, String, Option[String]]) =
-    val asFs2 = fs2.io.file.Path(stringPath)
-    fs2
-      .io
-      .file
-      .Files[IO]
-      .walk(asFs2)
-      .evalMap {
-        f =>
-          Files[IO]
-            .isRegularFile(f)
-            .ifM(
-              // logger.trace(s"hashing $f") >>
-              fielHash(f).flatMap(
-                h =>
-                  val key = asFs2.relativize(f)
-                  logger.trace(s"hashing $f to put at $key with hash : $h") >>
-                    mr.setKeyValue(key.toString(), h)
-              ),
-              IO.unit
-            )
-      }
-      .compile
-      .drain
-      .toResource
-
-  end seedMapOnStart
-
-  private def fileWatcher(
-      stringPath: fs2.io.file.Path,
-      mr: MapRef[IO, String, Option[String]]
-  ): ResourceIO[IO[OutcomeIO[Unit]]] =
-    fs2
-      .Stream
-      .resource(Watcher.default[IO].evalTap(_.watch(stringPath.toNioPath)))
-      .flatMap {
-        w =>
-          w.events()
-            .evalTap(
-              (e: Event) =>
-                e match
-                  case Event.Created(path, i) =>
-                    // if path.endsWith(".js") then
-                    logger.trace(s"created $path, calculating hash") >>
-                      fielHash(fs2.io.file.Path(path.toString())).flatMap(
-                        h =>
-                          val serveAt = stringPath.relativize(fs2.io.file.Path(path.toString()))
-                          logger.trace(s"$serveAt :: hash -> $h") >>
-                            mr.setKeyValue(serveAt.toString(), h)
-                      )
-                  // else IO.unit
-                  case Event.Modified(path, i) =>
-                    // if path.endsWith(".js") then
-                    logger.trace(s"modified $path, calculating hash") >>
-                      fielHash(fs2.io.file.Path(path.toString())).flatMap(
-                        h =>
-                          val serveAt = stringPath.relativize(fs2.io.file.Path(path.toString()))
-                          logger.trace(s"$serveAt :: hash -> $h") >>
-                            mr.setKeyValue(serveAt.toString(), h)
-                      )
-                  // else IO.unit
-                  case Event.Deleted(path, i) =>
-                    val serveAt = stringPath.relativize(fs2.io.file.Path(path.toString()))
-                    logger.trace(s"deleted $path, removing key $serveAt") >>
-                      mr.unsetKey(serveAt.toString())
-                  case e: Event.Overflow    => logger.info("overflow")
-                  case e: Event.NonStandard => logger.info("non-standard")
-            )
-      }
-      .compile
-      .drain
-      .background
-  end fileWatcher
-
-  object ETagMiddleware:
-
-    def apply(service: HttpRoutes[IO]): HttpRoutes[IO] = Kleisli {
-      (req: Request[IO]) =>
-        req.headers.get(ci"If-None-Match") match
-          case Some(header) =>
-            req.uri.query.params.get("hash") match
-              case Some(hash) =>
-                OptionT.liftF(logger.debug(s"Hash  : $hash")) >>
-                  service(req)
-              case None =>
-                OptionT.liftF(logger.debug("No hash in query")) >>
-                  OptionT.liftF(NotModified())
-          case _ =>
-            OptionT.liftF(logger.debug("No headers in query")) >>
-              service(req)
-    }
-  end ETagMiddleware
-
-  def routes(
-      stringPath: String,
-      refreshTopic: Topic[IO, String],
-      stylesPath: Option[String],
-      proxyRoutes: HttpRoutes[IO],
-      indexHtmlTemplate: String
-  ): Resource[IO, (HttpApp[IO], MapRef[IO, String, Option[String]], Ref[IO, Map[String, String]])] =
-    Resource.eval(
-      for
-        ref <- Ref[IO].of(Map.empty[String, String])
-        mr = MapRef.fromSingleImmutableMapRef[IO, String, String](ref)
-      yield
-        val staticFiles = Router(
-          "" -> fileService[IO](FileService.Config(stringPath))
-        )
-
-        val styles =
-          stylesPath.fold(HttpRoutes.empty[IO])(
-            path =>
-              Router(
-                "" -> fileService[IO](FileService.Config(path))
-              )
-          )
-
-        val makeIndex = ref.get.flatMap(mp => logger.trace(mp.toString())) >>
-          (ref
-            .get
-            .map(_.toSeq.map((path, hash) => (fs2.io.file.Path(path), hash)))
-            .map(mods => injectModulePreloads(mods, indexHtmlTemplate)))
-            .map(html => Response[IO]().withEntity(html).withHeaders(Header("Cache-Control", "no-cache")))
-
-        val overrides = HttpRoutes.of[IO] {
-          case GET -> Root =>
-            logger.trace("GET /") >>
-              makeIndex
-
-          case GET -> Root / "index.html" =>
-            logger.trace("GET /index.html") >>
-              makeIndex
-
-          case GET -> Root / "all" =>
-            ref
-              .get
-              .flatTap(m => logger.trace(m.toString))
-              .flatMap {
-                m =>
-                  Ok(m.toString)
-              }
-          case GET -> Root / "api" / "v1" / "sse" =>
-            val keepAlive = fs2.Stream.fixedRate[IO](10.seconds).as(KeepAlive())
-            Ok(
-              keepAlive
-                .merge(refreshTopic.subscribe(10).as(PageRefresh()))
-                .map(msg => ServerSentEvent(Some(msg.asJson.noSpaces)))
-            )
-        }
-        val app = overrides.combineK(staticFiles).combineK(styles).combineK(proxyRoutes).orNotFound
-        (app, mr, ref)
-    )
-  end routes
 
   private def buildServer(httpApp: HttpApp[IO], port: Port) = EmberServerBuilder
     .default[IO]
@@ -371,6 +217,25 @@ object LiveServer
 
   override def main: Opts[IO[ExitCode]] =
     given R: Random[IO] = Random.javaUtilConcurrentThreadLocalRandom[IO]
+    def makeProxyRoutes(
+        client: Client[IO],
+        pathPrefix: Option[String],
+        proxyConfig: Resource[IO, Option[Equilibrium]]
+    ): Resource[IO, HttpRoutes[IO]] =
+      proxyConfig.flatMap {
+        case Some(pc) =>
+          {
+            logger.debug("setup proxy server") >>
+              IO(HttpProxy.servers[IO](pc, client, pathPrefix.getOrElse(???)).head._2)
+          }.toResource
+
+        case None =>
+          (
+            logger.debug("no proxy set") >>
+              IO(HttpRoutes.empty[IO])
+          ).toResource
+      }
+
     (
       baseDirOpt,
       outDirOpt,
@@ -422,25 +287,12 @@ object LiveServer
             )
             .toResource
 
+          fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+          fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
+          refreshPub <- Topic[IO, String].toResource
           client <- EmberClientBuilder.default[IO].build
 
-          proxyRoutes: HttpRoutes[IO] <- proxyConfig.flatMap {
-            case Some(pc) =>
-              {
-                logger.debug("setup proxy server") >>
-                  IO(HttpProxy.servers[IO](pc, client, pathPrefix.getOrElse(???)).head._2)
-              }.toResource
-
-            case None =>
-              (
-                logger.debug("no proxy set") >>
-                  IO(HttpRoutes.empty[IO])
-              ).toResource
-          }
-
-          _ <- logger.info(s"Start dev server on http://localhost:$port").toResource
-
-          refreshPub <- refreshTopic
+          proxyRoutes: HttpRoutes[IO] <- makeProxyRoutes(client, pathPrefix, proxyConfig)
 
           _ <- buildRunner(
             buildTool,
@@ -450,30 +302,19 @@ object LiveServer
             extraBuildArgs,
             millModuleName
           )(logger)
+
           indexHtmlTemplate = externalIndexHtmlTemplate.getOrElse(vanillaTemplate(stylesDir.isDefined).render)
 
-          routes <- routes(outDir.toString(), refreshPub, stylesDir, proxyRoutes, indexHtmlTemplate)
+          app <- routes(outDir.toString(), refreshPub, stylesDir, proxyRoutes, indexHtmlTemplate, fileToHashRef)(logger)
 
-          (app, mr, ref) = routes
-
-          _ <- seedMapOnStart(outDir, mr)
+          _ <- seedMapOnStart(outDir, fileToHashMapRef)(logger)
           // _ <- stylesDir.fold(Resource.unit)(sd => seedMapOnStart(sd, mr))
-          _ <- fileWatcher(fs2.io.file.Path(outDir), mr)
+          _ <- fileWatcher(fs2.io.file.Path(outDir), fileToHashMapRef)(logger)
           // _ <- stylesDir.fold(Resource.unit[IO])(sd => fileWatcher(fs2.io.file.Path(sd), mr))
+          _ <- logger.info(s"Start dev server on http://localhost:$port").toResource
           server <- buildServer(app, port)
 
-          - <- IO {
-            openBrowserAt match
-              case None => logger.trace("No openBrowserAt flag set, so no browser will be opened")
-              case Some(value) =>
-                val openAt = URI(s"http://localhost:$port$value")
-                logger.info(s"Attemptiong to open browser to $openAt") >>
-                  IO(
-                    if Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE) then
-                      IO(Desktop.getDesktop().browse(openAt))
-                    else logger.error("Desktop not supported, so can't open browser")
-                  ).flatten
-          }.flatten.toResource
+          - <- openBrowser(openBrowserAt, port)(logger).toResource
         yield server
 
         server.use(_ => IO.never).as(ExitCode.Success)
