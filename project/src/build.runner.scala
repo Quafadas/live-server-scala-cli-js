@@ -77,7 +77,7 @@ def buildRunnerScli(
                 .chunks
                 .evalMap(
                   aChunk =>
-                    if aChunk.toString.contains("node ./") then
+                    if aChunk.toString.contains("main.js, run it with") then
                       logger.trace("Detected that linking was successful, emitting refresh event") >>
                         refreshTopic.publish1("refresh")
                     else

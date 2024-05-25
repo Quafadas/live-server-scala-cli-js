@@ -10,6 +10,9 @@ import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
+import com.microsoft.playwright.Locator.WaitForOptions
+import com.microsoft.playwright.assertions.LocatorAssertions.ContainsTextOptions
+
 /*
 Run
 cs launch com.microsoft.playwright:playwright:1.41.1 -M "com.microsoft.playwright.CLI" -- install --with-deps
@@ -21,203 +24,211 @@ class PlaywrightTest extends munit.FunSuite:
   var browser: Browser = uninitialized
   var page: Page = uninitialized
 
-  val testDir = os.pwd / "testDir"
-  val outDir = testDir / ".out"
-  val styleDir = testDir / "styles"
+  val options = new BrowserType.LaunchOptions()
+  // options.setHeadless(false);
+
+  // def testDir(base: os.Path) = os.pwd / "testDir"
+  def outDir(base: os.Path) = base / ".out"
+  def styleDir(base: os.Path) = base / "styles"
 
   override def beforeAll(): Unit =
     pw = Playwright.create()
-    browser = pw.chromium().launch();
+    browser = pw.chromium().launch(options);
     page = browser.newPage();
+    page.setDefaultTimeout(30000)
   end beforeAll
 
-  // before each test, write in some simple code which should compile and some styles
-  override def beforeEach(context: BeforeEach): Unit =
-    if os.exists(testDir) then os.remove.all(os.pwd / "testDir")
-    end if
-    os.makeDir.all(outDir)
-    os.makeDir.all(styleDir)
+  val files = FunFixture[os.Path](
+    setup = test =>
+      // create a temp folder
+      val tempDir = os.temp.dir()
+      // create a file in the folder
+      os.makeDir.all(outDir(tempDir))
+      os.makeDir.all(styleDir(tempDir))
+      os.write.over(tempDir / "hello.scala", helloWorldCode("Hello"))
+      os.write.over(styleDir(tempDir) / "index.less", "")
+      os.proc("scala-cli", "compile", tempDir.toString).call(cwd = tempDir)
+      tempDir
+    ,
+    teardown = tempDir =>
+      // Always gets called, even if test failed.
+      os.remove.all(tempDir)
+  )
 
-    os.write.over(testDir / "hello.scala", helloWorldCode("Hello"))
-    os.write.over(styleDir / "index.less", "")
-    os.proc("scala-cli", "compile", testDir.toString).call(cwd = testDir)
-  end beforeEach
+  files.test("incremental") {
+    testDir =>
+      val thisTestPort = 3001
+      os.write.over(styleDir(testDir) / "index.less", "")
+      os.proc("scala-cli", "compile", testDir.toString).call(cwd = testDir)
 
-  test("incremental") {
-    val thisTestPort = 3001
-
-    if os.exists(testDir) then os.remove.all(os.pwd / "testDir")
-    end if
-    os.makeDir.all(outDir)
-    os.makeDir.all(styleDir)
-
-    os.write.over(testDir / "hello.scala", helloWorldCode("Hello"))
-    os.write.over(styleDir / "index.less", "")
-    os.proc("scala-cli", "compile", testDir.toString).call(cwd = testDir)
-
-    LiveServer
-      .run(
-        List(
-          "--build-tool",
-          "scala-cli",
-          "--project-dir",
-          testDir.toString,
-          "--out-dir",
-          outDir.toString,
-          "--styles-dir",
-          styleDir.toString,
-          "--port",
-          thisTestPort.toString
+      LiveServer
+        .run(
+          List(
+            "--build-tool",
+            "scala-cli",
+            "--project-dir",
+            testDir.toString,
+            "--out-dir",
+            outDir(testDir).toString,
+            "--styles-dir",
+            styleDir(testDir).toString,
+            "--port",
+            thisTestPort.toString
+          )
         )
-      )
-      .unsafeToFuture()
+        .unsafeToFuture()
 
-    Thread.sleep(4000) // give the thing time to start.
+      Thread.sleep(500)
+      val increaseTimeout = ContainsTextOptions()
+      increaseTimeout.setTimeout(30000)
 
-    page.navigate(s"http://localhost:$thisTestPort")
-    assertThat(page.locator("h1")).containsText("HelloWorld");
+      page.navigate(s"http://localhost:$thisTestPort")
+      assertThat(page.locator("h1")).containsText("HelloWorld", increaseTimeout);
 
-    os.write.over(testDir / "hello.scala", helloWorldCode("Bye"))
-    assertThat(page.locator("h1")).containsText("ByeWorld");
+      os.write.over(testDir / "hello.scala", helloWorldCode("Bye"))
 
-    os.write.append(styleDir / "index.less", "h1 { color: red; }")
-    assertThat(page.locator("h1")).hasCSS("color", "rgb(255, 0, 0)")
+      assertThat(page.locator("h1")).containsText("ByeWorld", increaseTimeout);
+
+      os.write.append(styleDir(testDir) / "index.less", "h1 { color: red; }")
+      assertThat(page.locator("h1")).hasCSS("color", "rgb(255, 0, 0)")
 
   }
 
-  test("no proxy server") {
-    val thisTestPort = 3000
-    LiveServer
-      .run(
-        List(
-          "--build-tool",
-          "scala-cli",
-          "--project-dir",
-          testDir.toString,
-          "--out-dir",
-          outDir.toString,
-          "--styles-dir",
-          styleDir.toString,
-          "--port",
-          thisTestPort.toString
+  files.test("no proxy server") {
+    testDir =>
+      val thisTestPort = 3000
+      LiveServer
+        .run(
+          List(
+            "--build-tool",
+            "scala-cli",
+            "--project-dir",
+            testDir.toString,
+            "--out-dir",
+            outDir(testDir).toString,
+            "--styles-dir",
+            styleDir(testDir).toString,
+            "--port",
+            thisTestPort.toString
+          )
         )
-      )
-      .unsafeToFuture()
+        .unsafeToFuture()
 
-    Thread.sleep(4000) // give the thing time to start.
+      Thread.sleep(4000) // give the thing time to start.
 
-    val out = requests.get(s"http://localhost:$thisTestPort/api/hello", check = false)
-    assertEquals(out.statusCode, 404)
+      val out = requests.get(s"http://localhost:$thisTestPort/api/hello", check = false)
+      assertEquals(out.statusCode, 404)
   }
 
-  test("proxy server") {
-    val backendPort = 8089
-    val thisTestPort = 3005
-    // use http4s to instantiate a simple server that responds to /api/hello with 200, use Http4sEmberServer
-    EmberServerBuilder
-      .default[IO]
-      .withHttpApp(
-        HttpRoutes
-          .of[IO] {
-            case GET -> Root / "api" / "hello" =>
-              Ok("hello world")
-          }
-          .orNotFound
-      )
-      .withPort(Port.fromInt(backendPort).get)
-      .build
-      .allocated
-      .unsafeToFuture()
-
-    LiveServer
-      .run(
-        List(
-          "--build-tool",
-          "scala-cli",
-          "--project-dir",
-          testDir.toString,
-          "--out-dir",
-          outDir.toString,
-          "--styles-dir",
-          styleDir.toString,
-          "--port",
-          thisTestPort.toString,
-          "--proxy-target-port",
-          backendPort.toString,
-          "--proxy-prefix-path",
-          "/api"
+  files.test("proxy server") {
+    testDir =>
+      val backendPort = 8089
+      val thisTestPort = 3005
+      // use http4s to instantiate a simple server that responds to /api/hello with 200, use Http4sEmberServer
+      EmberServerBuilder
+        .default[IO]
+        .withHttpApp(
+          HttpRoutes
+            .of[IO] {
+              case GET -> Root / "api" / "hello" =>
+                Ok("hello world")
+            }
+            .orNotFound
         )
-      )
-      .unsafeToFuture()
+        .withPort(Port.fromInt(backendPort).get)
+        .build
+        .allocated
+        .unsafeToFuture()
 
-    Thread.sleep(500) // give the thing time to start.
+      LiveServer
+        .run(
+          List(
+            "--build-tool",
+            "scala-cli",
+            "--project-dir",
+            testDir.toString,
+            "--out-dir",
+            outDir(testDir).toString,
+            "--styles-dir",
+            styleDir(testDir).toString,
+            "--port",
+            thisTestPort.toString,
+            "--proxy-target-port",
+            backendPort.toString,
+            "--proxy-prefix-path",
+            "/api"
+          )
+        )
+        .unsafeToFuture()
 
-    val out = requests.get(s"http://localhost:$thisTestPort/api/hello", check = false)
-    assertEquals(out.statusCode, 200)
-    assertEquals(out.text(), "hello world")
+      Thread.sleep(500) // give the thing time to start.
 
-    val outFail = requests.get(s"http://localhost:$thisTestPort/api/nope", check = false)
-    assertEquals(outFail.statusCode, 404)
+      val out = requests.get(s"http://localhost:$thisTestPort/api/hello", check = false)
+      assertEquals(out.statusCode, 200)
+      assertEquals(out.text(), "hello world")
+
+      val outFail = requests.get(s"http://localhost:$thisTestPort/api/nope", check = false)
+      assertEquals(outFail.statusCode, 404)
   }
 
-  test("no styles") {
-    val thisTestPort = 3002
-    LiveServer
-      .run(
-        List(
-          "--build-tool",
-          "scala-cli",
-          "--project-dir",
-          testDir.toString,
-          "--out-dir",
-          outDir.toString,
-          "--port",
-          thisTestPort.toString
+  files.test("no styles") {
+    testDir =>
+      val thisTestPort = 3002
+      LiveServer
+        .run(
+          List(
+            "--build-tool",
+            "scala-cli",
+            "--project-dir",
+            testDir.toString,
+            "--out-dir",
+            outDir(testDir).toString,
+            "--port",
+            thisTestPort.toString
+          )
         )
-      )
-      .unsafeToFuture()
+        .unsafeToFuture()
 
-    Thread.sleep(1000)
+      Thread.sleep(1000)
 
-    val out = requests.get(s"http://localhost:$thisTestPort", check = false)
-    assertEquals(out.statusCode, 200)
-    assert(!out.text().contains("less"))
+      val out = requests.get(s"http://localhost:$thisTestPort", check = false)
+      assertEquals(out.statusCode, 200)
+      assert(!out.text().contains("less"))
 
   }
 
-  test("with styles") {
-    val thisTestPort = 3003
-    LiveServer
-      .run(
-        List(
-          "--build-tool",
-          "scala-cli",
-          "--project-dir",
-          testDir.toString,
-          "--out-dir",
-          outDir.toString,
-          "--port",
-          thisTestPort.toString,
-          "--styles-dir",
-          styleDir.toString
+  files.test("with styles") {
+    testDir =>
+      val thisTestPort = 3003
+      LiveServer
+        .run(
+          List(
+            "--build-tool",
+            "scala-cli",
+            "--project-dir",
+            testDir.toString,
+            "--out-dir",
+            outDir(testDir).toString,
+            "--port",
+            thisTestPort.toString,
+            "--styles-dir",
+            styleDir(testDir).toString
+          )
         )
-      )
-      .unsafeToFuture()
+        .unsafeToFuture()
 
-    Thread.sleep(1000)
+      Thread.sleep(1000)
 
-    val out = requests.get(s"http://localhost:$thisTestPort", check = false)
-    assertEquals(out.statusCode, 200)
-    assert(out.text().contains("src=\"https://cdn.jsdelivr.net/npm/less"))
-    assert(out.text().contains("less.watch()"))
+      val out = requests.get(s"http://localhost:$thisTestPort", check = false)
+      assertEquals(out.statusCode, 200)
+      assert(out.text().contains("src=\"https://cdn.jsdelivr.net/npm/less"))
+      assert(out.text().contains("less.watch()"))
 
   }
 
   override def afterAll(): Unit =
     super.afterAll()
     pw.close()
-    // os.remove.all(testDir)
-
   end afterAll
 
 end PlaywrightTest
@@ -227,7 +238,7 @@ def helloWorldCode(greet: String) = s"""
 //> using platform js
 
 //> using dep org.scala-js::scalajs-dom::2.8.0
-//> using dep com.raquo::laminar::17.0.0-M6
+//> using dep com.raquo::laminar::17.0.0
 
 //> using jsModuleKind es
 //> using jsModuleSplitStyleStr smallmodulesfor

@@ -56,27 +56,27 @@ object ETagMiddleware:
       req.headers.get(ci"If-None-Match") match
         case Some(header) =>
           val etag = header.head.value
-          OptionT.liftF(logger.debug(req.uri.toString)) >>
-            OptionT.liftF(logger.debug(etag)) >>
-            service(req).semiflatMap {
-              resp =>
-                mr.get
-                  .flatMap {
-                    map =>
-                      map.get(req.uri.path.toString.drop(1)) match
-                        case Some(foundEt) =>
-                          if etag == foundEt then
-                            logger.debug("ETag matches, returning 304") >>
-                              IO(Response[IO](Status.NotModified))
-                          else
-                            logger.debug(etag) >>
-                              logger.debug("ETag doesn't match, returning 200") >>
-                              respondWithEtag(resp)
-                          end if
-                        case None =>
-                          respondWithEtag(resp)
-                  }
-            }
+          // OptionT.liftF(logger.debug(req.uri.toString)) >>
+          //   OptionT.liftF(logger.debug(etag)) >>
+          service(req).semiflatMap {
+            resp =>
+              mr.get
+                .flatMap {
+                  map =>
+                    map.get(req.uri.path.toString.drop(1)) match
+                      case Some(foundEt) =>
+                        if etag == foundEt then
+                          logger.debug("ETag matches, returning 304") >>
+                            IO(Response[IO](Status.NotModified))
+                        else
+                          logger.debug(etag) >>
+                            logger.debug("ETag doesn't match, returning 200") >>
+                            respondWithEtag(resp)
+                        end if
+                      case None =>
+                        respondWithEtag(resp)
+                }
+          }
         case _ =>
           OptionT.liftF(logger.debug("No headers in query, service it")) >>
             service(req).semiflatMap {

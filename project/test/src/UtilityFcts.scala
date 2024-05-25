@@ -32,7 +32,6 @@ class UtilityFcs extends munit.FunSuite:
 
   test(" That we can inject a refresh script") {
     val html = injectRefreshScript("<html><head></head><body></body></html>")
-    println(html)
     assert(
       html.contains("sse.addEventListener")
     )
