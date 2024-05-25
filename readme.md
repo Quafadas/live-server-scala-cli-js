@@ -100,6 +100,13 @@ Options and flags:
         Extra arguments to pass to the build tool
 ```
 
+To be minimally viable for me personally,
+- A Proxy server to the backend
+- Style application
+- Mill
+- Some way, to integrate the outcome into a deployment pipline
+
+As the project is somehwhat young, the approach these points may remain chaotic... your contribution or opinion on them is welcome :-).
 
 # An experiment in a dev server for scala JS
 
