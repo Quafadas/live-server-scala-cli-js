@@ -1,7 +1,5 @@
 import java.security.MessageDigest
 
-import scala.concurrent.duration.DurationInt
-
 import org.http4s.HttpRoutes
 import org.typelevel.ci.CIStringSyntax
 
@@ -13,7 +11,8 @@ import cats.effect.kernel.Ref
 import cats.effect.std.MapRef
 
 import munit.CatsEffectSuite
-// import cats.effect.unsafe.implicits.global
+
+import scala.concurrent.duration.*
 
 class ExampleSuite extends CatsEffectSuite:
 
@@ -56,22 +55,30 @@ class ExampleSuite extends CatsEffectSuite:
 
   files.test("watched map is updated") {
     tempDir =>
-      val newStr = "const hi = 'bye, world'"
-      val newHash = md.digest(testStr.getBytes()).map("%02x".format(_)).mkString
       val toCheck = for
         logger <- IO(scribe.cats[IO]).toResource
         fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+        linkingTopic <- Topic[IO, Unit].toResource
+        refreshTopic <- Topic[IO, Unit].toResource
         fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
+        _ <- fileWatcher(fs2.io.file.Path(tempDir.toString), fileToHashMapRef, linkingTopic, refreshTopic)(logger)
+        _ <- IO.sleep(100.millis).toResource // wait for watcher to start
         _ <- seedMapOnStart(tempDir.toString, fileToHashMapRef)(logger)
-        _ <- fileWatcher(fs2.io.file.Path(tempDir.toString), fileToHashMapRef)(logger)
-        _ <- IO(os.write.over(tempDir / "test.js", newStr)).toResource
-        _ <- IO.sleep(1.second).toResource
-        updatedMap <- fileToHashRef.get.toResource
-      yield updatedMap
+        _ <- IO.blocking(os.write.over(tempDir / "test.js", "const hi = 'bye, world'")).toResource
+        _ <- linkingTopic.publish1(()).toResource
+        _ <- refreshTopic.subscribe(1).head.compile.resource.drain
+        oldHash <- fileToHashRef.get.map(_("test.js")).toResource
+        _ <- IO.blocking(os.write.over(tempDir / "test.js", "const hi = 'modified, workd'")).toResource
+        _ <- linkingTopic.publish1(()).toResource
+        _ <- refreshTopic.subscribe(1).head.compile.resource.drain
+        newHash <- fileToHashRef.get.map(_("test.js")).toResource
+      yield oldHash -> newHash
 
       toCheck.use {
-        updatedMap =>
-          assertIO(IO(updatedMap.get("test.js")), Some(newHash))
+        case (oldHash, newHash) =>
+          IO(assertNotEquals(oldHash, newHash)) >>
+            IO(assertEquals(oldHash, "27b2d040a66fb938f134c4b66fb7e9ce")) >>
+            IO(assertEquals(newHash, "3ebb82d4d6236c6bfbb90d65943b3e3d"))
       }
 
   }
@@ -84,7 +91,7 @@ class ExampleSuite extends CatsEffectSuite:
           fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
           fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
           _ <- seedMapOnStart(tempDir.toString, fileToHashMapRef)(logger)
-          refreshPub <- Topic[IO, String].toResource
+          refreshPub <- Topic[IO, Unit].toResource
           theseRoutes <- routes(
             tempDir.toString,
             refreshPub,
