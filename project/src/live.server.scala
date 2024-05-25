@@ -77,7 +77,7 @@ object LiveServer
   //   }
 
   val logLevelOpt: Opts[String] = Opts
-    .option[String]("log-level", help = "The log level (e.g., info, debug, error)")
+    .option[String]("log-level", help = "The log level. info, debug, error, trace)")
     .withDefault("info")
     .validate("Invalid log level") {
       case "info"  => true
@@ -116,7 +116,7 @@ object LiveServer
     .validate("Must be a directory")(sOpt => sOpt.fold(true)(s => os.isDir(os.Path(s))))
 
   val portOpt = Opts
-    .option[Int]("port", "The port yo want to run the server on - e.g. 3000")
+    .option[Int]("port", "The port you want to run the server on - e.g. 3000")
     .withDefault(3000)
     .validate("Port must be between 1 and 65535")(i => i > 0 && i < 65535)
     .map(i => Port.fromInt(i).get)

@@ -1,35 +1,3 @@
-# An experiment in a dev server for scala JS
-
-Try and break the dependance on node / npm completely whilst retaining a sane developer experience for browser based scala-js development.
-
-[Blogpost](https://quafadas.github.io/Whimsy/2024/05/22/Viteless.html)
-
-## Goals
-
-Replicate the "experience" of using vite with scala JS.
-
-- Live reload / link on change
-- Hot application of style (no page reload)
-- Proxy server
-- page open on start
-
-## Contraints
-
-- Scala cli to build frontend
-- ESModule output (only)
-- Third party ESModules via import map rather than npm
-- Styles through LESS
-
-## Assumptions
-
-`cs`, `scala-cli` and `mill` are readily available on the path.
-The entry point for styles is `index.less`, and that file exists in the styles directory. It can link to other style files.
-App must be mounted to a div, with id `app`.
-
-## Contributing
-
-CI builds a container image which is ready to roll.
-
 ## TL:DR
 
 ```sh
@@ -94,3 +62,73 @@ The intention, is for the simple case to be zero configuration. The below invoca
 - Your application, will mount in a div with id `app`.
 
 The file above is a one file example of such a project, satisfying these constraints.
+
+The dream, is for the CLI to be flexible enough to accomodate more complex scenarios as well.
+
+```sh
+simon@Simons-Mac-mini cwazy % cs launch io.github.quafadas:live-server-scala-cli-js_3:0.0.10 -- --help
+Usage: LiveServer [--project-dir <string>] [--out-dir <string>] [--styles-dir <string>] [--port <integer>] [--proxy-target-port <integer>] [--proxy-prefix-path <string>] [--log-level <string>] --build-tool <string> [--browse-on-open-at <string>] [--extra-build-args <string>]... [--mill-module-name <string>] [--path-to-index-html-template <string>]
+
+Scala JS live server
+
+Options and flags:
+    --help
+        Display this help text.
+    --version, -v
+        Print the version number and exit.
+    --project-dir <string>
+        The fully qualified location of your project - e.g. c:/temp/helloScalaJS
+    --out-dir <string>
+        Where the compiled JS will be compiled to - e.g. c:/temp/helloScalaJS/.out
+    --styles-dir <string>
+        A fully qualified path to your styles directory with LESS files in - e.g. c:/temp/helloScalaJS/styles
+    --port <integer>
+        The port you want to run the server on - e.g. 3000
+    --proxy-target-port <integer>
+        The port you want to forward api requests to - e.g. 8080
+    --proxy-prefix-path <string>
+        Match routes starting with this prefix - e.g. /api
+    --log-level <string>
+        The log level (e.g. info, debug, error, trace)
+    --build-tool <string>
+        scala-cli or mill
+    --browse-on-open-at <string>
+        A suffix to localhost where we'll open a browser window on server start - e.g. /ui/greatPage OR just `/` for root
+    --extra-build-args <string>
+        Extra arguments to pass to the build tool
+    --mill-module-name <string>
+        Extra arguments to pass to the build tool
+```
+
+
+# An experiment in a dev server for scala JS
+
+Try and break the dependance on node / npm completely whilst retaining a sane developer experience for browser based scala-js development.
+
+[Blogpost](https://quafadas.github.io/Whimsy/2024/05/22/Viteless.html)
+
+## Goals
+
+Replicate the "experience" of using vite with scala JS.
+
+- Live reload / link on change
+- Hot application of style (no page reload)
+- Proxy server
+- page open on start
+
+## Contraints
+
+- Scala cli to build frontend
+- ESModule output (only)
+- Third party ESModules via import map rather than npm
+- Styles through LESS
+
+## Assumptions
+
+`cs`, `scala-cli` and `mill` are readily available on the path.
+The entry point for styles is `index.less`, and that file exists in the styles directory. It can link to other style files.
+App must be mounted to a div, with id `app`.
+
+## Contributing
+
+CI builds a container image which is ready to roll.
