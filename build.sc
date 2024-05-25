@@ -10,7 +10,11 @@ import de.tobiasroeser.mill.vcs.version._
 
 import com.goyeau.mill.scalafix.ScalafixModule
 
-object project extends ScalaModule with PublishModule with ScalafmtModule with ScalafixModule  {
+trait FormatFix extends ScalafmtModule with ScalafixModule{
+  override def scalacOptions: Target[Seq[String]] = super.scalacOptions() ++ Seq("-Wunused:all")
+}
+
+object project extends ScalaModule with PublishModule with FormatFix  {
   def scalaVersion = "3.4.2"
   def ivyDeps = super.ivyDeps() ++ Seq(
     ivy"org.http4s::http4s-ember-server::0.23.26",
@@ -30,10 +34,9 @@ object project extends ScalaModule with PublishModule with ScalafmtModule with S
 
   def artifactName = "live-server-scala-cli-js"
 
-  override def scalacOptions: Target[Seq[String]] = super.scalacOptions() ++ Seq("-Wunused:all")
   def publishVersion = VcsVersion.vcsState().format()
 
-  object test extends ScalaTests with TestModule.Munit {
+  object test extends ScalaTests with TestModule.Munit with FormatFix {
     def ivyDeps = super.ivyDeps() ++ project.ivyDeps() ++ Seq(
       ivy"org.scalameta::munit::1.0.0",
       ivy"com.microsoft.playwright:playwright:${playwrightVersion.pwV}",

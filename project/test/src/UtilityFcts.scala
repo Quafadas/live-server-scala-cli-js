@@ -1,6 +1,3 @@
-import munit.CatsEffectSuite
-import cats.effect.IO
-
 class UtilityFcs extends munit.FunSuite:
 
   test("That we actually inject the preloads ") {

@@ -1,16 +1,18 @@
-import cats.effect.{IO, SyncIO}
-import munit.CatsEffectSuite
+import java.security.MessageDigest
+
+import scala.concurrent.duration.DurationInt
+
+import org.http4s.HttpRoutes
+import org.typelevel.ci.CIStringSyntax
+
+import fs2.concurrent.Topic
 import fs2.io.file.Path
-import fs2.io.file.Files
+
+import cats.effect.IO
 import cats.effect.kernel.Ref
 import cats.effect.std.MapRef
-import fs2.concurrent.Topic
-import org.http4s.HttpRoutes
-import cats.effect.kernel.Resource
-import scribe.Scribe
-import org.typelevel.ci.CIStringSyntax
-import java.security.MessageDigest
-import scala.concurrent.duration.DurationInt
+
+import munit.CatsEffectSuite
 // import cats.effect.unsafe.implicits.global
 
 class ExampleSuite extends CatsEffectSuite:

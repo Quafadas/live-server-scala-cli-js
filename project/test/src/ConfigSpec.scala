@@ -1,5 +1,6 @@
-import munit.CatsEffectSuite
 import cats.effect.IO
+
+import munit.CatsEffectSuite
 
 class ConfigSpec extends CatsEffectSuite:
 

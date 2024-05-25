@@ -1,23 +1,15 @@
 import scala.compiletime.uninitialized
-import com.microsoft.playwright.*
-import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
-import com.sun.net.httpserver.*;
-import java.net.InetSocketAddress;
-import com.microsoft.playwright.Page.InputValueOptions
-import java.nio.file.Paths
-import com.microsoft.playwright.impl.driver.Driver
-import scala.concurrent.Future
 
-import cats.effect.unsafe.implicits.global
-import scalatags.Text.styles
-import cats.effect.IO
-
-import com.comcast.ip4s.port
-import com.comcast.ip4s.Port
-
+import org.http4s.HttpRoutes
 import org.http4s.dsl.io.*
 import org.http4s.ember.server.EmberServerBuilder
-import org.http4s.HttpRoutes
+
+import com.comcast.ip4s.Port
+import com.microsoft.playwright.*
+import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
+
+import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 /*
 Run
 cs launch com.microsoft.playwright:playwright:1.41.1 -M "com.microsoft.playwright.CLI" -- install --with-deps
@@ -122,7 +114,7 @@ class PlaywrightTest extends munit.FunSuite:
     val backendPort = 8089
     val thisTestPort = 3005
     // use http4s to instantiate a simple server that responds to /api/hello with 200, use Http4sEmberServer
-    val backend = EmberServerBuilder
+    EmberServerBuilder
       .default[IO]
       .withHttpApp(
         HttpRoutes

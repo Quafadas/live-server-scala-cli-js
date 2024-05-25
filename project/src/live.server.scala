@@ -17,7 +17,6 @@ import com.monovore.decline.effect.*
 
 import fs2.*
 import fs2.concurrent.Topic
-import fs2.io.Watcher
 
 import scribe.Level
 
