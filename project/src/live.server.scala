@@ -94,7 +94,7 @@ object LiveServer
         "browse-on-open-at",
         "A suffix to localhost where we'll open a browser window on server start - e.g. /ui/greatPage OR just `/` for root "
       )
-      .orNone
+      .withDefault("/")
 
   val baseDirOpt =
     Opts
@@ -292,7 +292,7 @@ object LiveServer
           _ <- logger.info(s"Start dev server on http://localhost:$port").toResource
           server <- buildServer(app, port)
 
-          - <- openBrowser(openBrowserAt, port)(logger).toResource
+          - <- openBrowser(Some(openBrowserAt), port)(logger).toResource
         yield server
 
         server.use(_ => IO.never).as(ExitCode.Success)
