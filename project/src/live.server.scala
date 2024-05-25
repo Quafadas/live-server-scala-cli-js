@@ -138,6 +138,7 @@ object LiveServer
       case "mill"      => true
       case _           => false
     }
+    .withDefault("scala-cli")
     .map {
       _ match
         case "scala-cli" => ScalaCli()
