@@ -1,43 +1,38 @@
-import org.http4s.HttpRoutes
-import cats.effect.IO
-import org.http4s.server.Router
-import org.http4s.server.staticcontent.FileService
+import scala.concurrent.duration.DurationInt
 
+import org.http4s.Header
 import org.http4s.HttpApp
 import org.http4s.HttpRoutes
 import org.http4s.Request
 import org.http4s.Response
 import org.http4s.ServerSentEvent
+import org.http4s.Status
 import org.http4s.dsl.io.*
-import org.http4s.ember.client.EmberClientBuilder
-import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.implicits.*
-import org.http4s.scalatags.*
 import org.http4s.server.Router
 import org.http4s.server.staticcontent.*
-import cats.effect.kernel.Ref
-import cats.data.Kleisli
-import scribe.Scribe
-import org.http4s.Header
+import org.http4s.server.staticcontent.FileService
 import org.typelevel.ci.CIStringSyntax
-import cats.data.OptionT
-import cats.syntax.all.*
-import org.http4s.Status
-import fs2.concurrent.Topic
-import cats.effect.kernel.Resource
-import scala.concurrent.duration.DurationInt
-import io.circe.syntax.EncoderOps
-import cats.effect.std.MapRef
-
-import cats.effect.*
-import cats.effect.std.*
-import cats.implicits.*
 
 import fs2.*
 import fs2.concurrent.Topic
 import fs2.io.Watcher
 import fs2.io.Watcher.Event
 import fs2.io.file.Files
+
+import scribe.Scribe
+
+import cats.data.Kleisli
+import cats.data.OptionT
+import cats.effect.*
+import cats.effect.IO
+import cats.effect.kernel.Ref
+import cats.effect.kernel.Resource
+import cats.effect.std.*
+import cats.effect.std.MapRef
+import cats.syntax.all.*
+
+import _root_.io.circe.syntax.EncoderOps
 object ETagMiddleware:
 
   def apply(service: HttpRoutes[IO], mr: Ref[IO, Map[String, String]])(logger: Scribe[IO]): HttpRoutes[IO] = Kleisli {

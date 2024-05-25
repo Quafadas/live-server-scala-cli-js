@@ -2,18 +2,13 @@
 
 import scala.concurrent.duration.*
 
+import org.http4s.*
 import org.http4s.HttpApp
 import org.http4s.HttpRoutes
-import org.http4s.Request
-import org.http4s.Response
-import org.http4s.ServerSentEvent
+import org.http4s.client.Client
 import org.http4s.dsl.io.*
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.ember.server.EmberServerBuilder
-import org.http4s.implicits.*
-import org.http4s.scalatags.*
-import org.http4s.server.Router
-import org.http4s.server.staticcontent.*
 
 import com.comcast.ip4s.Port
 import com.comcast.ip4s.host
@@ -23,33 +18,17 @@ import com.monovore.decline.effect.*
 import fs2.*
 import fs2.concurrent.Topic
 import fs2.io.Watcher
-import fs2.io.Watcher.Event
-import fs2.io.file.Files
 
 import scribe.Level
 
-import cats.data.Kleisli
-import cats.data.OptionT
 import cats.effect.*
 import cats.effect.std.*
 import cats.implicits.*
 
 import _root_.io.circe.*
 import _root_.io.circe.Encoder
-import _root_.io.circe.syntax.*
 
 import ProxyConfig.Equilibrium
-import java.awt.Desktop
-import java.net.URI
-import org.http4s.Header
-
-import cats.effect.*
-import org.http4s.*
-import org.http4s.dsl.io.*
-import org.http4s.implicits.*
-import org.typelevel.ci.CIStringSyntax
-import org.http4s.headers.ETag
-import org.http4s.client.Client
 
 sealed trait FrontendEvent derives Encoder.AsObject
 

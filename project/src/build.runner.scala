@@ -1,21 +1,20 @@
 import fs2.*
 import fs2.concurrent.Topic
-import fs2.io.process.ProcessBuilder
-import fs2.io.process.Processes
 import fs2.io.Watcher
 import fs2.io.Watcher.Event
-import fs2.io.file.Files
+import fs2.io.Watcher.Event.Created
+import fs2.io.Watcher.Event.Deleted
+import fs2.io.Watcher.Event.Modified
+import fs2.io.Watcher.Event.NonStandard
+import fs2.io.Watcher.Event.Overflow
+import fs2.io.process.ProcessBuilder
+import fs2.io.process.Processes
 
 import scribe.Scribe
 
 import cats.effect.IO
 import cats.effect.OutcomeIO
 import cats.effect.ResourceIO
-import fs2.io.Watcher.Event.Created
-import fs2.io.Watcher.Event.Deleted
-import fs2.io.Watcher.Event.Modified
-import fs2.io.Watcher.Event.Overflow
-import fs2.io.Watcher.Event.NonStandard
 
 sealed trait BuildTool
 class ScalaCli extends BuildTool

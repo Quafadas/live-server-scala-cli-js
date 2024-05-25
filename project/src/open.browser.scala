@@ -1,8 +1,11 @@
-import cats.effect.IO
-import scribe.Scribe
-import java.net.URI
 import java.awt.Desktop
+import java.net.URI
+
 import com.comcast.ip4s.Port
+
+import scribe.Scribe
+
+import cats.effect.IO
 
 def openBrowser(openBrowserAt: Option[String], port: Port)(logger: Scribe[IO]): IO[Unit] =
   openBrowserAt match
