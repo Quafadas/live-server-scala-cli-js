@@ -161,7 +161,7 @@ class PlaywrightTest extends munit.FunSuite:
         )
         .unsafeToFuture()
 
-      Thread.sleep(500) // give the thing time to start.
+      Thread.sleep(1000) // give the thing time to start.
 
       val out = requests.get(s"http://localhost:$thisTestPort/api/hello", check = false)
       assertEquals(out.statusCode, 200)
