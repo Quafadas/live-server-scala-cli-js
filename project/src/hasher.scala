@@ -1,15 +1,11 @@
-import java.security.MessageDigest
-
 import cats.effect.IO
+import fs2.io.file.*
 
-val md = MessageDigest.getInstance("MD5")
+// TODO: Use last modified time once scala-cli stops
+//       copy pasting the files from a temporary directory
+//       and performs linking in place
+// def fileHash(filePath: Path): IO[String] =
+//   Files[IO].getLastModifiedTime(filePath).map(_.toNanos.toString)
 
-def fielHash(filePath: fs2.io.file.Path): IO[String] =
-  fs2
-    .io
-    .file
-    .Files[IO]
-    .readUtf8Lines(filePath)
-    .compile
-    .toList
-    .map(lines => md.digest(lines.mkString("\n").getBytes).map("%02x".format(_)).mkString)
+def fileHash(filePath: fs2.io.file.Path): IO[String] =
+  Files[IO].readAll(filePath).through(fs2.hash.md5).through(fs2.text.hex.encode).compile.string

@@ -267,14 +267,15 @@ object LiveServer
 
           fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
           fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
-          refreshPub <- Topic[IO, String].toResource
+          refreshTopic <- Topic[IO, Unit].toResource
+          linkingTopic <- Topic[IO, Unit].toResource
           client <- EmberClientBuilder.default[IO].build
 
           proxyRoutes: HttpRoutes[IO] <- makeProxyRoutes(client, pathPrefix, proxyConfig)
 
           _ <- buildRunner(
             buildTool,
-            refreshPub,
+            linkingTopic,
             fs2.io.file.Path(baseDir),
             fs2.io.file.Path(outDir),
             extraBuildArgs,
@@ -283,11 +284,13 @@ object LiveServer
 
           indexHtmlTemplate = externalIndexHtmlTemplate.getOrElse(vanillaTemplate(stylesDir.isDefined).render)
 
-          app <- routes(outDir.toString(), refreshPub, stylesDir, proxyRoutes, indexHtmlTemplate, fileToHashRef)(logger)
+          app <- routes(outDir.toString(), refreshTopic, stylesDir, proxyRoutes, indexHtmlTemplate, fileToHashRef)(
+            logger
+          )
 
           _ <- seedMapOnStart(outDir, fileToHashMapRef)(logger)
           // _ <- stylesDir.fold(Resource.unit)(sd => seedMapOnStart(sd, mr))
-          _ <- fileWatcher(fs2.io.file.Path(outDir), fileToHashMapRef)(logger)
+          _ <- fileWatcher(fs2.io.file.Path(outDir), fileToHashMapRef, linkingTopic, refreshTopic)(logger)
           // _ <- stylesDir.fold(Resource.unit[IO])(sd => fileWatcher(fs2.io.file.Path(sd), mr))
           _ <- logger.info(s"Start dev server on http://localhost:$port").toResource
           server <- buildServer(app, port)

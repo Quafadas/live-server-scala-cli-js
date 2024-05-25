@@ -16,8 +16,6 @@ import org.typelevel.ci.CIStringSyntax
 
 import fs2.*
 import fs2.concurrent.Topic
-import fs2.io.Watcher
-import fs2.io.Watcher.Event
 import fs2.io.file.Files
 
 import scribe.Scribe
@@ -29,7 +27,6 @@ import cats.effect.IO
 import cats.effect.kernel.Ref
 import cats.effect.kernel.Resource
 import cats.effect.std.*
-import cats.effect.std.MapRef
 import cats.syntax.all.*
 
 import _root_.io.circe.syntax.EncoderOps
@@ -89,7 +86,7 @@ end ETagMiddleware
 
 def routes(
     stringPath: String,
-    refreshTopic: Topic[IO, String],
+    refreshTopic: Topic[IO, Unit],
     stylesPath: Option[String],
     proxyRoutes: HttpRoutes[IO],
     indexHtmlTemplate: String,
@@ -162,7 +159,7 @@ def seedMapOnStart(stringPath: String, mr: MapRef[IO, String, Option[String]])(l
           .isRegularFile(f)
           .ifM(
             // logger.trace(s"hashing $f") >>
-            fielHash(f).flatMap(
+            fileHash(f).flatMap(
               h =>
                 val key = asFs2.relativize(f)
                 logger.trace(s"hashing $f to put at $key with hash : $h") >>
@@ -179,46 +176,33 @@ end seedMapOnStart
 
 private def fileWatcher(
     stringPath: fs2.io.file.Path,
-    mr: MapRef[IO, String, Option[String]]
-)(logger: Scribe[IO]): ResourceIO[IO[OutcomeIO[Unit]]] =
-  fs2
-    .Stream
-    .resource(Watcher.default[IO].evalTap(_.watch(stringPath.toNioPath)))
-    .flatMap {
-      w =>
-        w.events()
-          .evalTap(
-            (e: Event) =>
-              e match
-                case Event.Created(path, i) =>
-                  // if path.endsWith(".js") then
-                  logger.trace(s"created $path, calculating hash") >>
-                    fielHash(fs2.io.file.Path(path.toString())).flatMap(
-                      h =>
-                        val serveAt = stringPath.relativize(fs2.io.file.Path(path.toString()))
-                        logger.trace(s"$serveAt :: hash -> $h") >>
-                          mr.setKeyValue(serveAt.toString(), h)
-                    )
-                // else IO.unit
-                case Event.Modified(path, i) =>
-                  // if path.endsWith(".js") then
-                  logger.trace(s"modified $path, calculating hash") >>
-                    fielHash(fs2.io.file.Path(path.toString())).flatMap(
-                      h =>
-                        val serveAt = stringPath.relativize(fs2.io.file.Path(path.toString()))
-                        logger.trace(s"$serveAt :: hash -> $h") >>
-                          mr.setKeyValue(serveAt.toString(), h)
-                    )
-                // else IO.unit
-                case Event.Deleted(path, i) =>
+    mr: MapRef[IO, String, Option[String]],
+    linkingTopic: Topic[IO, Unit],
+    refreshTopic: Topic[IO, Unit]
+)(logger: Scribe[IO]): ResourceIO[Unit] =
+  linkingTopic
+    .subscribe(10)
+    .evalTap {
+      _ =>
+        fs2
+          .io
+          .file
+          .Files[IO]
+          .list(stringPath)
+          .evalTap {
+            path =>
+              fileHash(path).flatMap(
+                h =>
                   val serveAt = stringPath.relativize(fs2.io.file.Path(path.toString()))
-                  logger.trace(s"deleted $path, removing key $serveAt") >>
-                    mr.unsetKey(serveAt.toString())
-                case e: Event.Overflow    => logger.info("overflow")
-                case e: Event.NonStandard => logger.info("non-standard")
-          )
+                  logger.trace(s"$serveAt :: hash -> $h") >>
+                    mr.setKeyValue(serveAt.toString(), h)
+              )
+          }
+          .compile
+          .drain >> refreshTopic.publish1(())
     }
     .compile
     .drain
     .background
+    .void
 end fileWatcher

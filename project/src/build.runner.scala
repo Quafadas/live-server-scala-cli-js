@@ -16,13 +16,15 @@ import cats.effect.IO
 import cats.effect.OutcomeIO
 import cats.effect.ResourceIO
 
+import scala.concurrent.duration.*
+
 sealed trait BuildTool
 class ScalaCli extends BuildTool
 class Mill extends BuildTool
 
 def buildRunner(
     tool: BuildTool,
-    refreshTopic: Topic[IO, String],
+    linkingTopic: Topic[IO, Unit],
     workDir: fs2.io.file.Path,
     outDir: fs2.io.file.Path,
     extraBuildArgs: List[String],
@@ -30,17 +32,17 @@ def buildRunner(
 )(
     logger: Scribe[IO]
 ): ResourceIO[IO[OutcomeIO[Unit]]] = tool match
-  case scli: ScalaCli => buildRunnerScli(refreshTopic, workDir, outDir, extraBuildArgs)(logger)
+  case scli: ScalaCli => buildRunnerScli(linkingTopic, workDir, outDir, extraBuildArgs)(logger)
   case m: Mill =>
     buildRunnerMill(
-      refreshTopic,
+      linkingTopic,
       workDir,
       millModuleName.getOrElse(throw new Exception("must have a module name when running with mill")),
       extraBuildArgs
     )(logger)
 
 def buildRunnerScli(
-    refreshTopic: Topic[IO, String],
+    linkingTopic: Topic[IO, Unit],
     workDir: fs2.io.file.Path,
     outDir: fs2.io.file.Path,
     extraBuildArgs: List[String]
@@ -79,7 +81,7 @@ def buildRunnerScli(
                   aChunk =>
                     if aChunk.toString.contains("main.js, run it with") then
                       logger.trace("Detected that linking was successful, emitting refresh event") >>
-                        refreshTopic.publish1("refresh")
+                        linkingTopic.publish1(())
                     else
                       logger.trace(s"$aChunk :: Linking unfinished") >>
                         IO.unit
@@ -92,7 +94,7 @@ def buildRunnerScli(
 end buildRunnerScli
 
 def buildRunnerMill(
-    refreshTopic: Topic[IO, String],
+    linkingTopic: Topic[IO, Unit],
     workDir: fs2.io.file.Path,
     moduleName: String,
     extraBuildArgs: List[String]
@@ -105,7 +107,7 @@ def buildRunnerMill(
     .Stream
     .resource(Watcher.default[IO].evalTap(_.watch(watchLinkComplePath.toNioPath)))
     .flatMap {
-      _.events()
+      _.events(100.millis)
         .evalTap {
           (e: Event) =>
             e match
@@ -113,7 +115,7 @@ def buildRunnerMill(
               case Deleted(path, count) => logger.info("fastLinkJs.json was deleted")
               case Modified(path, count) =>
                 logger.info("fastLinkJs.json was modified - link successful => trigger a refresh") >>
-                  refreshTopic.publish1("refresh")
+                  linkingTopic.publish1(())
               case Overflow(count)                         => logger.info("overflow")
               case NonStandard(event, registeredDirectory) => logger.info("non-standard")
 
