@@ -3,7 +3,6 @@ import scala.concurrent.duration.*
 import org.http4s.*
 import org.http4s.HttpApp
 import org.http4s.HttpRoutes
-import org.http4s.client.Client
 import org.http4s.dsl.io.*
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.ember.server.EmberServerBuilder
@@ -19,14 +18,12 @@ import fs2.concurrent.Topic
 import scribe.Level
 
 import cats.effect.*
-import cats.effect.std.*
 import cats.implicits.*
 
 import _root_.io.circe.*
 import _root_.io.circe.Encoder
 
 import ProxyConfig.Equilibrium
-import scribe.Scribe
 
 sealed trait FrontendEvent derives Encoder.AsObject
 
@@ -265,27 +262,28 @@ object LiveServer
             .toResource
 
           fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
-          fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
           refreshTopic <- Topic[IO, Unit].toResource
           linkingTopic <- Topic[IO, Unit].toResource
           client <- EmberClientBuilder.default[IO].build
+          outDirPath = fs2.io.file.Path(outDir)
+          baseDirPath = fs2.io.file.Path(baseDir)
 
           proxyRoutes: HttpRoutes[IO] <- makeProxyRoutes(client, pathPrefix, proxyConfig)(logger)
 
           _ <- buildRunner(
             buildTool,
             linkingTopic,
-            fs2.io.file.Path(baseDir),
-            fs2.io.file.Path(outDir),
+            baseDirPath,
+            outDirPath,
             extraBuildArgs,
             millModuleName
           )(logger)
 
-          app <- routes(outDir.toString(), refreshTopic, indexOpts, proxyRoutes, fileToHashRef)(logger)
+          app <- routes(outDir, refreshTopic, indexOpts, proxyRoutes, fileToHashRef)(logger)
 
-          _ <- seedMapOnStart(outDir, fileToHashMapRef)(logger)
+          _ <- updateMapRef(outDirPath, fileToHashRef)(logger).toResource
           // _ <- stylesDir.fold(Resource.unit)(sd => seedMapOnStart(sd, mr))
-          _ <- fileWatcher(fs2.io.file.Path(outDir), fileToHashMapRef, linkingTopic, refreshTopic)(logger)
+          _ <- fileWatcher(outDirPath, fileToHashRef, linkingTopic, refreshTopic)(logger)
           // _ <- stylesDir.fold(Resource.unit[IO])(sd => fileWatcher(fs2.io.file.Path(sd), mr))
           _ <- logger.info(s"Start dev server on http://localhost:$port").toResource
           server <- buildServer(app, port)

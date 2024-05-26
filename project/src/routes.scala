@@ -27,7 +27,6 @@ import cats.effect.*
 import cats.effect.IO
 import cats.effect.kernel.Ref
 import cats.effect.kernel.Resource
-import cats.effect.std.*
 import cats.syntax.all.*
 
 import _root_.io.circe.syntax.EncoderOps
@@ -147,37 +146,29 @@ def routes(
 
 end routes
 
-def seedMapOnStart(stringPath: String, mr: MapRef[IO, String, Option[String]])(logger: Scribe[IO]) =
-  val asFs2 = fs2.io.file.Path(stringPath)
-  fs2
-    .io
-    .file
-    .Files[IO]
-    .walk(asFs2)
-    .evalMap {
-      f =>
-        Files[IO]
-          .isRegularFile(f)
-          .ifM(
-            // logger.trace(s"hashing $f") >>
-            fileHash(f).flatMap(
-              h =>
-                val key = asFs2.relativize(f)
-                logger.trace(s"hashing $f to put at $key with hash : $h") >>
-                  mr.setKeyValue(key.toString(), h)
-            ),
-            IO.unit
-          )
-    }
+def updateMapRef(stringPath: fs2.io.file.Path, mr: Ref[IO, Map[String, String]])(logger: Scribe[IO]) =
+  Files[IO]
+    .walk(stringPath)
+    .evalFilter(Files[IO].isRegularFile)
+    .parEvalMap(maxConcurrent = 8)(path => fileHash(path).map(path -> _))
     .compile
-    .drain
-    .toResource
-
-end seedMapOnStart
+    .toVector
+    .flatMap(
+      vector =>
+        val newMap = vector
+          .view
+          .map(
+            (path, hash) =>
+              val relativizedPath = stringPath.relativize(path).toString
+              relativizedPath -> hash
+          )
+          .toMap
+        logger.trace(s"Updated hashes $newMap") *> mr.set(newMap)
+    )
 
 private def fileWatcher(
     stringPath: fs2.io.file.Path,
-    mr: MapRef[IO, String, Option[String]],
+    mr: Ref[IO, Map[String, String]],
     linkingTopic: Topic[IO, Unit],
     refreshTopic: Topic[IO, Unit]
 )(logger: Scribe[IO]): ResourceIO[Unit] =
@@ -185,22 +176,7 @@ private def fileWatcher(
     .subscribe(10)
     .evalTap {
       _ =>
-        fs2
-          .io
-          .file
-          .Files[IO]
-          .list(stringPath)
-          .evalTap {
-            path =>
-              fileHash(path).flatMap(
-                h =>
-                  val serveAt = stringPath.relativize(fs2.io.file.Path(path.toString()))
-                  logger.trace(s"$serveAt :: hash -> $h") >>
-                    mr.setKeyValue(serveAt.toString(), h)
-              )
-          }
-          .compile
-          .drain >> refreshTopic.publish1(())
+        updateMapRef(stringPath, mr)(logger) >> refreshTopic.publish1(())
     }
     .compile
     .drain
