@@ -65,9 +65,8 @@ The file above is a one file example of such a project, satisfying these constra
 
 The dream, is for the CLI to be flexible enough to accomodate more complex scenarios as well.
 
-```sh
-simon@Simons-Mac-mini cwazy % cs launch io.github.quafadas:live-server-scala-cli-js_3:0.0.10 -- --help
-Usage: LiveServer [--project-dir <string>] [--out-dir <string>] [--styles-dir <string>] [--port <integer>] [--proxy-target-port <integer>] [--proxy-prefix-path <string>] [--log-level <string>] --build-tool <string> [--browse-on-open-at <string>] [--extra-build-args <string>]... [--mill-module-name <string>] [--path-to-index-html-template <string>]
+```
+Usage: LiveServer [--project-dir <string>] [--out-dir <string>] [--port <integer>] [--proxy-target-port <integer>] [--proxy-prefix-path <string>] [--log-level <string>] [--build-tool <string>] [--browse-on-open-at <string>] [--extra-build-args <string>]... [--mill-module-name <string>] [--path-to-index-html <string>] [--styles-dir <string>]
 
 Scala JS live server
 
@@ -79,9 +78,7 @@ Options and flags:
     --project-dir <string>
         The fully qualified location of your project - e.g. c:/temp/helloScalaJS
     --out-dir <string>
-        Where the compiled JS will be compiled to - e.g. c:/temp/helloScalaJS/.out
-    --styles-dir <string>
-        A fully qualified path to your styles directory with LESS files in - e.g. c:/temp/helloScalaJS/styles
+        Where the compiled JS will be compiled to - e.g. c:/temp/helloScalaJS/.out. If no file is given, a temporary directory is created.
     --port <integer>
         The port you want to run the server on - e.g. 3000
     --proxy-target-port <integer>
@@ -89,7 +86,7 @@ Options and flags:
     --proxy-prefix-path <string>
         Match routes starting with this prefix - e.g. /api
     --log-level <string>
-        The log level (e.g. info, debug, error, trace)
+        The log level. info, debug, error, trace
     --build-tool <string>
         scala-cli or mill
     --browse-on-open-at <string>
@@ -98,6 +95,10 @@ Options and flags:
         Extra arguments to pass to the build tool
     --mill-module-name <string>
         Extra arguments to pass to the build tool
+    --path-to-index-html <string>
+        a path to a directory which contains index.html. The entire directory will be served as static assets
+    --styles-dir <string>
+        A fully qualified path to your styles directory with LESS files in - e.g. c:/temp/helloScalaJS/styles
 ```
 
 To be minimally viable for me personally,
@@ -139,3 +140,21 @@ App must be mounted to a div, with id `app`.
 ## Contributing
 
 CI builds a container image which is ready to roll.
+
+## Providing your own HTML
+
+You'll need to make sure it includes this script. Otherwise no reload on change.
+
+```html
+    <script>
+      const sse = new EventSource("/api/v1/sse");
+      sse.addEventListener("message", (e) => {
+        const msg = JSON.parse(e.data);
+
+        if ("KeepAlive" in msg) console.log("KeepAlive");
+
+        if ("PageRefresh" in msg) location.reload();
+      });
+    </script>
+
+```
