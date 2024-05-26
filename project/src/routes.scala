@@ -7,6 +7,7 @@ import org.http4s.Request
 import org.http4s.Response
 import org.http4s.ServerSentEvent
 import org.http4s.Status
+import org.http4s.scalatags.*
 import org.http4s.dsl.io.*
 import org.http4s.implicits.*
 import org.http4s.server.Router
@@ -87,48 +88,52 @@ end ETagMiddleware
 def routes(
     stringPath: String,
     refreshTopic: Topic[IO, Unit],
-    stylesPath: Option[String],
+    indexOpts: Option[IndexHtmlConfig],
     proxyRoutes: HttpRoutes[IO],
-    indexHtmlTemplate: String,
     ref: Ref[IO, Map[String, String]]
 )(logger: Scribe[IO]): Resource[IO, HttpApp[IO]] =
 
-  val staticFiles = Router(
-    "" -> fileService[IO](FileService.Config(stringPath))
-  )
+  val linkedAppWithCaching: HttpRoutes[IO] = ETagMiddleware(
+    Router(
+      "" -> fileService[IO](FileService.Config(stringPath))
+    ),
+    ref
+  )(logger)
 
-  val styles =
-    stylesPath.fold(HttpRoutes.empty[IO])(
-      path =>
-        Router(
-          "" -> fileService[IO](FileService.Config(path))
-        )
-    )
-
-  val makeIndex = ref.get.flatMap(mp => logger.trace(mp.toString())) >>
-    (ref
-      .get
-      .map(_.toSeq.map((path, hash) => (fs2.io.file.Path(path), hash)))
-      .map(mods => injectModulePreloads(mods, indexHtmlTemplate)))
-      .map(html => Response[IO]().withEntity(indexHtmlTemplate).withHeaders(Header("Cache-Control", "no-cache")))
-
-  val overrides = HttpRoutes.of[IO] {
+  def generatedIndexHtml(injectStyles: Boolean) = HttpRoutes.of[IO] {
     case GET -> Root =>
-      logger.trace("GET /") >>
-        makeIndex
+      IO(Response[IO]().withEntity(vanillaTemplate(injectStyles)).withHeaders(Header("Cache-Control", "no-cache")))
 
     case GET -> Root / "index.html" =>
-      logger.trace("GET /index.html") >>
-        makeIndex
+      IO(Response[IO]().withEntity(vanillaTemplate(injectStyles)).withHeaders(Header("Cache-Control", "no-cache")))
+  }
 
-    case GET -> Root / "all" =>
-      ref
-        .get
-        .flatTap(m => logger.trace(m.toString))
-        .flatMap {
-          m =>
-            Ok(m.toString)
-        }
+  val staticAssetRoutes: HttpRoutes[IO] = indexOpts match
+    case None => generatedIndexHtml(injectStyles = false)
+    case Some(IndexHtmlConfig(Some(externalPath), None)) =>
+      Router(
+        "" -> fileService[IO](FileService.Config(externalPath.toString()))
+      )
+    case Some(IndexHtmlConfig(None, Some(stylesPath))) =>
+      generatedIndexHtml(injectStyles = true).combineK(
+        Router(
+          "" -> fileService[IO](FileService.Config(stylesPath.toString()))
+        )
+      )
+    case _ =>
+      throw new Exception(
+        "A seperate style path and index.html location were defined, this is not permissable"
+      ) // This should have been validated out earlier
+
+  val refreshRoutes = HttpRoutes.of[IO] {
+    // case GET -> Root / "all" =>
+    //   ref
+    //     .get
+    //     .flatTap(m => logger.trace(m.toString))
+    //     .flatMap {
+    //       m =>
+    //         Ok(m.toString)
+    //     }
     case GET -> Root / "api" / "v1" / "sse" =>
       val keepAlive = fs2.Stream.fixedRate[IO](10.seconds).as(KeepAlive())
       Ok(
@@ -137,11 +142,7 @@ def routes(
           .map(msg => ServerSentEvent(Some(msg.asJson.noSpaces)))
       )
   }
-  val app = overrides
-    .combineK(ETagMiddleware(staticFiles, ref)(logger))
-    .combineK(styles)
-    .combineK(proxyRoutes)
-    .orNotFound
+  val app = refreshRoutes.combineK(linkedAppWithCaching).combineK(staticAssetRoutes).combineK(proxyRoutes).orNotFound
   IO(app).toResource
 
 end routes

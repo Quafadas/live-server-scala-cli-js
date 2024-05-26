@@ -70,13 +70,15 @@ class PlaywrightTest extends munit.FunSuite:
             styleDir(testDir).toString,
             "--port",
             thisTestPort.toString
+            // "--log-level",
+            // "debug"
           )
         )
         .unsafeToFuture()
 
-      Thread.sleep(1500)
+      Thread.sleep(2500)
       val increaseTimeout = ContainsTextOptions()
-      increaseTimeout.setTimeout(30000)
+      increaseTimeout.setTimeout(15000)
 
       page.navigate(s"http://localhost:$thisTestPort")
       assertThat(page.locator("h1")).containsText("HelloWorld", increaseTimeout);
@@ -201,6 +203,8 @@ class PlaywrightTest extends munit.FunSuite:
             thisTestPort.toString,
             "--styles-dir",
             styleDir(testDir).toString
+            // "--log-level",
+            // "debug"
           )
         )
         .unsafeToFuture()
@@ -211,6 +215,9 @@ class PlaywrightTest extends munit.FunSuite:
       assertEquals(out.statusCode, 200)
       assert(out.text().contains("src=\"https://cdn.jsdelivr.net/npm/less"))
       assert(out.text().contains("less.watch()"))
+
+      val out2 = requests.get(s"http://localhost:$thisTestPort/index.less", check = false)
+      assertEquals(out2.statusCode, 200)
 
   }
 

@@ -14,7 +14,7 @@ import munit.CatsEffectSuite
 
 import scala.concurrent.duration.*
 
-class ExampleSuite extends CatsEffectSuite:
+class RoutesSuite extends CatsEffectSuite:
 
   val md = MessageDigest.getInstance("MD5")
   val testStr = "const hi = 'Hello, world'"
@@ -29,6 +29,32 @@ class ExampleSuite extends CatsEffectSuite:
       os.write(tempFile, testStr)
       os.write(tempDir / "test2.js", testStr)
       os.write(tempDir / "test3.js", testStr)
+      tempDir
+    ,
+    teardown = tempDir =>
+      // Always gets called, even if test failed.
+      os.remove.all(tempDir)
+  )
+
+  val externalIndexHtml = FunFixture[os.Path](
+    setup = test =>
+      // create a temp folder
+      val tempDir = os.temp.dir()
+      // create a file in the folder
+      val tempFile = tempDir / "index.html"
+      os.write(tempFile, """<head><title>Test</title></head><body><h1>Test</h1></body>""")
+      os.write(tempDir / "index.less", testStr)
+      tempDir
+    ,
+    teardown = tempDir =>
+      // Always gets called, even if test failed.
+      os.remove.all(tempDir)
+  )
+
+  val externalSyles = FunFixture[os.Path](
+    setup = test =>
+      val tempDir = os.temp.dir()
+      os.write(tempDir / "index.less", testStr)
       tempDir
     ,
     teardown = tempDir =>
@@ -97,7 +123,6 @@ class ExampleSuite extends CatsEffectSuite:
             refreshPub,
             None,
             HttpRoutes.empty[IO],
-            "",
             fileToHashRef
           )(logger)
         yield theseRoutes
@@ -130,6 +155,96 @@ class ExampleSuite extends CatsEffectSuite:
             checks >> testWithETag
 
         }
-
     }
-end ExampleSuite
+
+  FunFixture
+    .map2(files, externalIndexHtml)
+    .test("The files configured externally are served") {
+      (appDir, staticDir) =>
+        val app = for
+          logger <- IO(scribe.cats[IO]).toResource
+          fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+          fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
+          refreshPub <- Topic[IO, Unit].toResource
+          theseRoutes <- routes(
+            appDir.toString,
+            refreshPub,
+            Some(IndexHtmlConfig(Some(staticDir), None)),
+            HttpRoutes.empty[IO],
+            fileToHashRef
+          )(logger)
+        yield theseRoutes
+
+        app.use {
+          served =>
+            val requestHtml = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("/index.html"))
+            val requestLess = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("/index.less"))
+
+            val responseHtml = served(requestHtml)
+            val responseLess = served(requestLess)
+
+            assertIO(responseHtml.map(_.status.code), 200) >>
+              assertIO(responseLess.map(_.status.code), 200)
+        }
+    }
+
+  files.test("That we generate an index.html in the absence of config") {
+    appDir =>
+      val app = for
+        logger <- IO(scribe.cats[IO]).toResource
+        fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+        fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
+        refreshPub <- Topic[IO, Unit].toResource
+        theseRoutes <- routes(
+          appDir.toString,
+          refreshPub,
+          None,
+          HttpRoutes.empty[IO],
+          fileToHashRef
+        )(logger)
+      yield theseRoutes
+
+      app.use {
+        served =>
+          val requestHtml = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("/index.html"))
+          val requestRoot = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("/"))
+
+          val responseHtml = served(requestHtml)
+          val responseRoot = served(requestRoot)
+          assertIO(responseHtml.map(_.status.code), 200) >>
+            assertIO(responseRoot.map(_.status.code), 200)
+      }
+  }
+
+  FunFixture
+    .map2(files, externalSyles)
+    .test("That index.html and index.less is served with style config") {
+      (appDir, styleDir) =>
+        val app = for
+          logger <- IO(scribe.cats[IO]).toResource
+          fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+          fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
+          refreshPub <- Topic[IO, Unit].toResource
+          theseRoutes <- routes(
+            appDir.toString,
+            refreshPub,
+            Some(IndexHtmlConfig(None, Some(styleDir))),
+            HttpRoutes.empty[IO],
+            fileToHashRef
+          )(logger)
+        yield theseRoutes
+
+        app.use {
+          served =>
+            val requestHtml = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("/index.html"))
+            val requestLess = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("/index.less"))
+
+            val responseHtml = served(requestHtml)
+            val responseLess = served(requestLess)
+
+            assertIO(responseHtml.map(_.status.code), 200) >>
+              assertIO(responseLess.map(_.status.code), 200)
+        }
+    }
+
+end RoutesSuite
