@@ -67,8 +67,7 @@ class RoutesSuite extends CatsEffectSuite:
       for
         logger <- IO(scribe.cats[IO]).toResource
         fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
-        fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
-        _ <- seedMapOnStart(tempDir.toString, fileToHashMapRef)(logger)
+        _ <- updateMapRef(tempDir.toFs2, fileToHashRef)(logger).toResource
       yield fileToHashRef
         .get
         .map {
@@ -86,10 +85,9 @@ class RoutesSuite extends CatsEffectSuite:
         fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
         linkingTopic <- Topic[IO, Unit].toResource
         refreshTopic <- Topic[IO, Unit].toResource
-        fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
-        _ <- fileWatcher(fs2.io.file.Path(tempDir.toString), fileToHashMapRef, linkingTopic, refreshTopic)(logger)
+        _ <- fileWatcher(fs2.io.file.Path(tempDir.toString), fileToHashRef, linkingTopic, refreshTopic)(logger)
         _ <- IO.sleep(100.millis).toResource // wait for watcher to start
-        _ <- seedMapOnStart(tempDir.toString, fileToHashMapRef)(logger)
+        _ <- updateMapRef(tempDir.toFs2, fileToHashRef)(logger).toResource
         _ <- IO.blocking(os.write.over(tempDir / "test.js", "const hi = 'bye, world'")).toResource
         _ <- linkingTopic.publish1(()).toResource
         _ <- refreshTopic.subscribe(1).head.compile.resource.drain
@@ -115,8 +113,7 @@ class RoutesSuite extends CatsEffectSuite:
         val app = for
           logger <- IO(scribe.cats[IO]).toResource
           fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
-          fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
-          _ <- seedMapOnStart(tempDir.toString, fileToHashMapRef)(logger)
+          _ <- updateMapRef(tempDir.toFs2, fileToHashRef)(logger).toResource
           refreshPub <- Topic[IO, Unit].toResource
           theseRoutes <- routes(
             tempDir.toString,
