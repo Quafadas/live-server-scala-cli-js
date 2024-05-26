@@ -42,7 +42,6 @@ class PlaywrightTest extends munit.FunSuite:
       // create a temp folder
       val tempDir = os.temp.dir()
       // create a file in the folder
-      os.makeDir.all(outDir(tempDir))
       os.makeDir.all(styleDir(tempDir))
       os.write.over(tempDir / "hello.scala", helloWorldCode("Hello"))
       os.write.over(styleDir(tempDir) / "index.less", "")
@@ -67,8 +66,6 @@ class PlaywrightTest extends munit.FunSuite:
             "scala-cli",
             "--project-dir",
             testDir.toString,
-            "--out-dir",
-            outDir(testDir).toString,
             "--styles-dir",
             styleDir(testDir).toString,
             "--port",
@@ -103,8 +100,6 @@ class PlaywrightTest extends munit.FunSuite:
             "scala-cli",
             "--project-dir",
             testDir.toString,
-            "--out-dir",
-            outDir(testDir).toString,
             "--styles-dir",
             styleDir(testDir).toString,
             "--port",
@@ -146,8 +141,6 @@ class PlaywrightTest extends munit.FunSuite:
             "scala-cli",
             "--project-dir",
             testDir.toString,
-            "--out-dir",
-            outDir(testDir).toString,
             "--styles-dir",
             styleDir(testDir).toString,
             "--port",
@@ -180,8 +173,6 @@ class PlaywrightTest extends munit.FunSuite:
             "scala-cli",
             "--project-dir",
             testDir.toString,
-            "--out-dir",
-            outDir(testDir).toString,
             "--port",
             thisTestPort.toString
           )
@@ -206,8 +197,6 @@ class PlaywrightTest extends munit.FunSuite:
             "scala-cli",
             "--project-dir",
             testDir.toString,
-            "--out-dir",
-            outDir(testDir).toString,
             "--port",
             thisTestPort.toString,
             "--styles-dir",

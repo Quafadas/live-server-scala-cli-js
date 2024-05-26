@@ -1,5 +1,3 @@
-// write a basic http4s server
-
 import scala.concurrent.duration.*
 
 import org.http4s.*
@@ -70,12 +68,6 @@ object LiveServer
     .withShutdownTimeout(10.milli)
     .build
 
-  // override def main: Opts[IO[ExitCode]] =
-  //   (showProcessesOpts orElse buildOpts).map {
-  //     case ShowProcesses(all)           => ???
-  //     case BuildImage(dockerFile, path) => ???
-  //   }
-
   val logLevelOpt: Opts[String] = Opts
     .option[String]("log-level", help = "The log level. info, debug, error, trace)")
     .withDefault("info")
@@ -103,8 +95,13 @@ object LiveServer
       .validate("The project directory should be a fully qualified directory")(s => os.isDir(os.Path(s)))
 
   val outDirOpt = Opts
-    .option[String]("out-dir", "Where the compiled JS will be compiled to - e.g. c:/temp/helloScalaJS/.out")
-    .withDefault((os.pwd / ".out").toString())
+    .option[String](
+      "out-dir",
+      "Where the compiled JS will be compiled to - e.g. c:/temp/helloScalaJS/.out. If no file is given, a temporary directory is created."
+    )
+    .withDefault(
+      os.temp.dir().toString()
+    )
     .validate("Must be a directory")(s => os.isDir(os.Path(s)))
 
   val stylesDirOpt = Opts
@@ -155,8 +152,7 @@ object LiveServer
   val indexHtmlTemplateOpt: Opts[Option[String]] = Opts
     .option[String](
       "path-to-index-html-template",
-      "a path to a file which contains the index.html template you want to use. \n" +
-        "The file _MUST_ have the EXACT string <script __REPLACE_WITH_MODULE_HEADERS__\\> in the header tag/>"
+      "a path to a file which contains the index.html template you want to use."
     )
     .validate(
       "index.html must be a file, with a .html extension, and must contain <head> </head> and <body> </body> tags"

@@ -4,7 +4,7 @@ import $ivy.`com.goyeau::mill-scalafix::0.4.0`
 import $file.playwrightVersion // used to cache in GHA
 
 import io.github.quafadas.millSite._
-import mill._, scalalib._, publish._
+import mill._, scalalib._, publish._, scalanativelib._
 import mill.scalalib.scalafmt.ScalafmtModule
 import de.tobiasroeser.mill.vcs.version._
 
@@ -14,8 +14,9 @@ trait FormatFix extends ScalafmtModule with ScalafixModule{
   override def scalacOptions: Target[Seq[String]] = super.scalacOptions() ++ Seq("-Wunused:all")
 }
 
-object project extends ScalaModule with PublishModule with FormatFix  {
+object project extends ScalaModule with PublishModule with FormatFix /*with ScalaNativeModule*/ {
   def scalaVersion = "3.4.2"
+
   def ivyDeps = super.ivyDeps() ++ Seq(
     ivy"org.http4s::http4s-ember-server::0.23.26",
     ivy"org.http4s::http4s-ember-client::0.23.26",
@@ -59,6 +60,26 @@ object project extends ScalaModule with PublishModule with FormatFix  {
       )
     )
   }
-
+  //def scalaNativeVersion = "0.4.17" // aspirational :-)
 
 }
+
+// SN deps which aren't yet there.
+/**
+1 targets failed
+project.resolvedIvyDeps
+Resolution failed for 2 modules:
+--------------------------------------------
+  com.outr:scribe-cats_native0.4_3:3.13.5
+        not found: /Users/simon/.ivy2/local/com.outr/scribe-cats_native0.4_3/3.13.5/ivys/ivy.xml
+        not found: https://repo1.maven.org/maven2/com/outr/scribe-cats_native0.4_3/3.13.5/scribe-cats_native0.4_3-3.13.5.pom
+  io.circe:circe-yaml_native0.4_3:0.15.1
+        not found: /Users/simon/.ivy2/local/io.circe/circe-yaml_native0.4_3/0.15.1/ivys/ivy.xml
+        not found: https://repo1.maven.org/maven2/io/circe/circe-yaml_native0.4_3/0.15.1/circe-yaml_native0.4_3-0.15.1.pom
+
+--------------------------------------------
+
+For additional information on library dependencies, see the docs at
+https://mill-build.com/mill/Library_Dependencies.html
+
+**/
