@@ -7,3 +7,4 @@ testDir
 .bsp
 out
 .bloop
+.DS_Store
