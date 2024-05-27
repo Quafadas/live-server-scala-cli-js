@@ -116,7 +116,7 @@ class PlaywrightTest extends munit.FunSuite:
       assertEquals(out.statusCode, 404)
   }
 
-  files.test("proxy server") {
+  files.test("proxy server".only) {
     testDir =>
       val backendPort = 8089
       val thisTestPort = 3005

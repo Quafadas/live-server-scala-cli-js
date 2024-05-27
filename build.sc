@@ -29,7 +29,6 @@ object project extends ScalaModule with PublishModule with FormatFix /*with Scal
     ivy"com.monovore::decline::2.4.1",
     ivy"com.monovore::decline-effect::2.4.1",
     ivy"com.lihaoyi::os-lib:0.10.1",
-    ivy"io.circe::circe-yaml::0.15.1",
     ivy"com.outr::scribe-cats::3.13.5"
   )
 
@@ -73,10 +72,6 @@ Resolution failed for 2 modules:
   com.outr:scribe-cats_native0.4_3:3.13.5
         not found: /Users/simon/.ivy2/local/com.outr/scribe-cats_native0.4_3/3.13.5/ivys/ivy.xml
         not found: https://repo1.maven.org/maven2/com/outr/scribe-cats_native0.4_3/3.13.5/scribe-cats_native0.4_3-3.13.5.pom
-  io.circe:circe-yaml_native0.4_3:0.15.1
-        not found: /Users/simon/.ivy2/local/io.circe/circe-yaml_native0.4_3/0.15.1/ivys/ivy.xml
-        not found: https://repo1.maven.org/maven2/io/circe/circe-yaml_native0.4_3/0.15.1/circe-yaml_native0.4_3-0.15.1.pom
-
 --------------------------------------------
 
 For additional information on library dependencies, see the docs at

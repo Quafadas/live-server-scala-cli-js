@@ -24,6 +24,10 @@ import _root_.io.circe.*
 import _root_.io.circe.Encoder
 
 import ProxyConfig.Equilibrium
+import ProxyConfig.Server
+import com.comcast.ip4s.Host
+import cats.data.NonEmptyList
+import ProxyConfig.LocationMatcher
 
 sealed trait FrontendEvent derives Encoder.AsObject
 
@@ -247,12 +251,53 @@ object LiveServer
           .withHandler(minimumLevel = Some(Level.get(lvl).get))
           .replace()
 
-        val proxyConfig: Resource[IO, Option[Equilibrium]] = proxyTarget
+        // val proxyConfig: Resource[IO, Option[Equilibrium]] = proxyTarget
+        //   .zip(pathPrefix)
+        //   .traverse {
+        //     (pt, prfx) =>
+        //       ProxyConfig.loadYaml[IO](makeProxyConfig(port, pt, prfx)).toResource
+        //   }
+
+        val proxyConf2: Resource[IO, Option[Equilibrium]] = proxyTarget
           .zip(pathPrefix)
           .traverse {
             (pt, prfx) =>
-              ProxyConfig.loadYaml[IO](makeProxyConfig(port, pt, prfx)).toResource
+              // ProxyConfig.loadYaml[IO](makeProxyConfig(port, pt, prfx)).toResource
+              IO(
+                Equilibrium(
+                  ProxyConfig.HttpProxyConfig(
+                    servers = NonEmptyList(
+                      Server(
+                        listen = port,
+                        serverNames = List("localhost"),
+                        locations = List(
+                          ProxyConfig.Location(
+                            matcher = LocationMatcher.Prefix(prfx),
+                            proxyPass = s"http://$$backend"
+                          )
+                        )
+                      ),
+                      List()
+                    ),
+                    upstreams = List(
+                      ProxyConfig.Upstream(
+                        name = "backend",
+                        servers = NonEmptyList(
+                          ProxyConfig.UpstreamServer(
+                            host = Host.fromString("localhost").get,
+                            port = pt,
+                            weight = 5
+                          ),
+                          List()
+                        )
+                      )
+                    )
+                  )
+                )
+              )
+
           }
+          .toResource
 
         val server = for
           _ <- logger
@@ -268,7 +313,7 @@ object LiveServer
           outDirPath = fs2.io.file.Path(outDir)
           baseDirPath = fs2.io.file.Path(baseDir)
 
-          proxyRoutes: HttpRoutes[IO] <- makeProxyRoutes(client, pathPrefix, proxyConfig)(logger)
+          proxyRoutes: HttpRoutes[IO] <- makeProxyRoutes(client, pathPrefix, proxyConf2)(logger)
 
           _ <- buildRunner(
             buildTool,
