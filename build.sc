@@ -28,7 +28,6 @@ object project extends ScalaModule with PublishModule with FormatFix /*with Scal
     ivy"com.lihaoyi::scalatags::0.12.0",
     ivy"com.monovore::decline::2.4.1",
     ivy"com.monovore::decline-effect::2.4.1",
-    ivy"com.lihaoyi::os-lib:0.10.1",
     ivy"io.circe::circe-yaml::0.15.1",
     ivy"com.outr::scribe-cats::3.13.5"
   )
@@ -43,7 +42,8 @@ object project extends ScalaModule with PublishModule with FormatFix /*with Scal
       ivy"com.microsoft.playwright:playwright:${playwrightVersion.pwV}",
       ivy"com.microsoft.playwright:driver-bundle:${playwrightVersion.pwV}",
       ivy"org.typelevel::munit-cats-effect::2.0.0-M1",
-      ivy"com.lihaoyi::requests::0.8.2"
+      ivy"com.lihaoyi::requests::0.8.2",
+      ivy"com.lihaoyi::os-lib:0.10.1"
     )
   }
 
