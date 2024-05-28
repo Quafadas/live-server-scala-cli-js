@@ -2,8 +2,6 @@ import scala.concurrent.duration.*
 
 import org.http4s.*
 import org.http4s.HttpApp
-import org.http4s.HttpRoutes
-import org.http4s.dsl.io.*
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.ember.server.EmberServerBuilder
 
@@ -13,6 +11,7 @@ import com.monovore.decline.*
 import com.monovore.decline.effect.*
 
 import fs2.*
+import fs2.io.file.*
 import fs2.concurrent.Topic
 
 import scribe.Level
@@ -24,6 +23,8 @@ import _root_.io.circe.*
 import _root_.io.circe.Encoder
 
 import ProxyConfig.Equilibrium
+
+import scala.util.control.NoStackTrace
 
 sealed trait FrontendEvent derives Encoder.AsObject
 
@@ -48,21 +49,14 @@ http:
           weight: 5
 """
 
-case class IndexHtmlConfig(
-    indexHtmlatPath: Option[IndexHtmlDir],
-    stylesOnly: Option[StyleDir]
-)
+enum IndexHtmlConfig:
+  case IndexHtmlPath(path: Path)
+  case StylesOnly(path: Path)
+end IndexHtmlConfig
 
-type StyleDir = os.Path
-type IndexHtmlDir = os.Path
+case class CliValidationError(message: String) extends NoStackTrace
 
-object LiveServer
-    extends CommandIOApp(
-      name = "LiveServer",
-      header = "Scala JS live server",
-      version = "0.0.1"
-    ):
-
+object LiveServer extends IOApp:
   private val logger = scribe.cats[IO]
 
   private def buildServer(httpApp: HttpApp[IO], port: Port) = EmberServerBuilder
@@ -97,18 +91,14 @@ object LiveServer
   val baseDirOpt =
     Opts
       .option[String]("project-dir", "The fully qualified location of your project - e.g. c:/temp/helloScalaJS")
-      .withDefault(os.pwd.toString())
-      .validate("The project directory should be a fully qualified directory")(s => os.isDir(os.Path(s)))
+      .orNone
 
   val outDirOpt = Opts
     .option[String](
       "out-dir",
       "Where the compiled JS will be compiled to - e.g. c:/temp/helloScalaJS/.out. If no file is given, a temporary directory is created."
     )
-    .withDefault(
-      os.temp.dir().toString()
-    )
-    .validate("Must be a directory")(s => os.isDir(os.Path(s)))
+    .orNone
 
   val portOpt = Opts
     .option[Int]("port", "The port you want to run the server on - e.g. 3000")
@@ -147,46 +137,19 @@ object LiveServer
     )
     .orEmpty
 
-  val stylesDirOpt: Opts[Option[StyleDir]] = Opts
+  val stylesDirOpt: Opts[Option[String]] = Opts
     .option[String](
       "styles-dir",
       "A fully qualified path to your styles directory with LESS files in - e.g. c:/temp/helloScalaJS/styles"
     )
     .orNone
-    .validate("The styles-dir must be a directory, it should have index.less at it's root")(
-      sOpt => sOpt.fold(true)(s => os.isDir(os.Path(s)))
-    )
-    .map(_.map(os.Path(_)))
 
-  val indexHtmlTemplateOpt: Opts[Option[IndexHtmlDir]] = Opts
+  val indexHtmlTemplateOpt: Opts[Option[String]] = Opts
     .option[String](
       "path-to-index-html",
       "a path to a directory which contains index.html. The entire directory will be served as static assets"
     )
     .orNone
-    .validate(
-      "The path-to-index-html must be a directory. The directory must contain an index.html file. index.html must contain <head> </head> and <body> </body> tags"
-    ) {
-      pathOpt =>
-        pathOpt.forall {
-          path =>
-            os.isDir(os.Path(path)) match
-              case false => false
-              case true =>
-                val f = os.Path(path) / "index.html"
-                os.exists(f) match
-                  case false => false
-                  case true =>
-                    val content = os.read(f)
-                    content.contains("</head>") && content.contains("</body>") && content.contains("<head>") && content
-                      .contains(
-                        "<body>"
-                      )
-                end match
-        }
-
-    }
-    .map(_.map(os.Path(_)))
 
   val millModuleNameOpt: Opts[Option[String]] = Opts
     .option[String](
@@ -199,19 +162,7 @@ object LiveServer
     }
     .orNone
 
-  val indexOpts = (indexHtmlTemplateOpt, stylesDirOpt)
-    .mapN(IndexHtmlConfig.apply)
-    .validate("You must provide either a styles directory or an index.html template directory, or neither") {
-      c => c.indexHtmlatPath.isDefined || c.stylesOnly.isDefined || (c.indexHtmlatPath.isEmpty && c.stylesOnly.isEmpty)
-    }
-    .map(
-      c =>
-        c match
-          case IndexHtmlConfig(None, None) => None
-          case _                           => Some(c)
-    )
-
-  override def main: Opts[IO[ExitCode]] =
+  def main: Opts[IO[ExitCode]] =
     (
       baseDirOpt,
       outDirOpt,
@@ -223,11 +174,12 @@ object LiveServer
       openBrowserAtOpt,
       extraBuildArgsOpt,
       millModuleNameOpt,
-      indexOpts
+      stylesDirOpt,
+      indexHtmlTemplateOpt
     ).mapN {
       (
           baseDir,
-          outDir,
+          outDirOpt,
           port,
           proxyTarget,
           pathPrefix,
@@ -236,7 +188,8 @@ object LiveServer
           openBrowserAt,
           extraBuildArgs,
           millModuleName,
-          indexOpts
+          stylesDir,
+          indexHtmlTemplate
       ) =>
 
         scribe
@@ -257,7 +210,7 @@ object LiveServer
         val server = for
           _ <- logger
             .debug(
-              s"baseDir: $baseDir \n outDir: $outDir \n indexOpts: $indexOpts \n port: $port \n proxyTarget: $proxyTarget \n pathPrefix: $pathPrefix \n extraBuildArgs: $extraBuildArgs"
+              s"baseDir: $baseDir \n outDir: $outDirOpt \n stylesDir: $stylesDir \n indexHtmlTemplate: $indexHtmlTemplate \n port: $port \n proxyTarget: $proxyTarget \n pathPrefix: $pathPrefix \n extraBuildArgs: $extraBuildArgs"
             )
             .toResource
 
@@ -265,10 +218,38 @@ object LiveServer
           refreshTopic <- Topic[IO, Unit].toResource
           linkingTopic <- Topic[IO, Unit].toResource
           client <- EmberClientBuilder.default[IO].build
-          outDirPath = fs2.io.file.Path(outDir)
-          baseDirPath = fs2.io.file.Path(baseDir)
+          baseDirPath <- baseDir.fold(Files[IO].currentWorkingDirectory.toResource)(toDirectoryPath)
+          outDirPath <- outDirOpt.fold(Files[IO].tempDirectory)(toDirectoryPath)
+          outDirString = outDirPath.show
+          indexHtmlTemplatePath <- indexHtmlTemplate.traverse(toDirectoryPath)
+          stylesDirPath <- stylesDir.traverse(toDirectoryPath)
 
-          proxyRoutes: HttpRoutes[IO] <- makeProxyRoutes(client, pathPrefix, proxyConfig)(logger)
+          indexOpts <- (indexHtmlTemplatePath, stylesDirPath) match
+            case (Some(html), None) =>
+              val indexHtmlFile = html / "index.html"
+              println(indexHtmlFile)
+              (for
+                indexHtmlExists <- Files[IO].exists(indexHtmlFile)
+                _ <- IO.raiseUnless(indexHtmlExists)(CliValidationError(s"index.html doesn't exist in $html"))
+                indexHtmlIsAFile <- Files[IO].isRegularFile(indexHtmlFile)
+                _ <- IO.raiseUnless(indexHtmlIsAFile)(CliValidationError(s"$indexHtmlFile is not a file"))
+              yield IndexHtmlConfig.IndexHtmlPath(html).some).toResource
+            case (None, Some(styles)) =>
+              val indexLessFile = styles / "index.less"
+              (for
+                indexLessExists <- Files[IO].exists(indexLessFile)
+                _ <- IO.raiseUnless(indexLessExists)(CliValidationError(s"index.html doesn't exist in $styles"))
+                indexLessIsAFile <- Files[IO].isRegularFile(indexLessFile)
+                _ <- IO.raiseUnless(indexLessIsAFile)(CliValidationError(s"$indexLessFile is not a file"))
+              yield IndexHtmlConfig.StylesOnly(styles).some).toResource
+            case (None, None) =>
+              Resource.pure(Option.empty[IndexHtmlConfig])
+            case (Some(_), Some(_)) =>
+              Resource.raiseError[IO, Nothing, Throwable](
+                CliValidationError("path-to-index-html and styles-dir can't be defined at the same time")
+              )
+
+          proxyRoutes <- makeProxyRoutes(client, pathPrefix, proxyConfig)(logger)
 
           _ <- buildRunner(
             buildTool,
@@ -279,7 +260,7 @@ object LiveServer
             millModuleName
           )(logger)
 
-          app <- routes(outDir, refreshTopic, indexOpts, proxyRoutes, fileToHashRef)(logger)
+          app <- routes(outDirString, refreshTopic, indexOpts, proxyRoutes, fileToHashRef)(logger)
 
           _ <- updateMapRef(outDirPath, fileToHashRef)(logger).toResource
           // _ <- stylesDir.fold(Resource.unit)(sd => seedMapOnStart(sd, mr))
@@ -291,7 +272,41 @@ object LiveServer
           - <- openBrowser(Some(openBrowserAt), port)(logger).toResource
         yield server
 
-        server.use(_ => IO.never).as(ExitCode.Success)
+        server
+          .useForever
+          .as(ExitCode.Success)
+          .handleErrorWith {
+            case CliValidationError(message) =>
+              IO.println(s"$message\n${command.showHelp}").as(ExitCode.Error)
+            case error => IO.raiseError(error)
+          }
     }
   end main
+
+  val command =
+    val versionFlag = Opts.flag(
+      long = "version",
+      short = "v",
+      help = "Print the version number and exit.",
+      visibility = Visibility.Partial
+    )
+
+    val version = "0.0.1"
+    val finalOpts = versionFlag.as(IO.println(version).as(ExitCode.Success)).orElse(main)
+    Command(name = "LiveServer", header = "Scala JS live server", helpFlag = true)(finalOpts)
+  end command
+
+  override def run(args: List[String]): IO[ExitCode] =
+    CommandIOApp.run(command, args)
+
+  private def toDirectoryPath(path: String) =
+    val res = Path(path)
+    Files[IO]
+      .isDirectory(res)
+      .toResource
+      .flatMap:
+        case true  => Resource.pure(res)
+        case false => Resource.raiseError[IO, Nothing, Throwable](CliValidationError(s"$path is not a directory"))
+  end toDirectoryPath
+
 end LiveServer
