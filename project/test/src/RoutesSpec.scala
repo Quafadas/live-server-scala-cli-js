@@ -17,6 +17,7 @@ import cats.effect.std.MapRef
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration.*
+import scribe.Level
 
 class RoutesSuite extends CatsEffectSuite:
 
