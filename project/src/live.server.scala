@@ -24,6 +24,9 @@ import _root_.io.circe.*
 import _root_.io.circe.Encoder
 
 import ProxyConfig.Equilibrium
+import org.http4s.server.Router
+import org.http4s.server.staticcontent.fileService
+import org.http4s.server.staticcontent.FileService
 
 sealed trait FrontendEvent derives Encoder.AsObject
 
@@ -129,7 +132,10 @@ object LiveServer
     .orNone
 
   val clientRoutesPrefixOpt = Opts
-    .option[ClientSideRoutesPrefix]("client-side-routes-prefix", "Match routes starting with this prefix - e.g. /app. The server will respond with the index.html file - this enables clientside routing, at any URL below this prefix.")
+    .option[ClientSideRoutesPrefix](
+      "client-side-routes-prefix",
+      "Match routes starting with this prefix - e.g. /app. The server will respond with the index.html file - this enables clientside routing, at any URL below this prefix."
+    )
     .orNone
 
   val buildToolOpt = Opts
@@ -278,34 +284,36 @@ object LiveServer
 
           proxyRoutes: HttpRoutes[IO] <- makeProxyRoutes(client, pathPrefix, proxyConfig)(logger)
 
-          clientRoutes : HttpRoutes[IO] <- (clientRoutesPrefix , indexOpts) match
+          clientRoutes: HttpRoutes[IO] <- (clientRoutesPrefix, indexOpts) match
             case (None, _) => Resource.pure(HttpRoutes.empty[IO])
 
             case (Some(prefix), Some(IndexHtmlConfig(None, Some(stylesPath)))) =>
               Resource.pure(HttpRoutes.of[IO] {
-                case req @ GET -> Root / prefix => vanillaIndexResponse      
-                case req @ _  -> path if path.toString.startsWith(prefix) => vanillaIndexResponse                  
+                case req @ GET -> Root / prefix                          => vanillaIndexResponse(true)
+                case req @ _ -> path if path.toString.startsWith(prefix) => vanillaIndexResponse(true)
               })
 
             case (Some(prefix), Some(IndexHtmlConfig(None, None))) =>
               Resource.pure(HttpRoutes.of[IO] {
-                case req @ GET -> Root / prefix => vanillaIndexResponse      
-                case req @ _  -> path if path.toString.startsWith(prefix) => vanillaIndexResponse                  
-              })            
+                case req @ GET -> Root / prefix                          => vanillaIndexResponse(false)
+                case req @ _ -> path if path.toString.startsWith(prefix) => vanillaIndexResponse(false)
+              })
 
             case (Some(prefix), Some(IndexHtmlConfig(Some(indexHtmlPath), None))) =>
               Resource.pure(HttpRoutes.of[IO] {
-                case req @ GET -> Root / prefix => Router(
-                  "" -> fileService[IO](FileService.Config(indexHtmlPath / "index.html"))
-                )      
-                case req @ _  -> path if path.toString.startsWith(prefix) => Router(
-                  "" -> fileService[IO](FileService.Config(indexHtmlPath / "index.html"))
-                )                   
-              }) 
+                case req @ GET -> Root / prefix =>
+                  StaticFile
+                    .fromPath[IO](fs2.io.file.Path(indexHtmlPath.toString()) / "index.html")
+                    .map(_.withHeaders(Header("Cache-Control", "no-cache")))
+                    .getOrElseF(NotFound())
+                case req @ _ -> path if path.toString.startsWith(prefix) =>
+                  StaticFile
+                    .fromPath[IO](fs2.io.file.Path(indexHtmlPath.toString()) / "index.html")
+                    .map(_.withHeaders(Header("Cache-Control", "no-cache")))
+                    .getOrElseF(NotFound())
+              })
 
             case (Some(prefix), Some(IndexHtmlConfig(Some(indexHtmlPath), Some(stylesPath)))) => ???
-            
-            
 
           _ <- buildRunner(
             buildTool,

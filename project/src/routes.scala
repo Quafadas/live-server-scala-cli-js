@@ -84,7 +84,9 @@ object ETagMiddleware:
   }
 end ETagMiddleware
 
-val vanillaIndexResponse = IO(Response[IO]().withEntity(vanillaTemplate(injectStyles)).withHeaders(Header("Cache-Control", "no-cache")))
+def vanillaIndexResponse(injectStyles: Boolean) = IO(
+  Response[IO]().withEntity(vanillaTemplate(injectStyles)).withHeaders(Header("Cache-Control", "no-cache"))
+)
 
 def routes(
     stringPath: String,
@@ -102,8 +104,8 @@ def routes(
   )(logger)
 
   def generatedIndexHtml(injectStyles: Boolean) = HttpRoutes.of[IO] {
-    case GET -> Root => vanillaIndexResponse    
-    case GET -> Root / "index.html" => vanillaIndexResponse      
+    case GET -> Root                => vanillaIndexResponse(injectStyles)
+    case GET -> Root / "index.html" => vanillaIndexResponse(injectStyles)
   }
 
   val staticAssetRoutes: HttpRoutes[IO] = indexOpts match
