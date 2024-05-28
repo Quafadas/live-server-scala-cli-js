@@ -41,7 +41,7 @@ import cats.effect.std.MapRef
 import fs2.io.file.Path
 import cats.data.OptionT
 
-def buildRunnerMill(
+def staticFileObserver(
     refreshTopic: Topic[IO, Unit],
     staticDir: fs2.io.file.Path
     // mr: MapRef[IO, String, Option[String]]
@@ -90,7 +90,7 @@ def buildRunnerMill(
     .drain
     .background
 
-end buildRunnerMill
+end staticFileObserver
 
 object StaticMiddleware:
 
