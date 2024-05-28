@@ -69,6 +69,11 @@ def routes(
         fs2.io.file.Path(path.toString())
       )(logger)
     case Some(IndexHtmlConfig.StylesOnly(path)) =>
+    case Some(IndexHtmlConfig.IndexHtmlPath(externalPath)) =>
+      Router(
+        "" -> fileService[IO](FileService.Config(externalPath.toString()))
+      )
+    case Some(IndexHtmlConfig.StylesOnly(stylesPath)) =>
       generatedIndexHtml(injectStyles = true).combineK(
         Router(
           "" -> fileService[IO](FileService.Config(path.toString()))
