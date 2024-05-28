@@ -15,7 +15,7 @@ checkOpts:
   mill project.run --help
 
 jvmServe:
-  mill project.run --build-tool scala-cli --project-dir /Users/simon/Code/helloScalaJs --out-dir /Users/simon/Code/helloScalaJs/out --styles-dir /Users/simon/Code/helloScalaJs/styles --log-level info --browse-on-open-at / --port 3005
+  mill -w project.runBackground --build-tool scala-cli --project-dir /Users/simon/Code/indigoLite --log-level info --browse-on-open-at / --path-to-index-html /Users/simon/Code/indigoLite/static --log-level trace
 
 jvmServeNoStyles:
   mill project.run --build-tool scala-cli --project-dir /Users/simon/Code/helloScalaJs --out-dir /Users/simon/Code/helloScalaJs/out
