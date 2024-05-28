@@ -55,6 +55,8 @@ case class IndexHtmlConfig(
 
 type StyleDir = os.Path
 type IndexHtmlDir = os.Path
+type ProxyPrefix = String
+type ClientSideRoutesPrefix = String
 
 object LiveServer
     extends CommandIOApp(
@@ -123,7 +125,11 @@ object LiveServer
     .map(i => i.flatMap(Port.fromInt))
 
   val proxyPathMatchPrefixOpt = Opts
-    .option[String]("proxy-prefix-path", "Match routes starting with this prefix - e.g. /api")
+    .option[ProxyPrefix]("proxy-prefix-path", "Match routes starting with this prefix - e.g. /api")
+    .orNone
+
+  val clientRoutesPrefixOpt = Opts
+    .option[ClientSideRoutesPrefix]("client-side-routes-prefix", "Match routes starting with this prefix - e.g. /app. The server will respond with the index.html file - this enables clientside routing, at any URL below this prefix.")
     .orNone
 
   val buildToolOpt = Opts
@@ -218,6 +224,7 @@ object LiveServer
       portOpt,
       proxyPortTargetOpt,
       proxyPathMatchPrefixOpt,
+      clientRoutesPrefixOpt,
       logLevelOpt,
       buildToolOpt,
       openBrowserAtOpt,
@@ -231,6 +238,7 @@ object LiveServer
           port,
           proxyTarget,
           pathPrefix,
+          clientRoutesPrefix,
           lvl,
           buildTool,
           openBrowserAt,
@@ -269,6 +277,35 @@ object LiveServer
           baseDirPath = fs2.io.file.Path(baseDir)
 
           proxyRoutes: HttpRoutes[IO] <- makeProxyRoutes(client, pathPrefix, proxyConfig)(logger)
+
+          clientRoutes : HttpRoutes[IO] <- (clientRoutesPrefix , indexOpts) match
+            case (None, _) => Resource.pure(HttpRoutes.empty[IO])
+
+            case (Some(prefix), Some(IndexHtmlConfig(None, Some(stylesPath)))) =>
+              Resource.pure(HttpRoutes.of[IO] {
+                case req @ GET -> Root / prefix => vanillaIndexResponse      
+                case req @ _  -> path if path.toString.startsWith(prefix) => vanillaIndexResponse                  
+              })
+
+            case (Some(prefix), Some(IndexHtmlConfig(None, None))) =>
+              Resource.pure(HttpRoutes.of[IO] {
+                case req @ GET -> Root / prefix => vanillaIndexResponse      
+                case req @ _  -> path if path.toString.startsWith(prefix) => vanillaIndexResponse                  
+              })            
+
+            case (Some(prefix), Some(IndexHtmlConfig(Some(indexHtmlPath), None))) =>
+              Resource.pure(HttpRoutes.of[IO] {
+                case req @ GET -> Root / prefix => Router(
+                  "" -> fileService[IO](FileService.Config(indexHtmlPath / "index.html"))
+                )      
+                case req @ _  -> path if path.toString.startsWith(prefix) => Router(
+                  "" -> fileService[IO](FileService.Config(indexHtmlPath / "index.html"))
+                )                   
+              }) 
+
+            case (Some(prefix), Some(IndexHtmlConfig(Some(indexHtmlPath), Some(stylesPath)))) => ???
+            
+            
 
           _ <- buildRunner(
             buildTool,
