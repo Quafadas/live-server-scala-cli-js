@@ -13,6 +13,7 @@ import cats.effect.std.MapRef
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration.*
+import scribe.Level
 
 class RoutesSuite extends CatsEffectSuite:
 
@@ -243,5 +244,52 @@ class RoutesSuite extends CatsEffectSuite:
               assertIO(responseLess.map(_.status.code), 200)
         }
     }
+
+  externalIndexHtml.test("Static files are updated when needed".only) {
+    staticDir =>
+      scribe
+        .Logger
+        .root
+        .clearHandlers()
+        .clearModifiers()
+        .withHandler(minimumLevel = Some(Level.get("trace").get))
+        .replace()
+
+    val hash = fileLastModified((staticDir / "index.html").toNIO)
+    val app = for
+      logger <- IO(scribe.cats[IO]).toResource
+      fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+      fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
+      refreshPub <- Topic[IO, Unit].toResource
+      theseRoutes <- routes(
+        os.temp.dir().toString,
+        refreshPub,
+        Some(IndexHtmlConfig(Some(staticDir), None)),
+        HttpRoutes.empty[IO],
+        fileToHashRef
+      )(logger)
+    yield (theseRoutes, logger)
+
+    app
+      .both(hash.toResource)
+      .use {
+        case ((served, logger), firstModified) =>
+          val request1 = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("/index.html"))
+
+          val request2 = org
+            .http4s
+            .Request[IO](uri = org.http4s.Uri.unsafeFromString("/index.html"))
+            .withHeaders(
+              org.http4s.Headers.of(org.http4s.Header.Raw(ci"If-Modified-Since", firstModified.toString()))
+            )
+
+          served(request1).flatTap(r => logger.debug("headers" + r.headers.headers.mkString(","))) >>
+            assertIO(served(request1).map(_.status.code), 200) >>
+            assertIO(served(request2).map(_.status.code), 304) >>
+            IO.blocking(os.write.over(staticDir / "index.html", """<head><title>Test</title></head>""")) >>
+            assertIO(served(request2).map(_.status.code), 200)
+
+      }
+  }
 
 end RoutesSuite

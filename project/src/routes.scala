@@ -110,9 +110,13 @@ def routes(
   val staticAssetRoutes: HttpRoutes[IO] = indexOpts match
     case None => generatedIndexHtml(injectStyles = false)
     case Some(IndexHtmlConfig(Some(externalPath), None)) =>
-      Router(
-        "" -> fileService[IO](FileService.Config(externalPath.toString()))
-      )
+      StaticMiddleware(
+        Router(
+          "" -> fileService[IO](FileService.Config(externalPath.toString()))
+        ),
+        fs2.io.file.Path(externalPath.toString())
+      )(logger)
+
     case Some(IndexHtmlConfig(None, Some(stylesPath))) =>
       generatedIndexHtml(injectStyles = true).combineK(
         Router(
