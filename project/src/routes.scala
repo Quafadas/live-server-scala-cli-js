@@ -6,14 +6,12 @@ import org.http4s.HttpRoutes
 import org.http4s.Request
 import org.http4s.Response
 import org.http4s.ServerSentEvent
-import org.http4s.Status
 import org.http4s.dsl.io.*
 import org.http4s.implicits.*
 import org.http4s.scalatags.*
 import org.http4s.server.Router
 import org.http4s.server.staticcontent.*
 import org.http4s.server.staticcontent.FileService
-import org.typelevel.ci.CIStringSyntax
 
 import fs2.*
 import fs2.concurrent.Topic
@@ -30,11 +28,6 @@ import cats.effect.kernel.Resource
 import cats.syntax.all.*
 
 import _root_.io.circe.syntax.EncoderOps
-import java.time.Instant
-import java.time.format.DateTimeFormatter
-import java.time.ZonedDateTime
-import java.time.ZoneId
-import cats.instances.map
 
 def routes(
     stringPath: String,
@@ -61,6 +54,7 @@ def routes(
   // val formatter = DateTimeFormatter.RFC_1123_DATE_TIME
   val staticAssetRoutes: HttpRoutes[IO] = indexOpts match
     case None => generatedIndexHtml(injectStyles = false)
+
     case Some(IndexHtmlConfig.IndexHtmlPath(path)) =>
       StaticMiddleware(
         Router(
@@ -68,10 +62,11 @@ def routes(
         ),
         fs2.io.file.Path(path.toString())
       )(logger)
-    case Some(IndexHtmlConfig.StylesOnly(path)) =>
+
+    case Some(IndexHtmlConfig.StylesOnly(stylesPath)) =>
       generatedIndexHtml(injectStyles = true).combineK(
         Router(
-          "" -> fileService[IO](FileService.Config(path.toString()))
+          "" -> fileService[IO](FileService.Config(stylesPath.toString()))
         )
       )
 

@@ -20,7 +20,6 @@ jvmServe:
 goViteless:
   mill -w project.run --project-dir /Users/simon/Code/viteless --styles-dir /Users/simon/Code/viteless/styles
 
-
 jvmServeNoStyles:
   mill project.run --build-tool scala-cli --project-dir /Users/simon/Code/helloScalaJs --out-dir /Users/simon/Code/helloScalaJs/out --log-level trace
 

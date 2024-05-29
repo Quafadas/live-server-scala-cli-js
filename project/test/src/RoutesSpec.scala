@@ -1,4 +1,7 @@
 import java.security.MessageDigest
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
 
 import scala.concurrent.duration.*
 
@@ -13,12 +16,6 @@ import cats.effect.kernel.Ref
 import cats.effect.std.MapRef
 
 import munit.CatsEffectSuite
-
-import scala.concurrent.duration.*
-import scribe.Level
-import java.time.ZonedDateTime
-import java.time.ZoneId
-import java.time.Instant
 
 class RoutesSuite extends CatsEffectSuite:
 
