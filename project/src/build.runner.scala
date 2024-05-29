@@ -13,8 +13,8 @@ import fs2.io.process.Processes
 import scribe.Scribe
 
 import cats.effect.IO
-import cats.effect.OutcomeIO
 import cats.effect.ResourceIO
+import cats.syntax.all.*
 
 import scala.concurrent.duration.*
 
@@ -31,7 +31,7 @@ def buildRunner(
     millModuleName: Option[String]
 )(
     logger: Scribe[IO]
-): ResourceIO[IO[OutcomeIO[Unit]]] = tool match
+): ResourceIO[Unit] = tool match
   case scli: ScalaCli => buildRunnerScli(linkingTopic, workDir, outDir, extraBuildArgs)(logger)
   case m: Mill =>
     buildRunnerMill(
@@ -48,14 +48,14 @@ def buildRunnerScli(
     extraBuildArgs: List[String]
 )(
     logger: Scribe[IO]
-): ResourceIO[IO[OutcomeIO[Unit]]] =
+): ResourceIO[Unit] =
   val scalaCliArgs = List(
     "--power",
     "package",
     "--js",
     ".",
     "-o",
-    outDir.toString(),
+    outDir.show,
     "-f",
     "-w"
   ) ++ extraBuildArgs
@@ -90,6 +90,7 @@ def buildRunnerScli(
                 .drain
           }
           .background
+          .void
     )
 end buildRunnerScli
 
@@ -100,7 +101,7 @@ def buildRunnerMill(
     extraBuildArgs: List[String]
 )(
     logger: Scribe[IO]
-): ResourceIO[IO[OutcomeIO[Unit]]] =
+): ResourceIO[Unit] =
   val watchLinkComplePath = workDir / "out" / moduleName / "fastLinkJS.json"
 
   val watcher = fs2
@@ -124,6 +125,7 @@ def buildRunnerMill(
     .compile
     .drain
     .background
+    .void
 
   // TODO pipe this to stdout so that we can see linker progress / errors.
   val builder = ProcessBuilder(
@@ -132,14 +134,14 @@ def buildRunnerMill(
       "-w",
       s"$moduleName.fastLinkJS"
     ) ++ extraBuildArgs
-  ).withWorkingDirectory(workDir).spawn[IO].useForever.map(_ => ()).background
+  ).withWorkingDirectory(workDir).spawn[IO].useForever.map(_ => ()).background.void
 
   for
     _ <- logger.trace("Starting buildRunnerMill").toResource
     _ <- logger.trace(s"watching path $watchLinkComplePath").toResource
-    builder <- builder
-    watcher <- watcher
-  yield builder >> watcher
+    _ <- builder
+    _ <- watcher
+  yield ()
   end for
 
 end buildRunnerMill

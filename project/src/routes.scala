@@ -109,20 +109,16 @@ def routes(
 
   val staticAssetRoutes: HttpRoutes[IO] = indexOpts match
     case None => generatedIndexHtml(injectStyles = false)
-    case Some(IndexHtmlConfig(Some(externalPath), None)) =>
+    case Some(IndexHtmlConfig.IndexHtmlPath(externalPath)) =>
       Router(
         "" -> fileService[IO](FileService.Config(externalPath.toString()))
       )
-    case Some(IndexHtmlConfig(None, Some(stylesPath))) =>
+    case Some(IndexHtmlConfig.StylesOnly(stylesPath)) =>
       generatedIndexHtml(injectStyles = true).combineK(
         Router(
           "" -> fileService[IO](FileService.Config(stylesPath.toString()))
         )
       )
-    case _ =>
-      throw new Exception(
-        "A seperate style path and index.html location were defined, this is not permissable"
-      ) // This should have been validated out earlier
 
   val refreshRoutes = HttpRoutes.of[IO] {
     // case GET -> Root / "all" =>
