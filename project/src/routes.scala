@@ -61,6 +61,7 @@ def routes(
   // val formatter = DateTimeFormatter.RFC_1123_DATE_TIME
   val staticAssetRoutes: HttpRoutes[IO] = indexOpts match
     case None => generatedIndexHtml(injectStyles = false)
+
     case Some(IndexHtmlConfig.IndexHtmlPath(path)) =>
       StaticMiddleware(
         Router(
@@ -68,6 +69,7 @@ def routes(
         ),
         fs2.io.file.Path(path.toString())
       )(logger)
+
     case Some(IndexHtmlConfig.StylesOnly(stylesPath)) =>
       generatedIndexHtml(injectStyles = true).combineK(
         Router(
