@@ -107,7 +107,7 @@ trait PlaywrightTest extends munit.FunSuite:
         )
         .unsafeToFuture()
 
-      Thread.sleep(3000)
+      Thread.sleep(3500)
       val increaseTimeout = ContainsTextOptions()
       increaseTimeout.setTimeout(15000)
 
