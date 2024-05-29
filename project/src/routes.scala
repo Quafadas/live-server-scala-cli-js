@@ -68,10 +68,6 @@ def routes(
         ),
         fs2.io.file.Path(path.toString())
       )(logger)
-    case Some(IndexHtmlConfig.IndexHtmlPath(externalPath)) =>
-      Router(
-        "" -> fileService[IO](FileService.Config(externalPath.toString()))
-      )
     case Some(IndexHtmlConfig.StylesOnly(stylesPath)) =>
       Router(
         "" -> fileService[IO](FileService.Config(stylesPath.toString()))
