@@ -6,11 +6,11 @@ import org.http4s.ember.server.EmberServerBuilder
 
 import com.comcast.ip4s.Port
 import com.microsoft.playwright.*
+import com.microsoft.playwright.assertions.LocatorAssertions.ContainsTextOptions
 import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
-import com.microsoft.playwright.assertions.LocatorAssertions.ContainsTextOptions
 
 /*
 Run

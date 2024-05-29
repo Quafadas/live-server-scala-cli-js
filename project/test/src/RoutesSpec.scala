@@ -1,5 +1,7 @@
 import java.security.MessageDigest
 
+import scala.concurrent.duration.*
+
 import org.http4s.HttpRoutes
 import org.typelevel.ci.CIStringSyntax
 

@@ -7,9 +7,9 @@ import org.http4s.Request
 import org.http4s.Response
 import org.http4s.ServerSentEvent
 import org.http4s.Status
-import org.http4s.scalatags.*
 import org.http4s.dsl.io.*
 import org.http4s.implicits.*
+import org.http4s.scalatags.*
 import org.http4s.server.Router
 import org.http4s.server.staticcontent.*
 import org.http4s.server.staticcontent.FileService

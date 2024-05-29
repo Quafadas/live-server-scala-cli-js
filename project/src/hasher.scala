@@ -1,6 +1,6 @@
+import fs2.io.file.*
+
 import cats.effect.IO
-import java.nio.file.Path
-import scala.concurrent.duration.FiniteDuration
 
 // TODO: Use last modified time once scala-cli stops
 //       copy pasting the files from a temporary directory
