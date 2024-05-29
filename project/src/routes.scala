@@ -69,8 +69,10 @@ def routes(
         fs2.io.file.Path(path.toString())
       )(logger)
     case Some(IndexHtmlConfig.StylesOnly(stylesPath)) =>
-      Router(
-        "" -> fileService[IO](FileService.Config(stylesPath.toString()))
+      generatedIndexHtml(injectStyles = true).combineK(
+        Router(
+          "" -> fileService[IO](FileService.Config(stylesPath.toString()))
+        )
       )
 
   val refreshRoutes = HttpRoutes.of[IO] {
