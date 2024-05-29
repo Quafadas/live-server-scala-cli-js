@@ -17,8 +17,46 @@ Run
 cs launch com.microsoft.playwright:playwright:1.41.1 -M "com.microsoft.playwright.CLI" -- install --with-deps
 before this test, to make sure that the driver bundles are downloaded.
  */
-class PlaywrightTest extends munit.FunSuite:
 
+class FirefoxSuite extends PlaywrightTest:
+
+  override def beforeAll(): Unit =
+    basePort = 5000
+    pw = Playwright.create()
+    browser = pw.firefox().launch(options);
+    page = browser.newPage();
+    page.setDefaultTimeout(30000)
+  end beforeAll
+
+end FirefoxSuite
+
+class SafariSuite extends PlaywrightTest:
+
+  override def beforeAll(): Unit =
+    basePort = 4000
+    pw = Playwright.create()
+    browser = pw.webkit().launch(options);
+    page = browser.newPage();
+    page.setDefaultTimeout(30000)
+  end beforeAll
+
+end SafariSuite
+
+class ChromeSuite extends PlaywrightTest:
+
+  override def beforeAll(): Unit =
+    basePort = 3000
+    pw = Playwright.create()
+    browser = pw.chromium().launch(options);
+    page = browser.newPage();
+    page.setDefaultTimeout(30000)
+  end beforeAll
+
+end ChromeSuite
+
+trait PlaywrightTest extends munit.FunSuite:
+
+  var basePort: Int = uninitialized
   var pw: Playwright = uninitialized
   var browser: Browser = uninitialized
   var page: Page = uninitialized
@@ -29,13 +67,6 @@ class PlaywrightTest extends munit.FunSuite:
   // def testDir(base: os.Path) = os.pwd / "testDir"
   def outDir(base: os.Path) = base / ".out"
   def styleDir(base: os.Path) = base / "styles"
-
-  override def beforeAll(): Unit =
-    pw = Playwright.create()
-    browser = pw.chromium().launch(options);
-    page = browser.newPage();
-    page.setDefaultTimeout(30000)
-  end beforeAll
 
   val files = FunFixture[os.Path](
     setup = test =>
@@ -55,7 +86,7 @@ class PlaywrightTest extends munit.FunSuite:
 
   files.test("incremental") {
     testDir =>
-      val thisTestPort = 3001
+      val thisTestPort = basePort + 1
       os.write.over(styleDir(testDir) / "index.less", "")
       os.proc("scala-cli", "compile", testDir.toString).call(cwd = testDir)
 
@@ -76,7 +107,7 @@ class PlaywrightTest extends munit.FunSuite:
         )
         .unsafeToFuture()
 
-      Thread.sleep(2500)
+      Thread.sleep(3000)
       val increaseTimeout = ContainsTextOptions()
       increaseTimeout.setTimeout(15000)
 
@@ -94,7 +125,7 @@ class PlaywrightTest extends munit.FunSuite:
 
   files.test("no proxy server") {
     testDir =>
-      val thisTestPort = 3000
+      val thisTestPort = basePort + 2
       LiveServer
         .run(
           List(
@@ -119,7 +150,7 @@ class PlaywrightTest extends munit.FunSuite:
   files.test("proxy server") {
     testDir =>
       val backendPort = 8089
-      val thisTestPort = 3005
+      val thisTestPort = basePort + 3
       // use http4s to instantiate a simple server that responds to /api/hello with 200, use Http4sEmberServer
       EmberServerBuilder
         .default[IO]
@@ -167,7 +198,7 @@ class PlaywrightTest extends munit.FunSuite:
 
   files.test("no styles") {
     testDir =>
-      val thisTestPort = 3002
+      val thisTestPort = basePort + 4
       LiveServer
         .run(
           List(
@@ -191,7 +222,7 @@ class PlaywrightTest extends munit.FunSuite:
 
   files.test("with styles") {
     testDir =>
-      val thisTestPort = 3003
+      val thisTestPort = basePort + 5
       LiveServer
         .run(
           List(

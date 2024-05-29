@@ -91,6 +91,20 @@ val formatter = DateTimeFormatter.RFC_1123_DATE_TIME
 def httpCacheFormat(zdt: ZonedDateTime): String =
   formatter.format(zdt)
 
+object NoCacheMiddlware:
+
+  def apply(service: HttpRoutes[IO]): HttpRoutes[IO] = Kleisli {
+    (req: Request[IO]) =>
+      service(req).map {
+        resp =>
+          resp.putHeaders(
+            Header.Raw(ci"Cache-Control", "no-cache")
+          )
+      }
+  }
+
+end NoCacheMiddlware
+
 object StaticMiddleware:
   def apply(service: HttpRoutes[IO], staticDir: Path)(logger: Scribe[IO]): HttpRoutes[IO] = Kleisli {
     (req: Request[IO]) =>
