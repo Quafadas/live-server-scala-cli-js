@@ -2,6 +2,8 @@ import java.security.MessageDigest
 
 import scala.concurrent.duration.*
 
+import scala.concurrent.duration.*
+
 import org.http4s.HttpRoutes
 import org.typelevel.ci.CIStringSyntax
 
@@ -15,10 +17,6 @@ import cats.effect.std.MapRef
 import munit.CatsEffectSuite
 
 import scala.concurrent.duration.*
-import scribe.Level
-import java.time.ZonedDateTime
-import java.time.ZoneId
-import java.time.Instant
 
 class RoutesSuite extends CatsEffectSuite:
 

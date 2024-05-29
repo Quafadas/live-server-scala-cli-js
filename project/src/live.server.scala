@@ -12,7 +12,6 @@ import com.monovore.decline.*
 import com.monovore.decline.effect.*
 
 import fs2.*
-import fs2.io.file.*
 import fs2.concurrent.Topic
 import fs2.io.file.*
 
@@ -25,8 +24,6 @@ import _root_.io.circe.*
 import _root_.io.circe.Encoder
 
 import ProxyConfig.Equilibrium
-
-import scala.util.control.NoStackTrace
 
 sealed trait FrontendEvent derives Encoder.AsObject
 
