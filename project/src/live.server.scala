@@ -1,4 +1,5 @@
 import scala.concurrent.duration.*
+import scala.util.control.NoStackTrace
 
 import org.http4s.*
 import org.http4s.HttpApp
@@ -11,8 +12,8 @@ import com.monovore.decline.*
 import com.monovore.decline.effect.*
 
 import fs2.*
-import fs2.io.file.*
 import fs2.concurrent.Topic
+import fs2.io.file.*
 
 import scribe.Level
 
@@ -23,8 +24,6 @@ import _root_.io.circe.*
 import _root_.io.circe.Encoder
 
 import ProxyConfig.Equilibrium
-
-import scala.util.control.NoStackTrace
 
 sealed trait FrontendEvent derives Encoder.AsObject
 

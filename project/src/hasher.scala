@@ -1,5 +1,6 @@
-import cats.effect.IO
 import fs2.io.file.*
+
+import cats.effect.IO
 
 // TODO: Use last modified time once scala-cli stops
 //       copy pasting the files from a temporary directory

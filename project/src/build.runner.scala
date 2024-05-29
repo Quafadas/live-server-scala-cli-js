@@ -1,3 +1,5 @@
+import scala.concurrent.duration.*
+
 import fs2.*
 import fs2.concurrent.Topic
 import fs2.io.Watcher
@@ -15,8 +17,6 @@ import scribe.Scribe
 import cats.effect.IO
 import cats.effect.ResourceIO
 import cats.syntax.all.*
-
-import scala.concurrent.duration.*
 
 sealed trait BuildTool
 class ScalaCli extends BuildTool
