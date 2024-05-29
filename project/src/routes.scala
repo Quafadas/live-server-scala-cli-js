@@ -65,8 +65,10 @@ def routes(
 
     case Some(IndexHtmlConfig.StylesOnly(stylesPath)) =>
       generatedIndexHtml(injectStyles = true).combineK(
-        Router(
-          "" -> fileService[IO](FileService.Config(stylesPath.toString()))
+        NoCacheMiddlware(
+          Router(
+            "" -> fileService[IO](FileService.Config(stylesPath.toString()))
+          )
         )
       )
 
