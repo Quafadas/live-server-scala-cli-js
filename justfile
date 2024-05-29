@@ -17,8 +17,12 @@ checkOpts:
 jvmServe:
   mill -w project.runBackground --build-tool scala-cli --project-dir /Users/simon/Code/indigoLite --log-level info --browse-on-open-at / --path-to-index-html /Users/simon/Code/indigoLite/static --log-level trace
 
+goViteless:
+  mill -w project.run --project-dir /Users/simon/Code/viteless --styles-dir /Users/simon/Code/viteless/styles
+
+
 jvmServeNoStyles:
-  mill project.run --build-tool scala-cli --project-dir /Users/simon/Code/helloScalaJs --out-dir /Users/simon/Code/helloScalaJs/out
+  mill project.run --build-tool scala-cli --project-dir /Users/simon/Code/helloScalaJs --out-dir /Users/simon/Code/helloScalaJs/out --log-level trace
 
 jvmLinker:
   mill project.run --build-tool scala-cli --project-dir /Users/simon/Code/helloScalaJs --out-dir /Users/simon/Code/helloScalaJs/out --extra-build-args --js-cli-on-jvm --port 3007
