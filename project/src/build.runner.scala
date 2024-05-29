@@ -18,8 +18,6 @@ import cats.effect.IO
 import cats.effect.ResourceIO
 import cats.syntax.all.*
 
-import scala.concurrent.duration.*
-
 sealed trait BuildTool
 class ScalaCli extends BuildTool
 class Mill extends BuildTool
