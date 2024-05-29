@@ -266,7 +266,7 @@ class RoutesSuite extends CatsEffectSuite:
         theseRoutes <- routes(
           os.temp.dir().toString,
           refreshPub,
-          Some(IndexHtmlConfig(Some(staticDir), None)),
+          Some(IndexHtmlConfig.IndexHtmlPath(staticDir.toFs2)),
           HttpRoutes.empty[IO],
           fileToHashRef
         )(logger)

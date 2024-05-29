@@ -34,6 +34,7 @@ import java.time.Instant
 import java.time.format.DateTimeFormatter
 import java.time.ZonedDateTime
 import java.time.ZoneId
+import cats.instances.map
 
 def routes(
     stringPath: String,
@@ -60,14 +61,17 @@ def routes(
   // val formatter = DateTimeFormatter.RFC_1123_DATE_TIME
   val staticAssetRoutes: HttpRoutes[IO] = indexOpts match
     case None => generatedIndexHtml(injectStyles = false)
-    case Some(IndexHtmlConfig.IndexHtmlPath(externalPath)) =>
-      Router(
-        "" -> fileService[IO](FileService.Config(externalPath.toString()))
-      )
-    case Some(IndexHtmlConfig.StylesOnly(stylesPath)) =>
+    case Some(IndexHtmlConfig.IndexHtmlPath(path)) =>
+      StaticMiddleware(
+        Router(
+          "" -> fileService[IO](FileService.Config(path.toString()))
+        ),
+        fs2.io.file.Path(path.toString())
+      )(logger)
+    case Some(IndexHtmlConfig.StylesOnly(path)) =>
       generatedIndexHtml(injectStyles = true).combineK(
         Router(
-          "" -> fileService[IO](FileService.Config(stylesPath.toString()))
+          "" -> fileService[IO](FileService.Config(path.toString()))
         )
       )
 

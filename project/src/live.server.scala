@@ -264,12 +264,11 @@ object LiveServer extends IOApp:
           _ <- updateMapRef(outDirPath, fileToHashRef)(logger).toResource
           // _ <- stylesDir.fold(Resource.unit)(sd => seedMapOnStart(sd, mr))
           _ <- fileWatcher(outDirPath, fileToHashRef, linkingTopic, refreshTopic)(logger)
-          _ <- indexOpts
-            .collect {
-              case IndexHtmlConfig(Some(indexHtmlatPath), _) =>
-                staticWatcher(refreshTopic, fs2.io.file.Path(indexHtmlatPath.toString))(logger)
-            }
-            .getOrElse(Resource.unit[IO])
+          _ <- indexOpts.match
+            case Some(IndexHtmlConfig.IndexHtmlPath(indexHtmlatPath)) =>
+              staticWatcher(refreshTopic, fs2.io.file.Path(indexHtmlatPath.toString))(logger)
+            case _ => Resource.unit[IO]
+
           // _ <- stylesDir.fold(Resource.unit[IO])(sd => fileWatcher(fs2.io.file.Path(sd), mr))
           _ <- logger.info(s"Start dev server on http://localhost:$port").toResource
           server <- buildServer(app, port)
