@@ -1,7 +1,6 @@
 .scala-build
 .metals
 .bsp
-.vscode
 native
 testDir
 .bsp

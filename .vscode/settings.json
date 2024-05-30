@@ -1,0 +1,11 @@
+{
+  "files.watcherExclude": {
+    "**/target": true
+  },
+  "remote.extensionKind": {
+    "scalameta.metals": [
+      "workspace"
+    ]
+  }
+
+}
