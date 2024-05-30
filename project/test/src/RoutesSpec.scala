@@ -5,12 +5,21 @@ import java.time.ZonedDateTime
 
 import scala.concurrent.duration.*
 
+import org.http4s.*
 import org.http4s.HttpRoutes
+import org.http4s.client.Client
+import org.http4s.implicits.*
+import org.http4s.server.middleware.ErrorAction
 import org.typelevel.ci.CIStringSyntax
 
 import fs2.concurrent.Topic
+import fs2.io.file.Files
 import fs2.io.file.Path
 
+import scribe.Level
+import scribe.Scribe
+
+import cats.effect.*
 import cats.effect.IO
 import cats.effect.kernel.Ref
 import cats.effect.std.MapRef
@@ -22,6 +31,7 @@ class RoutesSuite extends CatsEffectSuite:
   val md = MessageDigest.getInstance("MD5")
   val testStr = "const hi = 'Hello, world'"
   val testHash = md.digest(testStr.getBytes()).map("%02x".format(_)).mkString
+  given filesInstance: Files[IO] = Files.forAsync[IO]
 
   val files = FunFixture[os.Path](
     setup = test =>
@@ -110,52 +120,89 @@ class RoutesSuite extends CatsEffectSuite:
 
   }
 
-  files
-    .test("That the routes serve files on first call with a 200, that the eTag is set, and on second call with a 304") {
-      tempDir =>
-        val app = for
-          logger <- IO(scribe.cats[IO]).toResource
-          fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
-          _ <- updateMapRef(tempDir.toFs2, fileToHashRef)(logger).toResource
-          refreshPub <- Topic[IO, Unit].toResource
-          theseRoutes <- routes(
-            tempDir.toString,
-            refreshPub,
-            None,
-            HttpRoutes.empty[IO],
-            fileToHashRef
-          )(logger)
-        yield theseRoutes
+  files.test(
+    "That the routes serve files on first call with a 200, that the eTag is set, and on second call with a 304"
+  ) {
+    tempDir =>
 
-        app.use {
-          served =>
-            val request = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("/test.js"))
-            val response = served(request)
+      scribe
+        .Logger
+        .root
+        .clearHandlers()
+        .clearModifiers()
+        .withHandler(minimumLevel = Some(Level.get("error").get))
+        .replace()
 
-            val checks = assertIO(response.map(_.status.code), 200) >>
-              assertIO(response.map(_.headers.get(ci"ETag").isDefined), true) >>
-              assertIO(
-                response.map(re => re.headers.get(ci"ETag").get.head.value),
-                testHash
-              ) // hash of "const hi = 'Hello, world'"
+      val aLogger = scribe.cats[IO]
 
-            // And that if we recieve the If-None-Match header with the correct hash, we respond with a 304
-            val request2 = org
-              .http4s
-              .Request[IO](uri = org.http4s.Uri.unsafeFromString("/test.js"))
-              .withHeaders(
-                org.http4s.Headers.of(org.http4s.Header.Raw(ci"If-None-Match", testHash))
-              )
-            val response2 = served(request2)
+      def errorActionFor(service: HttpRoutes[IO], logger: Scribe[IO]) = ErrorAction.httpRoutes[IO](
+        service,
+        (req, thr) =>
+          logger.trace(req.toString()) >>
+            logger.error(thr)
+      )
 
-            val testWithETag =
-              for resp <- response2
-              yield assertEquals(resp.status.code, 304)
+      val app: Resource[IO, HttpApp[IO]] = for
+        logger <- IO(
+          aLogger
+        ).toResource
+        fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+        _ <- updateMapRef(tempDir.toFs2, fileToHashRef)(logger).toResource
+        refreshPub <- Topic[IO, Unit].toResource
+        theseRoutes: HttpRoutes[IO] <- routes(
+          tempDir.toString,
+          refreshPub,
+          None,
+          HttpRoutes.empty[IO],
+          fileToHashRef,
+          Some("app")
+        )(logger)
+      yield errorActionFor(theseRoutes, aLogger).orNotFound
 
-            checks >> testWithETag
+      app.use {
+        (served: HttpApp[IO]) =>
+          val client = Client.fromHttpApp(served)
+          val request = Request[IO](uri = uri"/test.js")
 
-        }
-    }
+          val checkResp1 = client
+            .run(request)
+            .use {
+              response =>
+                assertEquals(response.status.code, 200)
+                assertEquals(response.headers.get(ci"ETag").isDefined, true)
+                assertEquals(response.headers.get(ci"ETag").get.head.value, testHash)
+                IO.unit
+            }
+
+          val request2 = org
+            .http4s
+            .Request[IO](uri = org.http4s.Uri.unsafeFromString("/test.js"))
+            .withHeaders(
+              org.http4s.Headers.of(org.http4s.Header.Raw(ci"If-None-Match", testHash))
+            )
+
+          val checkResp2 = client
+            .run(request2)
+            .use {
+              resp2 =>
+                assertEquals(resp2.status.code, 304)
+                IO.unit
+            }
+
+          val requestSpaRoute = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("app/anything/random"))
+          val checkRespSpa = client
+            .run(requestSpaRoute)
+            .use {
+              resp3 =>
+                assertEquals(resp3.status.code, 200)
+                assertIOBoolean(resp3.bodyText.compile.string.map(_.contains("src=\"main.js"))) >>
+                  IO.unit
+            }
+
+          checkResp1 >> checkResp2 >> checkRespSpa
+
+      }
+  }
 
   FunFixture
     .map2(files, externalIndexHtml)
@@ -171,9 +218,10 @@ class RoutesSuite extends CatsEffectSuite:
             refreshPub,
             Some(IndexHtmlConfig.IndexHtmlPath(staticDir.toFs2)),
             HttpRoutes.empty[IO],
-            fileToHashRef
+            fileToHashRef,
+            None
           )(logger)
-        yield theseRoutes
+        yield theseRoutes.orNotFound
 
         app.use {
           served =>
@@ -200,9 +248,10 @@ class RoutesSuite extends CatsEffectSuite:
           refreshPub,
           None,
           HttpRoutes.empty[IO],
-          fileToHashRef
+          fileToHashRef,
+          None
         )(logger)
-      yield theseRoutes
+      yield theseRoutes.orNotFound
 
       app.use {
         served =>
@@ -230,9 +279,10 @@ class RoutesSuite extends CatsEffectSuite:
             refreshPub,
             Some(IndexHtmlConfig.StylesOnly(styleDir.toFs2)),
             HttpRoutes.empty[IO],
-            fileToHashRef
+            fileToHashRef,
+            None
           )(logger)
-        yield theseRoutes
+        yield theseRoutes.orNotFound
 
         app.use {
           served =>
@@ -265,15 +315,72 @@ class RoutesSuite extends CatsEffectSuite:
           refreshPub,
           Some(IndexHtmlConfig.IndexHtmlPath(staticDir.toFs2)),
           HttpRoutes.empty[IO],
-          fileToHashRef
+          fileToHashRef,
+          None
         )(logger)
-      yield (theseRoutes, logger)
+      yield (theseRoutes.orNotFound, logger)
 
       app
         .both(cacheFormatTime.toResource)
         .use {
           case ((served, logger), firstModified) =>
             val request1 = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("/index.html"))
+
+            val request2 = org
+              .http4s
+              .Request[IO](uri = org.http4s.Uri.unsafeFromString("/index.html"))
+              .withHeaders(
+                org.http4s.Headers.of(org.http4s.Header.Raw(ci"If-Modified-Since", firstModified.toString()))
+              )
+
+            served(request1).flatTap(r => logger.debug("headers" + r.headers.headers.mkString(","))) >>
+              logger.trace("first modified " + firstModified) >>
+              // You need these ... otherwise no caching.
+              // https://simonhearne.com/2022/caching-header-best-practices/
+              assertIOBoolean(served(request1).map(_.headers.get(ci"ETag").isDefined)) >>
+              assertIOBoolean(served(request1).map(_.headers.get(ci"Cache-Control").isDefined)) >>
+              assertIOBoolean(served(request1).map(_.headers.get(ci"Expires").isDefined)) >>
+              assertIOBoolean(served(request1).map(_.headers.get(ci"Last-Modified").isDefined)) >>
+              // Don't forget to set them _all_
+              assertIO(served(request1).map(_.status.code), 200) >>
+              assertIO(served(request2).map(_.status.code), 304) >>
+              IO.sleep(
+                1500.millis
+              ) >> // have to wait at least one second otherwish last modified could be the same, if test took <1 sceond to get to this point
+              IO.blocking(os.write.over(staticDir / "index.html", """<head><title>Test</title></head>""")) >>
+              served(request2).flatMap(_.bodyText.compile.string).flatMap(s => logger.trace(s)) >>
+              assertIO(served(request2).map(_.status.code), 200)
+
+        }
+  }
+
+  externalIndexHtml.test("Client SPA routes return index.html") {
+    staticDir =>
+      def cacheFormatTime = fileLastModified((staticDir / "index.html").toFs2).map {
+        seconds =>
+          httpCacheFormat(ZonedDateTime.ofInstant(Instant.ofEpochSecond(seconds), ZoneId.of("GMT")))
+      }
+
+      val app = for
+        logger <- IO(scribe.cats[IO]).toResource
+        fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+        fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
+        refreshPub <- Topic[IO, Unit].toResource
+        theseRoutes <- routes(
+          os.temp.dir().toString,
+          refreshPub,
+          Some(IndexHtmlConfig.IndexHtmlPath(staticDir.toFs2)),
+          HttpRoutes.empty[IO],
+          fileToHashRef,
+          Some("app")
+        )(logger)
+      yield (theseRoutes.orNotFound, logger)
+
+      app
+        .both(cacheFormatTime.toResource)
+        .use {
+          case ((served, logger), firstModified) =>
+            val request1 = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("app/whocare"))
 
             val request2 = org
               .http4s
