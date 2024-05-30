@@ -44,7 +44,7 @@ end SafariSuite
 
 class ChromeSuite extends PlaywrightTest:
 
-  override def beforeAll(): Unit =
+  override def beforeAll(): Unit = 
     basePort = 3000
     pw = Playwright.create()
     browser = pw.chromium().launch(options);

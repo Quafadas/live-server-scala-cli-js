@@ -57,6 +57,7 @@ case class CliValidationError(message: String) extends NoStackTrace
 
 object LiveServer extends IOApp:
   private val logger = scribe.cats[IO]
+  given filesInstance: Files[IO] = Files.forAsync[IO]
 
   private def buildServer(httpApp: HttpApp[IO], port: Port) = EmberServerBuilder
     .default[IO]
@@ -115,6 +116,10 @@ object LiveServer extends IOApp:
     .option[String]("proxy-prefix-path", "Match routes starting with this prefix - e.g. /api")
     .orNone
 
+  val clientRoutingPrefixOpt = Opts
+    .option[String]("client-routes-prefix", "Routes starting with this prefix  e.g. /app will return index.html. This enables client side routing via e.g. waypoint")
+    .orNone
+
   val buildToolOpt = Opts
     .option[String]("build-tool", "scala-cli or mill")
     .validate("Invalid build tool") {
@@ -168,6 +173,7 @@ object LiveServer extends IOApp:
       portOpt,
       proxyPortTargetOpt,
       proxyPathMatchPrefixOpt,
+      clientRoutingPrefixOpt,
       logLevelOpt,
       buildToolOpt,
       openBrowserAtOpt,
@@ -182,6 +188,7 @@ object LiveServer extends IOApp:
           port,
           proxyTarget,
           pathPrefix,
+          clientRoutingPrefix,
           lvl,
           buildTool,
           openBrowserAt,
@@ -259,7 +266,7 @@ object LiveServer extends IOApp:
             millModuleName
           )(logger)
 
-          app <- routes(outDirString, refreshTopic, indexOpts, proxyRoutes, fileToHashRef)(logger)
+          app <- routes(outDirString, refreshTopic, indexOpts, proxyRoutes, fileToHashRef, clientRoutingPrefix)(logger)
 
           _ <- updateMapRef(outDirPath, fileToHashRef)(logger).toResource
           // _ <- stylesDir.fold(Resource.unit)(sd => seedMapOnStart(sd, mr))

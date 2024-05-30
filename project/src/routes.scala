@@ -26,15 +26,23 @@ import cats.effect.IO
 import cats.effect.kernel.Ref
 import cats.effect.kernel.Resource
 import cats.syntax.all.*
+import org.typelevel.ci.CIStringSyntax
 
 import _root_.io.circe.syntax.EncoderOps
+import java.time.ZonedDateTime
+import java.time.Instant
+import java.time.ZoneId
+import org.http4s.Status
+import org.http4s.StaticFile
+import cats.MonadThrow
 
-def routes(
+def routes[F[_]: Files: MonadThrow](
     stringPath: String,
     refreshTopic: Topic[IO, Unit],
     indexOpts: Option[IndexHtmlConfig],
     proxyRoutes: HttpRoutes[IO],
-    ref: Ref[IO, Map[String, String]]
+    ref: Ref[IO, Map[String, String]],
+    clientRoutingPrefix: Option[String]
 )(logger: Scribe[IO]): Resource[IO, HttpApp[IO]] =
 
   val linkedAppWithCaching: HttpRoutes[IO] = ETagMiddleware(
@@ -44,13 +52,58 @@ def routes(
     ref
   )(logger)
 
-  def generatedIndexHtml(injectStyles: Boolean) = HttpRoutes.of[IO] {
-    case GET -> Root =>
-      IO(Response[IO]().withEntity(vanillaTemplate(injectStyles)).withHeaders(Header("Cache-Control", "no-cache")))
+  val hashFalse = vanillaTemplate(false).render.hashCode.toString
+  val hashTrue = vanillaTemplate(true).render.hashCode.toString
+  val zdt = ZonedDateTime.now()
 
-    case GET -> Root / "index.html" =>
-      IO(Response[IO]().withEntity(vanillaTemplate(injectStyles)).withHeaders(Header("Cache-Control", "no-cache")))
-  }
+
+  def userBrowserCacheHeaders(resp: Response[IO], lastModZdt: ZonedDateTime, injectStyles: Boolean) =
+      resp.putHeaders(
+        Header.Raw(ci"Cache-Control", "no-cache"),
+        Header.Raw(ci"ETag", injectStyles match
+          case true => hashTrue
+          case false => hashFalse
+        ),
+        Header.Raw(
+          ci"Last-Modified",
+          formatter.format(lastModZdt)
+        ),
+        Header.Raw(
+          ci"Expires",
+          httpCacheFormat(ZonedDateTime.ofInstant(Instant.now().plusSeconds(10000000), ZoneId.of("GMT")))
+        )
+      )
+      resp
+  end userBrowserCacheHeaders
+
+  object StaticHtmlMiddleware: 
+      def apply(service: HttpRoutes[IO], injectStyles: Boolean)(logger: Scribe[IO]): HttpRoutes[IO] = Kleisli {
+        (req: Request[IO]) =>
+          req.headers.get(ci"ETag").map(_.toList) match
+            case Some(h :: Nil) if h.value == hashFalse => OptionT.liftF(IO(Response[IO](Status.NotModified)))
+            case Some(h :: Nil) if h.value == hashTrue => OptionT.liftF(IO(Response[IO](Status.NotModified)))            
+            case _ => service(req).map(userBrowserCacheHeaders(_, zdt, injectStyles))
+      }
+  end StaticHtmlMiddleware
+
+  def generatedIndexHtml(injectStyles: Boolean) = 
+    StaticHtmlMiddleware(
+      HttpRoutes.of[IO] {
+        case GET -> Root => IO(
+          Response[IO]().withEntity(vanillaTemplate(injectStyles))
+        )
+      },injectStyles
+    )(logger).combineK(         
+      
+    StaticHtmlMiddleware(
+      HttpRoutes.of[IO] {
+        case GET -> Root / "index.html" => IO{
+          Response[IO]().withEntity(vanillaTemplate(injectStyles))
+        }
+      }, injectStyles
+    )(logger)
+    )
+
   // val formatter = DateTimeFormatter.RFC_1123_DATE_TIME
   val staticAssetRoutes: HttpRoutes[IO] = indexOpts match
     case None => generatedIndexHtml(injectStyles = false)
@@ -72,15 +125,40 @@ def routes(
         )
       )
 
+  val clientSpaRoutes : HttpRoutes[IO] = clientRoutingPrefix match
+    case None => HttpRoutes.empty[IO]
+    case Some(spaRoute) => 
+      indexOpts match
+        case None => 
+          StaticHtmlMiddleware(
+            HttpRoutes.of[IO] {
+              case GET -> Root / spaRoute / path => IO(
+                Response[IO]().withEntity(vanillaTemplate(false))
+              )
+            }, false
+          )(logger)
+
+        case Some(IndexHtmlConfig.StylesOnly(dir)) => 
+          StaticHtmlMiddleware(
+            HttpRoutes.of[IO] {
+              case GET -> Root / spaRoute / path => IO(
+                Response[IO]().withEntity(vanillaTemplate(true))
+              )
+            }, true
+          )(logger)
+
+        case Some(IndexHtmlConfig.IndexHtmlPath(dir)) => 
+          StaticFileMiddleware(
+            HttpRoutes.of[IO] {
+              case req @ GET -> Root / spaRoute / path => 
+                StaticFile.fromPath(dir / "index.html", Some(req)).getOrElseF(NotFound())
+              
+            }, dir / "index.html"
+          )(logger)
+      
+  
+
   val refreshRoutes = HttpRoutes.of[IO] {
-    // case GET -> Root / "all" =>
-    //   ref
-    //     .get
-    //     .flatTap(m => logger.trace(m.toString))
-    //     .flatMap {
-    //       m =>
-    //         Ok(m.toString)
-    //     }
     case GET -> Root / "api" / "v1" / "sse" =>
       val keepAlive = fs2.Stream.fixedRate[IO](10.seconds).as(KeepAlive())
       Ok(
@@ -89,45 +167,7 @@ def routes(
           .map(msg => ServerSentEvent(Some(msg.asJson.noSpaces)))
       )
   }
-  val app = refreshRoutes.combineK(linkedAppWithCaching).combineK(staticAssetRoutes).combineK(proxyRoutes).orNotFound
+  val app = refreshRoutes.combineK(linkedAppWithCaching).combineK(staticAssetRoutes).combineK(proxyRoutes).combineK(clientSpaRoutes).orNotFound
   IO(app).toResource
 
 end routes
-
-def updateMapRef(stringPath: fs2.io.file.Path, mr: Ref[IO, Map[String, String]])(logger: Scribe[IO]) =
-  Files[IO]
-    .walk(stringPath)
-    .evalFilter(Files[IO].isRegularFile)
-    .parEvalMap(maxConcurrent = 8)(path => fileHash(path).map(path -> _))
-    .compile
-    .toVector
-    .flatMap(
-      vector =>
-        val newMap = vector
-          .view
-          .map(
-            (path, hash) =>
-              val relativizedPath = stringPath.relativize(path).toString
-              relativizedPath -> hash
-          )
-          .toMap
-        logger.trace(s"Updated hashes $newMap") *> mr.set(newMap)
-    )
-
-private def fileWatcher(
-    stringPath: fs2.io.file.Path,
-    mr: Ref[IO, Map[String, String]],
-    linkingTopic: Topic[IO, Unit],
-    refreshTopic: Topic[IO, Unit]
-)(logger: Scribe[IO]): ResourceIO[Unit] =
-  linkingTopic
-    .subscribe(10)
-    .evalTap {
-      _ =>
-        updateMapRef(stringPath, mr)(logger) >> refreshTopic.publish1(())
-    }
-    .compile
-    .drain
-    .background
-    .void
-end fileWatcher

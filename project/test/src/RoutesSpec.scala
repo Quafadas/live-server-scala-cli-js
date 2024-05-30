@@ -16,12 +16,14 @@ import cats.effect.kernel.Ref
 import cats.effect.std.MapRef
 
 import munit.CatsEffectSuite
+import fs2.io.file.Files
 
 class RoutesSuite extends CatsEffectSuite:
 
   val md = MessageDigest.getInstance("MD5")
   val testStr = "const hi = 'Hello, world'"
   val testHash = md.digest(testStr.getBytes()).map("%02x".format(_)).mkString
+  given filesInstance: Files[IO] = Files.forAsync[IO]
 
   val files = FunFixture[os.Path](
     setup = test =>
@@ -123,7 +125,8 @@ class RoutesSuite extends CatsEffectSuite:
             refreshPub,
             None,
             HttpRoutes.empty[IO],
-            fileToHashRef
+            fileToHashRef,
+            None
           )(logger)
         yield theseRoutes
 
@@ -171,7 +174,8 @@ class RoutesSuite extends CatsEffectSuite:
             refreshPub,
             Some(IndexHtmlConfig.IndexHtmlPath(staticDir.toFs2)),
             HttpRoutes.empty[IO],
-            fileToHashRef
+            fileToHashRef,
+            None
           )(logger)
         yield theseRoutes
 
@@ -200,7 +204,8 @@ class RoutesSuite extends CatsEffectSuite:
           refreshPub,
           None,
           HttpRoutes.empty[IO],
-          fileToHashRef
+          fileToHashRef,
+            None
         )(logger)
       yield theseRoutes
 
@@ -230,7 +235,8 @@ class RoutesSuite extends CatsEffectSuite:
             refreshPub,
             Some(IndexHtmlConfig.StylesOnly(styleDir.toFs2)),
             HttpRoutes.empty[IO],
-            fileToHashRef
+            fileToHashRef,
+            None
           )(logger)
         yield theseRoutes
 
@@ -265,7 +271,8 @@ class RoutesSuite extends CatsEffectSuite:
           refreshPub,
           Some(IndexHtmlConfig.IndexHtmlPath(staticDir.toFs2)),
           HttpRoutes.empty[IO],
-          fileToHashRef
+          fileToHashRef,
+            None
         )(logger)
       yield (theseRoutes, logger)
 

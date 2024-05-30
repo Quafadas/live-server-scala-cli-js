@@ -33,6 +33,7 @@ import cats.effect.IO
 import cats.effect.OutcomeIO
 import cats.effect.ResourceIO
 import cats.syntax.all.*
+import fs2.io.file.Files
 
 def staticWatcher(
     refreshTopic: Topic[IO, Unit],
@@ -91,85 +92,41 @@ val formatter = DateTimeFormatter.RFC_1123_DATE_TIME
 def httpCacheFormat(zdt: ZonedDateTime): String =
   formatter.format(zdt)
 
-object NoCacheMiddlware:
-
-  def apply(service: HttpRoutes[IO]): HttpRoutes[IO] = Kleisli {
-    (req: Request[IO]) =>
-      service(req).map {
-        resp =>
-          resp.putHeaders(
-            Header.Raw(ci"Cache-Control", "no-cache")
+  
+def updateMapRef(stringPath: fs2.io.file.Path, mr: Ref[IO, Map[String, String]])(logger: Scribe[IO]) =
+  Files[IO]
+    .walk(stringPath)
+    .evalFilter(Files[IO].isRegularFile)
+    .parEvalMap(maxConcurrent = 8)(path => fileHash(path).map(path -> _))
+    .compile
+    .toVector
+    .flatMap(
+      vector =>
+        val newMap = vector
+          .view
+          .map(
+            (path, hash) =>
+              val relativizedPath = stringPath.relativize(path).toString
+              relativizedPath -> hash
           )
-      }
-  }
+          .toMap
+        logger.trace(s"Updated hashes $newMap") *> mr.set(newMap)
+    )
 
-end NoCacheMiddlware
-
-object StaticMiddleware:
-  def apply(service: HttpRoutes[IO], staticDir: Path)(logger: Scribe[IO]): HttpRoutes[IO] = Kleisli {
-    (req: Request[IO]) =>
-
-      val epochInstant: Instant = Instant.EPOCH
-      val fullPath = staticDir / req.uri.path.toString.drop(1)
-
-      def respondWithCacheLastModified(resp: Response[IO], lastModZdt: ZonedDateTime) =
-        resp.putHeaders(
-          Header.Raw(ci"Cache-Control", "no-cache"),
-          Header.Raw(ci"ETag", lastModZdt.toInstant.getEpochSecond.toString()),
-          Header.Raw(
-            ci"Last-Modified",
-            formatter.format(lastModZdt)
-          ),
-          Header.Raw(
-            ci"Expires",
-            httpCacheFormat(ZonedDateTime.ofInstant(Instant.now().plusSeconds(10000000), ZoneId.of("GMT")))
-          )
-        )
-      end respondWithCacheLastModified
-
-      def parseFromHeader(header: String): Long =
-        java.time.Duration.between(epochInstant, ZonedDateTime.parse(header, formatter)).toSeconds()
-      end parseFromHeader
-
-      OptionT
-        .liftF(fileLastModified(fullPath))
-        .flatMap {
-          lastmod =>
-            req.headers.get(ci"If-Modified-Since") match
-              case Some(header) =>
-                val browserLastModifiedAt = header.head.value
-                service(req).semiflatMap {
-                  resp =>
-                    val zdt = ZonedDateTime.ofInstant(Instant.ofEpochSecond(lastmod), ZoneId.of("GMT"))
-                    val response =
-                      if parseFromHeader(browserLastModifiedAt) == lastmod then
-                        logger.debug("Time matches, returning 304") >>
-                          IO(
-                            respondWithCacheLastModified(Response[IO](Status.NotModified), zdt)
-                          )
-                      else
-                        logger.debug(lastmod.toString()) >>
-                          logger.debug("Last modified doesn't match, returning 200") >>
-                          IO(
-                            respondWithCacheLastModified(resp, zdt)
-                          )
-                      end if
-                    end response
-                    logger.debug(lastmod.toString()) >>
-                      logger.debug(parseFromHeader(browserLastModifiedAt).toString()) >>
-                      response
-                }
-              case _ =>
-                OptionT.liftF(logger.debug("No headers in query, service it")) >>
-                  service(req).map {
-                    resp =>
-                      respondWithCacheLastModified(
-                        resp,
-                        ZonedDateTime.ofInstant(Instant.ofEpochSecond(lastmod), ZoneId.of("GMT"))
-                      )
-                  }
-
-          end match
-        }
-  }
-end StaticMiddleware
+private def fileWatcher(
+    stringPath: fs2.io.file.Path,
+    mr: Ref[IO, Map[String, String]],
+    linkingTopic: Topic[IO, Unit],
+    refreshTopic: Topic[IO, Unit]
+)(logger: Scribe[IO]): ResourceIO[Unit] =
+  linkingTopic
+    .subscribe(10)
+    .evalTap {
+      _ =>
+        updateMapRef(stringPath, mr)(logger) >> refreshTopic.publish1(())
+    }
+    .compile
+    .drain
+    .background
+    .void
+end fileWatcher
