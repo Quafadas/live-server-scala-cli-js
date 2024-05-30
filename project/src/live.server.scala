@@ -117,7 +117,10 @@ object LiveServer extends IOApp:
     .orNone
 
   val clientRoutingPrefixOpt = Opts
-    .option[String]("client-routes-prefix", "Routes starting with this prefix  e.g. /app will return index.html. This enables client side routing via e.g. waypoint")
+    .option[String](
+      "client-routes-prefix",
+      "Routes starting with this prefix  e.g. /app will return index.html. This enables client side routing via e.g. waypoint"
+    )
     .orNone
 
   val buildToolOpt = Opts
@@ -278,7 +281,7 @@ object LiveServer extends IOApp:
 
           // _ <- stylesDir.fold(Resource.unit[IO])(sd => fileWatcher(fs2.io.file.Path(sd), mr))
           _ <- logger.info(s"Start dev server on http://localhost:$port").toResource
-          server <- buildServer(app, port)
+          server <- buildServer(app.orNotFound, port)
 
           - <- openBrowser(Some(openBrowserAt), port)(logger).toResource
         yield server

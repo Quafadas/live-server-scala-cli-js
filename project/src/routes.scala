@@ -35,6 +35,7 @@ import java.time.ZoneId
 import org.http4s.Status
 import org.http4s.StaticFile
 import cats.MonadThrow
+import org.http4s.server.middleware.Logger
 
 def routes[F[_]: Files: MonadThrow](
     stringPath: String,
@@ -43,65 +44,82 @@ def routes[F[_]: Files: MonadThrow](
     proxyRoutes: HttpRoutes[IO],
     ref: Ref[IO, Map[String, String]],
     clientRoutingPrefix: Option[String]
-)(logger: Scribe[IO]): Resource[IO, HttpApp[IO]] =
+)(logger: Scribe[IO]): Resource[IO, HttpRoutes[IO]] =
 
-  val linkedAppWithCaching: HttpRoutes[IO] = ETagMiddleware(
-    Router(
-      "" -> fileService[IO](FileService.Config(stringPath))
-    ),
-    ref
-  )(logger)
+  val logMiddler = Logger.httpRoutes[IO](
+    logHeaders = true,
+    logBody = true,
+    redactHeadersWhen = _ => false,
+    logAction = Some((msg: String) => logger.trace(msg))
+  )
+
+  val linkedAppWithCaching: HttpRoutes[IO] =
+    ETagMiddleware(
+      HttpRoutes.of[IO] {
+        case req @ GET -> Root / fName ~ "js" =>
+          StaticFile
+            .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
+            .getOrElseF(NotFound())
+      },
+      ref
+    )(logger)
 
   val hashFalse = vanillaTemplate(false).render.hashCode.toString
   val hashTrue = vanillaTemplate(true).render.hashCode.toString
   val zdt = ZonedDateTime.now()
 
-
   def userBrowserCacheHeaders(resp: Response[IO], lastModZdt: ZonedDateTime, injectStyles: Boolean) =
-      resp.putHeaders(
-        Header.Raw(ci"Cache-Control", "no-cache"),
-        Header.Raw(ci"ETag", injectStyles match
-          case true => hashTrue
+    resp.putHeaders(
+      Header.Raw(ci"Cache-Control", "no-cache"),
+      Header.Raw(
+        ci"ETag",
+        injectStyles match
+          case true  => hashTrue
           case false => hashFalse
-        ),
-        Header.Raw(
-          ci"Last-Modified",
-          formatter.format(lastModZdt)
-        ),
-        Header.Raw(
-          ci"Expires",
-          httpCacheFormat(ZonedDateTime.ofInstant(Instant.now().plusSeconds(10000000), ZoneId.of("GMT")))
-        )
+      ),
+      Header.Raw(
+        ci"Last-Modified",
+        formatter.format(lastModZdt)
+      ),
+      Header.Raw(
+        ci"Expires",
+        httpCacheFormat(ZonedDateTime.ofInstant(Instant.now().plusSeconds(10000000), ZoneId.of("GMT")))
       )
-      resp
+    )
+    resp
   end userBrowserCacheHeaders
 
-  object StaticHtmlMiddleware: 
-      def apply(service: HttpRoutes[IO], injectStyles: Boolean)(logger: Scribe[IO]): HttpRoutes[IO] = Kleisli {
-        (req: Request[IO]) =>
-          req.headers.get(ci"ETag").map(_.toList) match
-            case Some(h :: Nil) if h.value == hashFalse => OptionT.liftF(IO(Response[IO](Status.NotModified)))
-            case Some(h :: Nil) if h.value == hashTrue => OptionT.liftF(IO(Response[IO](Status.NotModified)))            
-            case _ => service(req).map(userBrowserCacheHeaders(_, zdt, injectStyles))
-      }
+  object StaticHtmlMiddleware:
+    def apply(service: HttpRoutes[IO], injectStyles: Boolean)(logger: Scribe[IO]): HttpRoutes[IO] = Kleisli {
+      (req: Request[IO]) =>
+        req.headers.get(ci"ETag").map(_.toList) match
+          case Some(h :: Nil) if h.value == hashFalse => OptionT.liftF(IO(Response[IO](Status.NotModified)))
+          case Some(h :: Nil) if h.value == hashTrue  => OptionT.liftF(IO(Response[IO](Status.NotModified)))
+          case _                                      => service(req).map(userBrowserCacheHeaders(_, zdt, injectStyles))
+
+    }
+
   end StaticHtmlMiddleware
 
-  def generatedIndexHtml(injectStyles: Boolean) = 
+  def generatedIndexHtml(injectStyles: Boolean) =
     StaticHtmlMiddleware(
       HttpRoutes.of[IO] {
-        case GET -> Root => IO(
-          Response[IO]().withEntity(vanillaTemplate(injectStyles))
-        )
-      },injectStyles
-    )(logger).combineK(         
-      
-    StaticHtmlMiddleware(
-      HttpRoutes.of[IO] {
-        case GET -> Root / "index.html" => IO{
-          Response[IO]().withEntity(vanillaTemplate(injectStyles))
-        }
-      }, injectStyles
-    )(logger)
+        case GET -> Root =>
+          IO(
+            Response[IO]().withEntity(vanillaTemplate(injectStyles))
+          )
+      },
+      injectStyles
+    )(logger).combineK(
+      StaticHtmlMiddleware(
+        HttpRoutes.of[IO] {
+          case GET -> Root / "index.html" =>
+            IO {
+              Response[IO]().withEntity(vanillaTemplate(injectStyles))
+            }
+        },
+        injectStyles
+      )(logger)
     )
 
   // val formatter = DateTimeFormatter.RFC_1123_DATE_TIME
@@ -125,38 +143,44 @@ def routes[F[_]: Files: MonadThrow](
         )
       )
 
-  val clientSpaRoutes : HttpRoutes[IO] = clientRoutingPrefix match
-    case None => HttpRoutes.empty[IO]
-    case Some(spaRoute) => 
-      indexOpts match
-        case None => 
-          StaticHtmlMiddleware(
-            HttpRoutes.of[IO] {
-              case GET -> Root / spaRoute / path => IO(
-                Response[IO]().withEntity(vanillaTemplate(false))
-              )
-            }, false
-          )(logger)
+  val clientSpaRoutes: HttpRoutes[IO] =
+    clientRoutingPrefix match
+      case None => HttpRoutes.empty[IO]
+      case Some(spaRoute) =>
+        indexOpts match
+          case None =>
+            val aPath = Root / spaRoute
+            StaticHtmlMiddleware(
+              HttpRoutes.of[IO] {
+                case GET -> aPath /: path =>
+                  // logger.trace(path) >>
+                  IO(
+                    Response[IO]().withEntity(vanillaTemplate(false))
+                  )
+              },
+              false
+            )(logger)
 
-        case Some(IndexHtmlConfig.StylesOnly(dir)) => 
-          StaticHtmlMiddleware(
-            HttpRoutes.of[IO] {
-              case GET -> Root / spaRoute / path => IO(
-                Response[IO]().withEntity(vanillaTemplate(true))
-              )
-            }, true
-          )(logger)
+          case Some(IndexHtmlConfig.StylesOnly(dir)) =>
+            // val aPath = Root / spaRoute
+            StaticHtmlMiddleware(
+              HttpRoutes.of[IO] {
+                case GET -> spaRoute /: path =>
+                  IO(
+                    Response[IO]().withEntity(vanillaTemplate(true))
+                  )
+              },
+              true
+            )(logger)
 
-        case Some(IndexHtmlConfig.IndexHtmlPath(dir)) => 
-          StaticFileMiddleware(
-            HttpRoutes.of[IO] {
-              case req @ GET -> Root / spaRoute / path => 
-                StaticFile.fromPath(dir / "index.html", Some(req)).getOrElseF(NotFound())
-              
-            }, dir / "index.html"
-          )(logger)
-      
-  
+          case Some(IndexHtmlConfig.IndexHtmlPath(dir)) =>
+            StaticFileMiddleware(
+              HttpRoutes.of[IO] {
+                case req @ GET -> spaRoute /: path =>
+                  StaticFile.fromPath(dir / "index.html", Some(req)).getOrElseF(NotFound())
+              },
+              dir / "index.html"
+            )(logger)
 
   val refreshRoutes = HttpRoutes.of[IO] {
     case GET -> Root / "api" / "v1" / "sse" =>
@@ -167,7 +191,15 @@ def routes[F[_]: Files: MonadThrow](
           .map(msg => ServerSentEvent(Some(msg.asJson.noSpaces)))
       )
   }
-  val app = refreshRoutes.combineK(linkedAppWithCaching).combineK(staticAssetRoutes).combineK(proxyRoutes).combineK(clientSpaRoutes).orNotFound
-  IO(app).toResource
+  val app = logMiddler(
+    refreshRoutes
+      .combineK(linkedAppWithCaching)
+      .combineK(proxyRoutes)
+      .combineK(clientSpaRoutes)
+      .combineK(staticAssetRoutes)
+  )
+
+  clientRoutingPrefix.fold(IO.unit)(s => logger.trace(s"client spa at : $s")).toResource >>
+    IO(app).toResource
 
 end routes

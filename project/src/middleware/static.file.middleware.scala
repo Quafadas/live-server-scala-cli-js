@@ -1,4 +1,3 @@
-
 import org.http4s.Header
 import org.http4s.HttpRoutes
 import org.http4s.Request
@@ -16,12 +15,10 @@ import cats.data.Kleisli
 import cats.data.OptionT
 import cats.effect.*
 import cats.effect.IO
-import cats.effect.kernel.Ref
 import cats.syntax.all.*
 import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.ZoneId
-
 
 def parseFromHeader(epochInstant: Instant, header: String): Long =
   java.time.Duration.between(epochInstant, ZonedDateTime.parse(header, formatter)).toSeconds()
@@ -31,7 +28,7 @@ object StaticFileMiddleware:
   def apply(service: HttpRoutes[IO], file: Path)(logger: Scribe[IO]): HttpRoutes[IO] = Kleisli {
     (req: Request[IO]) =>
 
-      val epochInstant: Instant = Instant.EPOCH      
+      val epochInstant: Instant = Instant.EPOCH
 
       cachedFileResponse(epochInstant, file, req, service)(logger: Scribe[IO])
   }

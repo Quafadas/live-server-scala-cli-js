@@ -6,8 +6,6 @@ import org.http4s.Status
 import org.http4s.dsl.io.*
 import org.typelevel.ci.CIStringSyntax
 
-import fs2.*
-
 import scribe.Scribe
 
 import cats.data.Kleisli

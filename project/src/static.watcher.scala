@@ -1,17 +1,6 @@
-import java.time.Instant
-import java.time.ZoneId
-import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 import scala.concurrent.duration.*
-
-import org.http4s.Header
-import org.http4s.HttpRoutes
-import org.http4s.Request
-import org.http4s.Response
-import org.http4s.Status
-import org.http4s.dsl.io.*
-import org.typelevel.ci.CIStringSyntax
 
 import fs2.*
 import fs2.concurrent.Topic
@@ -26,14 +15,13 @@ import fs2.io.file.Path
 
 import scribe.Scribe
 
-import cats.data.Kleisli
-import cats.data.OptionT
 import cats.effect.*
 import cats.effect.IO
 import cats.effect.OutcomeIO
 import cats.effect.ResourceIO
 import cats.syntax.all.*
 import fs2.io.file.Files
+import java.time.ZonedDateTime
 
 def staticWatcher(
     refreshTopic: Topic[IO, Unit],
@@ -92,7 +80,6 @@ val formatter = DateTimeFormatter.RFC_1123_DATE_TIME
 def httpCacheFormat(zdt: ZonedDateTime): String =
   formatter.format(zdt)
 
-  
 def updateMapRef(stringPath: fs2.io.file.Path, mr: Ref[IO, Map[String, String]])(logger: Scribe[IO]) =
   Files[IO]
     .walk(stringPath)

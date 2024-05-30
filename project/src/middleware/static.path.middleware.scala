@@ -1,4 +1,3 @@
-
 import org.http4s.Header
 import org.http4s.HttpRoutes
 import org.http4s.Request
@@ -21,7 +20,6 @@ import java.time.Instant
 import java.time.ZonedDateTime
 import java.time.ZoneId
 
-
 inline def respondWithCacheLastModified(resp: Response[IO], lastModZdt: ZonedDateTime) =
   resp.putHeaders(
     Header.Raw(ci"Cache-Control", "no-cache"),
@@ -37,7 +35,9 @@ inline def respondWithCacheLastModified(resp: Response[IO], lastModZdt: ZonedDat
   )
 end respondWithCacheLastModified
 
-inline def cachedFileResponse(epochInstant: Instant, fullPath: Path, req: Request[IO], service: HttpRoutes[IO])(logger: Scribe[IO]) =
+inline def cachedFileResponse(epochInstant: Instant, fullPath: Path, req: Request[IO], service: HttpRoutes[IO])(
+    logger: Scribe[IO]
+) =
   OptionT
     .liftF(fileLastModified(fullPath))
     .flatMap {
