@@ -1,3 +1,4 @@
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
 import scala.concurrent.duration.*
@@ -11,6 +12,7 @@ import fs2.io.Watcher.Event.Deleted
 import fs2.io.Watcher.Event.Modified
 import fs2.io.Watcher.Event.NonStandard
 import fs2.io.Watcher.Event.Overflow
+import fs2.io.file.Files
 import fs2.io.file.Path
 
 import scribe.Scribe
@@ -20,8 +22,6 @@ import cats.effect.IO
 import cats.effect.OutcomeIO
 import cats.effect.ResourceIO
 import cats.syntax.all.*
-import fs2.io.file.Files
-import java.time.ZonedDateTime
 
 def staticWatcher(
     refreshTopic: Topic[IO, Unit],

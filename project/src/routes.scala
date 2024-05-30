@@ -1,17 +1,23 @@
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
+
 import scala.concurrent.duration.DurationInt
 
 import org.http4s.Header
-import org.http4s.HttpApp
 import org.http4s.HttpRoutes
 import org.http4s.Request
 import org.http4s.Response
 import org.http4s.ServerSentEvent
+import org.http4s.StaticFile
+import org.http4s.Status
 import org.http4s.dsl.io.*
-import org.http4s.implicits.*
 import org.http4s.scalatags.*
 import org.http4s.server.Router
+import org.http4s.server.middleware.Logger
 import org.http4s.server.staticcontent.*
 import org.http4s.server.staticcontent.FileService
+import org.typelevel.ci.CIStringSyntax
 
 import fs2.*
 import fs2.concurrent.Topic
@@ -19,6 +25,7 @@ import fs2.io.file.Files
 
 import scribe.Scribe
 
+import cats.MonadThrow
 import cats.data.Kleisli
 import cats.data.OptionT
 import cats.effect.*
@@ -26,16 +33,8 @@ import cats.effect.IO
 import cats.effect.kernel.Ref
 import cats.effect.kernel.Resource
 import cats.syntax.all.*
-import org.typelevel.ci.CIStringSyntax
 
 import _root_.io.circe.syntax.EncoderOps
-import java.time.ZonedDateTime
-import java.time.Instant
-import java.time.ZoneId
-import org.http4s.Status
-import org.http4s.StaticFile
-import cats.MonadThrow
-import org.http4s.server.middleware.Logger
 
 def routes[F[_]: Files: MonadThrow](
     stringPath: String,
@@ -149,7 +148,7 @@ def routes[F[_]: Files: MonadThrow](
       case Some(spaRoute) =>
         indexOpts match
           case None =>
-            val aPath = Root / spaRoute
+            Root / spaRoute
             StaticHtmlMiddleware(
               HttpRoutes.of[IO] {
                 case GET -> aPath /: path =>

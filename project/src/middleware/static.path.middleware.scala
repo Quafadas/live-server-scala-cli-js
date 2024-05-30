@@ -1,3 +1,7 @@
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
+
 import org.http4s.Header
 import org.http4s.HttpRoutes
 import org.http4s.Request
@@ -16,9 +20,6 @@ import cats.data.OptionT
 import cats.effect.*
 import cats.effect.IO
 import cats.syntax.all.*
-import java.time.Instant
-import java.time.ZonedDateTime
-import java.time.ZoneId
 
 inline def respondWithCacheLastModified(resp: Response[IO], lastModZdt: ZonedDateTime) =
   resp.putHeaders(
