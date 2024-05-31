@@ -134,7 +134,15 @@ def buildRunnerMill(
       "-w",
       s"$moduleName.fastLinkJS"
     ) ++ extraBuildArgs
-  ).withWorkingDirectory(workDir).spawn[IO].useForever.map(_ => ()).background.void
+  ).withWorkingDirectory(workDir)
+    .spawn[IO]
+    .use {
+      p =>
+        // p.stderr.through(fs2.io.stdout).compile.drain >>
+        p.stdout.through(text.utf8.decode).debug().compile.drain
+    }
+    .background
+    .void
 
   for
     _ <- logger.trace("Starting buildRunnerMill").toResource

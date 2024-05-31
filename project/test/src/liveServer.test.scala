@@ -196,6 +196,60 @@ trait PlaywrightTest extends munit.FunSuite:
       assertEquals(outFail.statusCode, 404)
   }
 
+  files.test("proxy server and SPA client apps") {
+    testDir =>
+      val backendPort = 8090
+      val thisTestPort = basePort + 3
+      // use http4s to instantiate a simple server that responds to /api/hello with 200, use Http4sEmberServer
+      EmberServerBuilder
+        .default[IO]
+        .withHttpApp(
+          HttpRoutes
+            .of[IO] {
+              case GET -> Root / "api" / "hello" =>
+                Ok("hello world")
+            }
+            .orNotFound
+        )
+        .withPort(Port.fromInt(backendPort).get)
+        .build
+        .allocated
+        .unsafeToFuture()
+
+      LiveServer
+        .run(
+          List(
+            "--build-tool",
+            "scala-cli",
+            "--project-dir",
+            testDir.toString,
+            "--styles-dir",
+            styleDir(testDir).toString,
+            "--client-routes-prefix",
+            "/app",
+            "--port",
+            thisTestPort.toString,
+            "--proxy-target-port",
+            backendPort.toString,
+            "--proxy-prefix-path",
+            "/api"
+          )
+        )
+        .unsafeToFuture()
+
+      Thread.sleep(1000) // give the thing time to start.
+
+      val out = requests.get(s"http://localhost:$thisTestPort/api/hello", check = false)
+      assertEquals(out.statusCode, 200)
+      assertEquals(out.text(), "hello world")
+
+      val outFail = requests.get(s"http://localhost:$thisTestPort/api/nope", check = false)
+      assertEquals(outFail.statusCode, 404)
+
+      val canGetHtml = requests.get(s"http://localhost:$thisTestPort", check = false)
+      assertEquals(canGetHtml.statusCode, 200)
+  }
+
   files.test("no styles") {
     testDir =>
       val thisTestPort = basePort + 4
