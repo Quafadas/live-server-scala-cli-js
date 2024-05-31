@@ -15,7 +15,7 @@ checkOpts:
   mill project.run --help
 
 jvmServe:
-  mill -w project.runBackground --build-tool scala-cli --project-dir /Users/simon/Code/indigoLite --log-level info --browse-on-open-at / --path-to-index-html /Users/simon/Code/indigoLite/static --log-level trace
+  mill -w project.runBackground --build-tool scala-cli --project-dir /Users/simon/Code/indigoLite --log-level info --browse-on-open-at / --path-to-index-html /Users/simon/Code/indigoLite/static
 
 goViteless:
   mill -w project.run --project-dir /Users/simon/Code/viteless --styles-dir /Users/simon/Code/viteless/styles
