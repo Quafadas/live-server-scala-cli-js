@@ -8,7 +8,7 @@ def lessStyle(withStyles: Boolean): Seq[Modifier] =
       link(
         rel := "stylesheet/less",
         `type` := "text/css",
-        href := "index.less"
+        href := "/index.less"
       ),
       script(
         raw(
