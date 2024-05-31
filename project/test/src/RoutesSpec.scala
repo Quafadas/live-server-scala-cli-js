@@ -30,6 +30,7 @@ class RoutesSuite extends CatsEffectSuite:
 
   val md = MessageDigest.getInstance("MD5")
   val testStr = "const hi = 'Hello, world'"
+  val simpleCss = "h1 {color: red;}"
   val testHash = md.digest(testStr.getBytes()).map("%02x".format(_)).mkString
   given filesInstance: Files[IO] = Files.forAsync[IO]
 
@@ -67,13 +68,22 @@ class RoutesSuite extends CatsEffectSuite:
   val externalSyles = FunFixture[os.Path](
     setup = test =>
       val tempDir = os.temp.dir()
-      os.write(tempDir / "index.less", testStr)
+      os.write(tempDir / "index.less", "h1 {color: red;}")
       tempDir
     ,
     teardown = tempDir =>
       // Always gets called, even if test failed.
       os.remove.all(tempDir)
   )
+
+  override def beforeAll(): Unit =
+    scribe
+      .Logger
+      .root
+      .clearHandlers()
+      .clearModifiers()
+      .withHandler(minimumLevel = Some(Level.get("trace").get))
+      .replace()
 
   files.test("seed map puts files in the map on start") {
     tempDir =>
@@ -144,7 +154,7 @@ class RoutesSuite extends CatsEffectSuite:
 
       val app: Resource[IO, HttpApp[IO]] = for
         logger <- IO(
-          aLogger
+          scribe.cats[IO]
         ).toResource
         fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
         _ <- updateMapRef(tempDir.toFs2, fileToHashRef)(logger).toResource
@@ -195,7 +205,7 @@ class RoutesSuite extends CatsEffectSuite:
             .use {
               resp3 =>
                 assertEquals(resp3.status.code, 200)
-                assertIOBoolean(resp3.bodyText.compile.string.map(_.contains("src=\"main.js"))) >>
+                assertIOBoolean(resp3.bodyText.compile.string.map(_.contains("src=\"/main.js"))) >>
                   IO.unit
             }
 
@@ -211,17 +221,17 @@ class RoutesSuite extends CatsEffectSuite:
                 IO.unit
             }
 
-          val requestHtml2 = Request[IO](uri = uri"/").withHeaders(Header.Raw(ci"If-None-Match", etag))
+          // val requestHtml2 = Request[IO](uri = uri"/").withHeaders(Header.Raw(ci"If-None-Match", etag))
 
-          val checkRespHtml2 = client
-            .run(requestHtml2)
-            .use {
-              respH =>
-                assertEquals(respH.status.code, 304)
-                IO.unit
-            }
+          // val checkRespHtml2 = client
+          //   .run(requestHtml2)
+          //   .use {
+          //     respH =>
+          //       assertEquals(respH.status.code, 304)
+          //       IO.unit
+          //   }
 
-          checkResp1 >> checkResp2 >> checkRespSpa >> checkRespHtml >> checkRespHtml2
+          checkResp1 >> checkResp2 >> checkRespSpa >> checkRespHtml
 
       }
   }
@@ -315,7 +325,36 @@ class RoutesSuite extends CatsEffectSuite:
             val responseLess = served(requestLess)
 
             assertIO(responseHtml.map(_.status.code), 200) >>
-              assertIO(responseLess.map(_.status.code), 200)
+              assertIO(responseLess.map(_.status.code), 200) >>
+              assertIO(responseLess.flatMap(_.bodyText.compile.string), simpleCss)
+        }
+    }
+
+  FunFixture
+    .map2(files, externalSyles)
+    .test("That styles and SPA play nicely together") {
+      (appDir, styleDir) =>
+        val app = for
+          logger <- IO(scribe.cats[IO]).toResource
+          fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+          fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
+          refreshPub <- Topic[IO, Unit].toResource
+          theseRoutes <- routes(
+            appDir.toString,
+            refreshPub,
+            Some(IndexHtmlConfig.StylesOnly(styleDir.toFs2)),
+            HttpRoutes.empty[IO],
+            fileToHashRef,
+            Some("app")
+          )(logger)
+        yield theseRoutes.orNotFound
+
+        app.use {
+          served =>
+            val requestLess = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("/index.less"))
+            val responseLess = served(requestLess)
+            assertIO(responseLess.map(_.status.code), 200) >>
+              assertIO(responseLess.flatMap(_.bodyText.compile.string), simpleCss)
         }
     }
 

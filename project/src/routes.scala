@@ -35,6 +35,7 @@ import cats.effect.kernel.Resource
 import cats.syntax.all.*
 
 import _root_.io.circe.syntax.EncoderOps
+import org.http4s.Uri.Path.SegmentEncoder
 
 def routes[F[_]: Files: MonadThrow](
     stringPath: String,
@@ -105,7 +106,7 @@ def routes[F[_]: Files: MonadThrow](
     StaticHtmlMiddleware(
       HttpRoutes.of[IO] {
         case req @ GET -> Root =>
-          logger.trace(req.headers.toString) >>
+          logger.trace("Generated index.html") >>
             IO(
               Response[IO]()
                 .withEntity(vanillaTemplate(injectStyles))
@@ -151,13 +152,11 @@ def routes[F[_]: Files: MonadThrow](
       )(logger)
 
     case Some(IndexHtmlConfig.StylesOnly(stylesPath)) =>
-      generatedIndexHtml(injectStyles = true).combineK(
-        NoCacheMiddlware(
-          Router(
-            "" -> fileService[IO](FileService.Config(stylesPath.toString()))
-          )
+      NoCacheMiddlware(
+        Router(
+          "" -> fileService[IO](FileService.Config(stylesPath.toString()))
         )
-      )
+      )(logger).combineK(generatedIndexHtml(injectStyles = true))
 
   val clientSpaRoutes: HttpRoutes[IO] =
     clientRoutingPrefix match
@@ -168,7 +167,7 @@ def routes[F[_]: Files: MonadThrow](
             Root / spaRoute
             StaticHtmlMiddleware(
               HttpRoutes.of[IO] {
-                case GET -> aPath /: path =>
+                case GET -> root /: spaRoute /: path =>
                   // logger.trace(path) >>
                   IO(
                     Response[IO]().withEntity(vanillaTemplate(false))
@@ -178,10 +177,9 @@ def routes[F[_]: Files: MonadThrow](
             )(logger)
 
           case Some(IndexHtmlConfig.StylesOnly(dir)) =>
-            // val aPath = Root / spaRoute
             StaticHtmlMiddleware(
               HttpRoutes.of[IO] {
-                case GET -> spaRoute /: path =>
+                case GET -> root /: spaRoute /: path =>
                   IO(
                     Response[IO]().withEntity(vanillaTemplate(true))
                   )

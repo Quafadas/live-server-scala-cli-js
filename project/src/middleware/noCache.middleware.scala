@@ -6,17 +6,22 @@ import org.typelevel.ci.CIStringSyntax
 import cats.data.Kleisli
 import cats.effect.*
 import cats.effect.IO
+import scribe.Scribe
+import cats.data.OptionT
+import cats.syntax.all.*
 
 object NoCacheMiddlware:
 
-  def apply(service: HttpRoutes[IO]): HttpRoutes[IO] = Kleisli {
+  def apply(service: HttpRoutes[IO])(logger: Scribe[IO]): HttpRoutes[IO] = Kleisli {
     (req: Request[IO]) =>
-      service(req).map {
-        resp =>
-          resp.putHeaders(
-            Header.Raw(ci"Cache-Control", "no-cache")
-          )
-      }
+      OptionT.liftF(logger.trace("No cache middleware")) >>
+        OptionT.liftF(logger.trace(req.toString)) >>
+        service(req).map {
+          resp =>
+            resp.putHeaders(
+              Header.Raw(ci"Cache-Control", "no-cache")
+            )
+        }
   }
 
 end NoCacheMiddlware

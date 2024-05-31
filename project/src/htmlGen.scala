@@ -102,7 +102,7 @@ def vanillaTemplate(withStyles: Boolean) = html(
   ),
   body(
     lessStyle(withStyles),
-    script(src := "main.js", `type` := "module"),
+    script(src := "/main.js", `type` := "module"),
     div(id := "app"),
     refreshScript
   )
