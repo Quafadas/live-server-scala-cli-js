@@ -199,7 +199,29 @@ class RoutesSuite extends CatsEffectSuite:
                   IO.unit
             }
 
-          checkResp1 >> checkResp2 >> checkRespSpa
+          val requestHtml = Request[IO](uri = uri"/")
+          val etag = "699892091"
+
+          val checkRespHtml = client
+            .run(requestHtml)
+            .use {
+              respH =>
+                assertEquals(respH.status.code, 200)
+                assertEquals(respH.headers.get(ci"ETag").isDefined, true)
+                IO.unit
+            }
+
+          val requestHtml2 = Request[IO](uri = uri"/").withHeaders(Header.Raw(ci"If-None-Match", etag))
+
+          val checkRespHtml2 = client
+            .run(requestHtml2)
+            .use {
+              respH =>
+                assertEquals(respH.status.code, 304)
+                IO.unit
+            }
+
+          checkResp1 >> checkResp2 >> checkRespSpa >> checkRespHtml >> checkRespHtml2
 
       }
   }

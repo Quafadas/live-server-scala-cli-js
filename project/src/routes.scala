@@ -91,10 +91,11 @@ def routes[F[_]: Files: MonadThrow](
   object StaticHtmlMiddleware:
     def apply(service: HttpRoutes[IO], injectStyles: Boolean)(logger: Scribe[IO]): HttpRoutes[IO] = Kleisli {
       (req: Request[IO]) =>
-        req.headers.get(ci"ETag").map(_.toList) match
+        req.headers.get(ci"If-None-Match").map(_.toList) match
           case Some(h :: Nil) if h.value == hashFalse => OptionT.liftF(IO(Response[IO](Status.NotModified)))
           case Some(h :: Nil) if h.value == hashTrue  => OptionT.liftF(IO(Response[IO](Status.NotModified)))
           case _                                      => service(req).map(userBrowserCacheHeaders(_, zdt, injectStyles))
+        end match
 
     }
 
@@ -103,10 +104,26 @@ def routes[F[_]: Files: MonadThrow](
   def generatedIndexHtml(injectStyles: Boolean) =
     StaticHtmlMiddleware(
       HttpRoutes.of[IO] {
-        case GET -> Root =>
-          IO(
-            Response[IO]().withEntity(vanillaTemplate(injectStyles))
-          )
+        case req @ GET -> Root =>
+          logger.trace(req.headers.toString) >>
+            IO(
+              Response[IO]()
+                .withEntity(vanillaTemplate(injectStyles))
+                .withHeaders(
+                  Header.Raw(ci"Cache-Control", "no-cache"),
+                  Header.Raw(
+                    ci"ETag",
+                    injectStyles match
+                      case true  => hashTrue
+                      case false => hashFalse
+                  ),
+                  Header.Raw(ci"Last-Modified", formatter.format(zdt)),
+                  Header.Raw(
+                    ci"Expires",
+                    httpCacheFormat(ZonedDateTime.ofInstant(Instant.now().plusSeconds(10000000), ZoneId.of("GMT")))
+                  )
+                )
+            )
       },
       injectStyles
     )(logger).combineK(
