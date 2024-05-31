@@ -162,13 +162,12 @@ def routes[F[_]: Files: MonadThrow](
     clientRoutingPrefix match
       case None => HttpRoutes.empty[IO]
       case Some(spaRoute) =>
-        indexOpts match
+        val r = indexOpts match
           case None =>
             Root / spaRoute
             StaticHtmlMiddleware(
               HttpRoutes.of[IO] {
-                case GET -> root /: spaRoute /: path =>
-                  // logger.trace(path) >>
+                case req @ GET -> root /: path =>
                   IO(
                     Response[IO]().withEntity(vanillaTemplate(false))
                   )
@@ -196,6 +195,8 @@ def routes[F[_]: Files: MonadThrow](
               dir / "index.html"
             )(logger)
 
+        Router(s"/$spaRoute" -> r)
+
   val refreshRoutes = HttpRoutes.of[IO] {
     case GET -> Root / "api" / "v1" / "sse" =>
       val keepAlive = fs2.Stream.fixedRate[IO](10.seconds).as(KeepAlive())
@@ -208,9 +209,9 @@ def routes[F[_]: Files: MonadThrow](
   val app = logMiddler(
     refreshRoutes
       .combineK(linkedAppWithCaching)
-      .combineK(proxyRoutes)
       .combineK(clientSpaRoutes)
       .combineK(staticAssetRoutes)
+      .combineK(proxyRoutes)
   )
 
   clientRoutingPrefix.fold(IO.unit)(s => logger.trace(s"client spa at : $s")).toResource >>

@@ -210,7 +210,7 @@ class RoutesSuite extends CatsEffectSuite:
             }
 
           val requestHtml = Request[IO](uri = uri"/")
-          val etag = "699892091"
+          // val etag = "699892091"
 
           val checkRespHtml = client
             .run(requestHtml)
