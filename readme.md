@@ -49,7 +49,7 @@ def interactiveApp =
 ```
 
 ```sh
-cs launch io.github.quafadas:live-server-scala-cli-js_3:0.0.11
+cs launch io.github.quafadas:live-server-scala-cli-js_3:0.0.21
 ```
 
 The intention, is for the simple case to be zero configuration. The below invocation makes the following assumptions;
