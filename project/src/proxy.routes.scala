@@ -8,25 +8,78 @@ import cats.effect.kernel.Resource
 import cats.effect.std.Random
 
 import ProxyConfig.Equilibrium
+import org.http4s.server.Router
+import org.http4s.server.middleware.Logger
+import com.comcast.ip4s.Port
+import cats.data.NonEmptyList
+import ProxyConfig.Server
+import ProxyConfig.LocationMatcher
+import com.comcast.ip4s.Host
+import cats.syntax.all.*
 
 def makeProxyRoutes(
     client: Client[IO],
-    pathPrefix: Option[String],
-    proxyConfig: Resource[IO, Option[Equilibrium]]
-)(logger: Scribe[IO]): Resource[IO, HttpRoutes[IO]] =
-  proxyConfig.flatMap {
-    case Some(pc) =>
-      {
-        given R: Random[IO] = Random.javaUtilConcurrentThreadLocalRandom[IO]
-        logger.debug("setup proxy server") >>
-          IO(HttpProxy.servers[IO](pc, client, pathPrefix.getOrElse(???)).head._2)
-      }.toResource
+    proxyConfig: Option[(Equilibrium, String)]
+)(logger: Scribe[IO]): HttpRoutes[IO] =
+  proxyConfig match
+    case Some((pc, pathPrefix)) =>
+      given R: Random[IO] = Random.javaUtilConcurrentThreadLocalRandom[IO]
+      Logger.httpRoutes[IO](
+        logHeaders = true,
+        logBody = true,
+        redactHeadersWhen = _ => false,
+        logAction = Some((msg: String) => logger.trace(msg))
+      )(
+        Router(
+          pathPrefix -> HttpProxy.servers[IO](pc, client, pathPrefix).head._2
+        )
+      )
 
     case None =>
-      (
-        logger.debug("no proxy set") >>
-          IO(HttpRoutes.empty[IO])
-      ).toResource
-  }
+      HttpRoutes.empty[IO]
 
 end makeProxyRoutes
+
+def proxyConf(proxyTarget: Option[Port], pathPrefix: Option[String]): Resource[IO, Option[(Equilibrium, String)]] =
+  proxyTarget
+    .zip(pathPrefix)
+    .traverse {
+      (pt, prfx) =>
+        IO(
+          (
+            Equilibrium(
+              ProxyConfig.HttpProxyConfig(
+                servers = NonEmptyList(
+                  Server(
+                    listen = pt,
+                    serverNames = List("localhost"),
+                    locations = List(
+                      ProxyConfig.Location(
+                        matcher = LocationMatcher.Prefix(prfx),
+                        proxyPass = s"http://$$backend"
+                      )
+                    )
+                  ),
+                  List()
+                ),
+                upstreams = List(
+                  ProxyConfig.Upstream(
+                    name = "backend",
+                    servers = NonEmptyList(
+                      ProxyConfig.UpstreamServer(
+                        host = Host.fromString("localhost").get,
+                        port = pt,
+                        weight = 5
+                      ),
+                      List()
+                    )
+                  )
+                )
+              )
+            ),
+            prfx
+          )
+        )
+
+    }
+    .toResource

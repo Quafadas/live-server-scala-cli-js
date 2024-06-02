@@ -209,9 +209,9 @@ def routes[F[_]: Files: MonadThrow](
   val app = logMiddler(
     refreshRoutes
       .combineK(linkedAppWithCaching)
+      .combineK(proxyRoutes)
       .combineK(clientSpaRoutes)
       .combineK(staticAssetRoutes)
-      .combineK(proxyRoutes)
   )
 
   clientRoutingPrefix.fold(IO.unit)(s => logger.trace(s"client spa at : $s")).toResource >>

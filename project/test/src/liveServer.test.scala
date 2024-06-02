@@ -84,6 +84,24 @@ trait PlaywrightTest extends munit.FunSuite:
       os.remove.all(tempDir)
   )
 
+  val externalHtmlStyles = FunFixture[(os.Path, os.Path)](
+    setup = test =>
+      // create a temp folder
+      val tempDir = os.temp.dir()
+      val staticDir = tempDir / "assets"
+      os.makeDir(staticDir)
+      // create a file in the folder
+      os.write.over(tempDir / "hello.scala", helloWorldCode("Hello"))
+      os.write.over(staticDir / "index.less", "h1{color:red}")
+      os.write.over(staticDir / "index.html", vanillaTemplate(true).render)
+      os.proc("scala-cli", "compile", tempDir.toString).call(cwd = tempDir)
+      (tempDir, staticDir)
+    ,
+    teardown = tempDir =>
+      // Always gets called, even if test failed.
+      os.remove.all(tempDir._1)
+  )
+
   files.test("incremental") {
     testDir =>
       val thisTestPort = basePort + 1
@@ -147,7 +165,7 @@ trait PlaywrightTest extends munit.FunSuite:
       assertEquals(out.statusCode, 404)
   }
 
-  files.test("proxy server".only) {
+  files.test("proxy server") {
     testDir =>
       val backendPort = 8089
       val thisTestPort = basePort + 3
@@ -196,7 +214,7 @@ trait PlaywrightTest extends munit.FunSuite:
       assertEquals(outFail.statusCode, 404)
   }
 
-  files.test("proxy server and SPA client apps") {
+  externalHtmlStyles.test("proxy server and SPA client apps") {
     testDir =>
       val backendPort = 8090
       val thisTestPort = basePort + 3
@@ -222,9 +240,9 @@ trait PlaywrightTest extends munit.FunSuite:
             "--build-tool",
             "scala-cli",
             "--project-dir",
-            testDir.toString,
-            "--styles-dir",
-            styleDir(testDir).toString,
+            testDir._1.toString,
+            "--path-to-index-html",
+            testDir._2.toString,
             "--client-routes-prefix",
             "/app",
             "--port",
@@ -232,7 +250,9 @@ trait PlaywrightTest extends munit.FunSuite:
             "--proxy-target-port",
             backendPort.toString,
             "--proxy-prefix-path",
-            "/api"
+            "/api",
+            "--log-level",
+            "trace"
           )
         )
         .unsafeToFuture()
@@ -248,6 +268,7 @@ trait PlaywrightTest extends munit.FunSuite:
 
       val canGetHtml = requests.get(s"http://localhost:$thisTestPort", check = false)
       assertEquals(canGetHtml.statusCode, 200)
+
   }
 
   files.test("no styles") {
