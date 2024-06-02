@@ -29,10 +29,14 @@ object HttpProxy:
 
           val routes: HttpRoutes[F] = HttpRoutes.of {
             case (req: Request[F]) =>
+              // println("in proxy")
+              // println(req)
               val pathRendered = pathPrefix + req.uri.path.renderString
+              // println(pathRendered)
               val host = req.headers.get[Host].map(_.host).getOrElse("") // Host set otherwise empty string
               val newServers = servers.filter(_.serverNames.contains(host))
-
+              // println(host)
+              // println(newServers)
               val exact =
                 newServers
                   .flatMap(_.locations)
@@ -59,12 +63,13 @@ object HttpProxy:
                     .headOption
                     .map(_._2)
                 }
-
               proxy.fold(
                 Response[F](Status.NotFound).withEntity("No Route Found").pure[F]
               )(
-                proxyThrough[F](_, upstreams)
-                  .flatMap(uri => client.toHttpApp(req.removeHeader[Host].withUri(uri.addPath(pathRendered))))
+                proxyThrough[F](_, upstreams).flatMap {
+                  uri =>
+                    client.toHttpApp(req.removeHeader[Host].withUri(uri.addPath(pathRendered)))
+                }
               )
           }
 
@@ -76,6 +81,8 @@ object HttpProxy:
       proxyPass: String,
       upstreams: Map[String, NonEmptyList[ProxyConfig.UpstreamServer]]
   ): F[Uri] =
+    println(s"proxypass $proxyPass")
+    println(upstreams)
     if !proxyPass.contains("$") then Uri.fromString(proxyPass).liftTo[F]
     else
       extractVariable(proxyPass).flatMap {
@@ -89,6 +96,8 @@ object HttpProxy:
                 )
             )
       }
+    end if
+  end proxyThrough
 
   private def extractVariable[F[_]: ApplicativeThrow](s: String): F[(String, String, String)] =
     s.split('$').toList match
@@ -131,6 +140,8 @@ object HttpProxy:
 
   def xForwardedMiddleware[G[_], F[_]](http: Http[G, F]): Http[G, F] = Kleisli {
     (req: Request[F]) =>
+      println("in middleware")
+      println(req)
       req
         .remote
         .fold(http.run(req)) {

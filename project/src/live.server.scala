@@ -23,12 +23,6 @@ import cats.implicits.*
 import _root_.io.circe.*
 import _root_.io.circe.Encoder
 
-import ProxyConfig.Equilibrium
-import ProxyConfig.Server
-import com.comcast.ip4s.Host
-import cats.data.NonEmptyList
-import ProxyConfig.LocationMatcher
-
 sealed trait FrontendEvent derives Encoder.AsObject
 
 case class KeepAlive() extends FrontendEvent derives Encoder.AsObject
@@ -213,46 +207,6 @@ object LiveServer extends IOApp:
           .withHandler(minimumLevel = Some(Level.get(lvl).get))
           .replace()
 
-        val proxyConf2: Resource[IO, Option[Equilibrium]] = proxyTarget
-          .zip(pathPrefix)
-          .traverse {
-            (pt, prfx) =>
-              IO(
-                Equilibrium(
-                  ProxyConfig.HttpProxyConfig(
-                    servers = NonEmptyList(
-                      Server(
-                        listen = port,
-                        serverNames = List("localhost"),
-                        locations = List(
-                          ProxyConfig.Location(
-                            matcher = LocationMatcher.Prefix(prfx),
-                            proxyPass = s"http://$$backend"
-                          )
-                        )
-                      ),
-                      List()
-                    ),
-                    upstreams = List(
-                      ProxyConfig.Upstream(
-                        name = "backend",
-                        servers = NonEmptyList(
-                          ProxyConfig.UpstreamServer(
-                            host = Host.fromString("localhost").get,
-                            port = pt,
-                            weight = 5
-                          ),
-                          List()
-                        )
-                      )
-                    )
-                  )
-                )
-              )
-
-          }
-          .toResource
-
         val server = for
           _ <- logger
             .debug(
@@ -295,7 +249,8 @@ object LiveServer extends IOApp:
                 CliValidationError("path-to-index-html and styles-dir can't be defined at the same time")
               )
 
-          proxyRoutes <- makeProxyRoutes(client, pathPrefix, proxyConf2)(logger)
+          proxyConf2 <- proxyConf(proxyTarget, pathPrefix)
+          proxyRoutes: HttpRoutes[IO] = makeProxyRoutes(client, proxyConf2)(logger)
 
           _ <- buildRunner(
             buildTool,

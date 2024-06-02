@@ -14,8 +14,13 @@ test:
 checkOpts:
   mill project.run --help
 
+
 jvmServe:
   mill -w project.runBackground --build-tool scala-cli --project-dir /Users/simon/Code/indigoLite --log-level info --browse-on-open-at / --path-to-index-html /Users/simon/Code/indigoLite/static
+
+proxy:
+  mill -w project.runBackground --project-dir /Users/simon/Code/viteless --port 3006 --proxy-prefix-path /api --proxy-target-port 8080 --log-level trace
+
 
 goViteless:
   mill -w project.run --project-dir /Users/simon/Code/viteless --styles-dir /Users/simon/Code/viteless/styles

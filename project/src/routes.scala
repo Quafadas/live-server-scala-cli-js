@@ -11,6 +11,7 @@ import org.http4s.Response
 import org.http4s.ServerSentEvent
 import org.http4s.StaticFile
 import org.http4s.Status
+import org.http4s.Uri.Path.SegmentEncoder
 import org.http4s.dsl.io.*
 import org.http4s.scalatags.*
 import org.http4s.server.Router
@@ -35,7 +36,6 @@ import cats.effect.kernel.Resource
 import cats.syntax.all.*
 
 import _root_.io.circe.syntax.EncoderOps
-import org.http4s.Uri.Path.SegmentEncoder
 
 def routes[F[_]: Files: MonadThrow](
     stringPath: String,
@@ -60,6 +60,12 @@ def routes[F[_]: Files: MonadThrow](
           StaticFile
             .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
             .getOrElseF(NotFound())
+
+        case req @ GET -> Root / fName ~ "map" =>
+          StaticFile
+            .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
+            .getOrElseF(NotFound())
+
       },
       ref
     )(logger)
@@ -209,9 +215,9 @@ def routes[F[_]: Files: MonadThrow](
   val app = logMiddler(
     refreshRoutes
       .combineK(linkedAppWithCaching)
+      .combineK(proxyRoutes)
       .combineK(clientSpaRoutes)
       .combineK(staticAssetRoutes)
-      .combineK(proxyRoutes)
   )
 
   clientRoutingPrefix.fold(IO.unit)(s => logger.trace(s"client spa at : $s")).toResource >>
