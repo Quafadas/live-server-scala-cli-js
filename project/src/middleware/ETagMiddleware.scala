@@ -63,7 +63,8 @@ object ETagMiddleware:
           OptionT.liftF(logger.debug("No ETag header in query, service it")) >>
             service(req).semiflatMap {
               resp =>
-                respondWithEtag(resp)
+                logger.trace(resp.toString) >>
+                  respondWithEtag(resp)
             }
       end match
   }

@@ -57,7 +57,7 @@ def proxyConf(proxyTarget: Option[Port], pathPrefix: Option[String]): Resource[I
                     locations = List(
                       ProxyConfig.Location(
                         matcher = LocationMatcher.Prefix(prfx),
-                        proxyPass = "http://$$backend"
+                        proxyPass = "http://$backend"
                       )
                     )
                   ),

@@ -60,6 +60,12 @@ def routes[F[_]: Files: MonadThrow](
           StaticFile
             .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
             .getOrElseF(NotFound())
+
+        case req @ GET -> Root / fName ~ "map" =>
+          StaticFile
+            .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
+            .getOrElseF(NotFound())
+
       },
       ref
     )(logger)

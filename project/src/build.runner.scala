@@ -127,13 +127,16 @@ def buildRunnerMill(
     .background
     .void
 
+  val millargs = List(
+    "-w",
+    s"$moduleName.fastLinkJS",
+    "-j",
+    "0"
+  ) ++ extraBuildArgs
   // TODO pipe this to stdout so that we can see linker progress / errors.
   val builder = ProcessBuilder(
     "mill",
-    List(
-      "-w",
-      s"$moduleName.fastLinkJS"
-    ) ++ extraBuildArgs
+    millargs
   ).withWorkingDirectory(workDir)
     .spawn[IO]
     .use {
@@ -147,6 +150,7 @@ def buildRunnerMill(
   for
     _ <- logger.trace("Starting buildRunnerMill").toResource
     _ <- logger.trace(s"watching path $watchLinkComplePath").toResource
+    _ <- logger.trace(s"running mill with args $millargs").toResource
     _ <- builder
     _ <- watcher
   yield ()
