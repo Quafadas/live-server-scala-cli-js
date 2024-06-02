@@ -1,0 +1,19 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "scala",
+            "request": "attach",
+            "name": "Attach debugger",
+            // name of the module that is being debugging
+            "buildTarget": "project.test",
+            // Host of the jvm to connect to
+            "hostName": "localhost",
+            // Port to connect to
+            "port": 5005
+          }
+    ]
+}
