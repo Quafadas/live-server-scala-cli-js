@@ -1,7 +1,6 @@
 import com.comcast.ip4s.*
 
 import cats.data.NonEmptyList
-
 import cats.syntax.all.*
 
 object ProxyConfig:

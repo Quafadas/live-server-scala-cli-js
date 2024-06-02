@@ -3,11 +3,12 @@ import org.http4s.HttpRoutes
 import org.http4s.Request
 import org.typelevel.ci.CIStringSyntax
 
+import scribe.Scribe
+
 import cats.data.Kleisli
+import cats.data.OptionT
 import cats.effect.*
 import cats.effect.IO
-import scribe.Scribe
-import cats.data.OptionT
 import cats.syntax.all.*
 
 object NoCacheMiddlware:

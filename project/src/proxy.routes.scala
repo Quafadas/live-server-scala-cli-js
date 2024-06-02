@@ -1,21 +1,22 @@
 import org.http4s.HttpRoutes
 import org.http4s.client.Client
+import org.http4s.server.Router
+import org.http4s.server.middleware.Logger
+
+import com.comcast.ip4s.Host
+import com.comcast.ip4s.Port
 
 import scribe.Scribe
 
+import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.effect.kernel.Resource
 import cats.effect.std.Random
+import cats.syntax.all.*
 
 import ProxyConfig.Equilibrium
-import org.http4s.server.Router
-import org.http4s.server.middleware.Logger
-import com.comcast.ip4s.Port
-import cats.data.NonEmptyList
-import ProxyConfig.Server
 import ProxyConfig.LocationMatcher
-import com.comcast.ip4s.Host
-import cats.syntax.all.*
+import ProxyConfig.Server
 
 def makeProxyRoutes(
     client: Client[IO],
@@ -56,7 +57,7 @@ def proxyConf(proxyTarget: Option[Port], pathPrefix: Option[String]): Resource[I
                     locations = List(
                       ProxyConfig.Location(
                         matcher = LocationMatcher.Prefix(prfx),
-                        proxyPass = s"http://$$backend"
+                        proxyPass = "http://$$backend"
                       )
                     )
                   ),

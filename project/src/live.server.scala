@@ -23,12 +23,6 @@ import cats.implicits.*
 import _root_.io.circe.*
 import _root_.io.circe.Encoder
 
-import ProxyConfig.Equilibrium
-import ProxyConfig.Server
-import com.comcast.ip4s.Host
-import cats.data.NonEmptyList
-import ProxyConfig.LocationMatcher
-
 sealed trait FrontendEvent derives Encoder.AsObject
 
 case class KeepAlive() extends FrontendEvent derives Encoder.AsObject

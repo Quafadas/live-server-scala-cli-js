@@ -11,6 +11,7 @@ import org.http4s.Response
 import org.http4s.ServerSentEvent
 import org.http4s.StaticFile
 import org.http4s.Status
+import org.http4s.Uri.Path.SegmentEncoder
 import org.http4s.dsl.io.*
 import org.http4s.scalatags.*
 import org.http4s.server.Router
@@ -35,7 +36,6 @@ import cats.effect.kernel.Resource
 import cats.syntax.all.*
 
 import _root_.io.circe.syntax.EncoderOps
-import org.http4s.Uri.Path.SegmentEncoder
 
 def routes[F[_]: Files: MonadThrow](
     stringPath: String,
