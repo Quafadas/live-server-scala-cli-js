@@ -89,36 +89,36 @@ trait PlaywrightTest extends CatsEffectSuite:
       }
       .toResource
 
-  val externalHtmlStyles = IO{      
-      val tempDir = os.temp.dir()
-      val staticDir = tempDir / "assets"
-      os.makeDir(staticDir)      
-      os.write.over(tempDir / "hello.scala", helloWorldCode("Hello"))
-      os.write.over(staticDir / "index.less", "h1{color:red}")
-      os.write.over(staticDir / "index.html", vanillaTemplate(true).render)      
-      (tempDir, staticDir)
-    }.flatTap{
+  val externalHtmlStyles = IO {
+    val tempDir = os.temp.dir()
+    val staticDir = tempDir / "assets"
+    os.makeDir(staticDir)
+    os.write.over(tempDir / "hello.scala", helloWorldCode("Hello"))
+    os.write.over(staticDir / "index.less", "h1{color:red}")
+    os.write.over(staticDir / "index.html", vanillaTemplate(true).render)
+    (tempDir, staticDir)
+  }.flatTap {
       tempDir =>
-          IO.blocking(os.proc("scala-cli", "compile", tempDir._1.toString).call(cwd = tempDir._1))
-    }.toResource
-    
+        IO.blocking(os.proc("scala-cli", "compile", tempDir._1.toString).call(cwd = tempDir._1))
+    }
+    .toResource
 
   val client = EmberClientBuilder.default[IO].build
 
   val backendPort = 8999
 
   val simpleBackend = EmberServerBuilder
-          .default[IO]
-          .withHttpApp(
-            HttpRoutes
-              .of[IO] {
-                case GET -> Root / "api" / "hello" =>
-                  Ok("hello world")
-              }
-              .orNotFound
-          )
-          .withPort(Port.fromInt(backendPort).get)
-          .build
+    .default[IO]
+    .withHttpApp(
+      HttpRoutes
+        .of[IO] {
+          case GET -> Root / "api" / "hello" =>
+            Ok("hello world")
+        }
+        .orNotFound
+    )
+    .withPort(Port.fromInt(backendPort).get)
+    .build
 
   ResourceFunFixture {
     files.flatMap {
@@ -138,7 +138,7 @@ trait PlaywrightTest extends CatsEffectSuite:
       increaseTimeout.setTimeout(15000)
       IO.sleep(3.seconds) >>
         IO(page.navigate(s"http://localhost:$port")) >>
-        IO(assertThat(page.locator("h1")).containsText("HelloWorld", increaseTimeout)) >>        
+        IO(assertThat(page.locator("h1")).containsText("HelloWorld", increaseTimeout)) >>
         IO.blocking(os.write.over(testDir / "hello.scala", helloWorldCode("Bye"))) >>
         IO(assertThat(page.locator("h1")).containsText("ByeWorld", increaseTimeout)) >>
         IO.blocking(os.write.append(styleDir(testDir) / "index.less", "h1 { color: red; }")) >>
@@ -183,78 +183,81 @@ trait PlaywrightTest extends CatsEffectSuite:
             proxyPortTarget = Port.fromInt(backendPort),
             proxyPathMatchPrefix = Some("/api")
           )
-          
-          simpleBackend.flatMap{ _ => 
-            LiveServer.main(lsc).map(_ => (lsc.port, client))
+
+          simpleBackend.flatMap {
+            _ =>
+              LiveServer.main(lsc).map(_ => (lsc.port, client))
           }
       }
   }.test("proxy server forwards to a backend server") {
-    (port, client) =>      
-      
+    (port, client) =>
       assertIO(
         client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port/api/hello"))),
         Ok
-      ) >> 
-      assertIO(
-        client.expect[String](s"http://localhost:$port/api/hello"),
-        "hello world"
       ) >>
-      assertIO(
-        client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port/api/nope"))),
-        NotFound
-      )
+        assertIO(
+          client.expect[String](s"http://localhost:$port/api/hello"),
+          "hello world"
+        ) >>
+        assertIO(
+          client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port/api/nope"))),
+          NotFound
+        )
   }
 
-  ResourceFunFixture {externalHtmlStyles.both(client).flatMap{
-    case((dir, extHtmlDir), client) => 
-      println(dir)
-      println(extHtmlDir)
-      val lsc = LiveServerConfig(
-        baseDir = Some(dir.toString),
-        indexHtmlTemplate = Some(extHtmlDir.toString),
-        port = Port.fromInt(basePort).get,
-        openBrowserAt = "",
-        preventBrowserOpen = true,
-        proxyPortTarget = Port.fromInt(backendPort),
-        proxyPathMatchPrefix = Some("/api"),
-        clientRoutingPrefix = Some("/app"),
-        logLevel = "info"
-      )
+  ResourceFunFixture {
+    externalHtmlStyles
+      .both(client)
+      .flatMap {
+        case ((dir, extHtmlDir), client) =>
+          println(dir)
+          println(extHtmlDir)
+          val lsc = LiveServerConfig(
+            baseDir = Some(dir.toString),
+            indexHtmlTemplate = Some(extHtmlDir.toString),
+            port = Port.fromInt(basePort).get,
+            openBrowserAt = "",
+            preventBrowserOpen = true,
+            proxyPortTarget = Port.fromInt(backendPort),
+            proxyPathMatchPrefix = Some("/api"),
+            clientRoutingPrefix = Some("/app"),
+            logLevel = "info"
+          )
 
-      simpleBackend.flatMap{ _ => 
-        LiveServer.main(lsc).map(_ => (lsc.port, client))
-      }      
-    }
+          simpleBackend.flatMap {
+            _ =>
+              LiveServer.main(lsc).map(_ => (lsc.port, client))
+          }
+      }
   }.test("proxy server and SPA client apps") {
     (port, client) =>
       assertIO(
         client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port/api/hello"))),
         Ok
-      ) >> 
-      assertIO(
-        client.expect[String](s"http://localhost:$port/api/hello"),
-        "hello world"
       ) >>
-      assertIO(
-        client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port/api/nope"))),
-        NotFound
-      ) >> 
-      assertIO(
-        client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port"))),
-        Ok
-      ) >>
-      assertIO(
-        client.expect[String](s"http://localhost:$port"),
-        vanillaTemplate(true).render
-      ) >>
-      assertIO(
-        client.expect[String](s"http://localhost:$port/app/spaRoute"),
-        vanillaTemplate(true).render
-      )
+        assertIO(
+          client.expect[String](s"http://localhost:$port/api/hello"),
+          "hello world"
+        ) >>
+        assertIO(
+          client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port/api/nope"))),
+          NotFound
+        ) >>
+        assertIO(
+          client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port"))),
+          Ok
+        ) >>
+        assertIO(
+          client.expect[String](s"http://localhost:$port"),
+          vanillaTemplate(true).render
+        ) >>
+        assertIO(
+          client.expect[String](s"http://localhost:$port/app/spaRoute"),
+          vanillaTemplate(true).render
+        )
 
   }
 
-  
   ResourceFunFixture {
     files.flatMap {
       dir =>
@@ -268,12 +271,15 @@ trait PlaywrightTest extends CatsEffectSuite:
     }
   }.test("no styles") {
     client =>
-      assertIO(client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$basePort"))), Ok) >>
-      assertIOBoolean(client.expect[String](s"http://localhost:$basePort").map(out => !out.contains("less")))
+      assertIO(
+        client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$basePort"))),
+        Ok
+      ) >>
+        assertIOBoolean(client.expect[String](s"http://localhost:$basePort").map(out => !out.contains("less")))
   }
 
   ResourceFunFixture {
-   files.flatMap {
+    files.flatMap {
       dir =>
         val lsc = LiveServerConfig(
           baseDir = Some(dir.toString),
@@ -283,13 +289,26 @@ trait PlaywrightTest extends CatsEffectSuite:
           preventBrowserOpen = true
         )
         LiveServer.main(lsc).flatMap(_ => client)
-    }  
+    }
   }.test("with styles") {
     client =>
-      assertIO(client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$basePort"))), Ok) >>
-      assertIOBoolean(client.expect[String](s"http://localhost:$basePort").map(out => out.contains("src=\"https://cdn.jsdelivr.net/npm/less"))) >>
-      assertIOBoolean(client.expect[String](s"http://localhost:$basePort").map(out => out.contains("less.watch()"))) >>
-      assertIO(client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$basePort/index.less"))), Ok) 
+      assertIO(
+        client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$basePort"))),
+        Ok
+      ) >>
+        assertIOBoolean(
+          client
+            .expect[String](s"http://localhost:$basePort")
+            .map(out => out.contains("src=\"https://cdn.jsdelivr.net/npm/less"))
+        ) >>
+        assertIOBoolean(
+          client.expect[String](s"http://localhost:$basePort").map(out => out.contains("less.watch()"))
+        ) >>
+        assertIO(
+          client
+            .status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$basePort/index.less"))),
+          Ok
+        )
   }
 
   override def afterAll(): Unit =
