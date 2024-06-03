@@ -16,6 +16,7 @@ import LiveServer.LiveServerConfig
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.Method
 import org.http4s.Uri
+import scalatags.Text.styles
 
 /*
 Run
@@ -129,7 +130,7 @@ trait PlaywrightTest extends CatsEffectSuite:
         )
         LiveServer.main(lsc).map((_, dir, lsc.port))
     }
-  }.test("incremental".only) {
+  }.test("incremental") {
     (_, testDir, port) =>
       val increaseTimeout = ContainsTextOptions()
       increaseTimeout.setTimeout(15000)
@@ -251,61 +252,43 @@ trait PlaywrightTest extends CatsEffectSuite:
 
   }
 
-  // files.test("no styles") {
-  //   testDir =>
-  //     val thisTestPort = basePort + 4
-  //     LiveServer
-  //       .run(
-  //         List(
-  //           "--build-tool",
-  //           "scala-cli",
-  //           "--project-dir",
-  //           testDir.toString,
-  //           "--port",
-  //           thisTestPort.toString
-  //         )
-  //       )
-  //       .unsafeToFuture()
+  
+  ResourceFunFixture {
+    files.flatMap {
+      dir =>
+        val lsc = LiveServerConfig(
+          baseDir = Some(dir.toString),
+          port = Port.fromInt(basePort).get,
+          openBrowserAt = "",
+          preventBrowserOpen = true
+        )
+        LiveServer.main(lsc).flatMap(_ => client)
+    }
+  }.test("no styles".only) {
+    client =>
+      assertIO(client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$basePort"))), Ok) >>
+      assertIOBoolean(client.expect[String](s"http://localhost:$basePort").map(out => !out.contains("less")))
+  }
 
-  //     Thread.sleep(1000)
-
-  //     val out = requests.get(s"http://localhost:$thisTestPort", check = false)
-  //     assertEquals(out.statusCode, 200)
-  //     assert(!out.text().contains("less"))
-
-  // }
-
-  // files.test("with styles") {
-  //   testDir =>
-  //     val thisTestPort = basePort + 5
-  //     LiveServer
-  //       .run(
-  //         List(
-  //           "--build-tool",
-  //           "scala-cli",
-  //           "--project-dir",
-  //           testDir.toString,
-  //           "--port",
-  //           thisTestPort.toString,
-  //           "--styles-dir",
-  //           styleDir(testDir).toString
-  //           // "--log-level",
-  //           // "debug"
-  //         )
-  //       )
-  //       .unsafeToFuture()
-
-  //     Thread.sleep(1000)
-
-  //     val out = requests.get(s"http://localhost:$thisTestPort", check = false)
-  //     assertEquals(out.statusCode, 200)
-  //     assert(out.text().contains("src=\"https://cdn.jsdelivr.net/npm/less"))
-  //     assert(out.text().contains("less.watch()"))
-
-  //     val out2 = requests.get(s"http://localhost:$thisTestPort/index.less", check = false)
-  //     assertEquals(out2.statusCode, 200)
-
-  // }
+  ResourceFunFixture {
+   files.flatMap {
+      dir =>
+        val lsc = LiveServerConfig(
+          baseDir = Some(dir.toString),
+          stylesDir = Some(styleDir(dir).toString),
+          port = Port.fromInt(basePort).get,
+          openBrowserAt = "",
+          preventBrowserOpen = true
+        )
+        LiveServer.main(lsc).flatMap(_ => client)
+    }  
+  }.test("with styles".only) {
+    client =>
+      assertIO(client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$basePort"))), Ok) >>
+      assertIOBoolean(client.expect[String](s"http://localhost:$basePort").map(out => out.contains("src=\"https://cdn.jsdelivr.net/npm/less"))) >>
+      assertIOBoolean(client.expect[String](s"http://localhost:$basePort").map(out => out.contains("less.watch()"))) >>
+      assertIO(client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$basePort/index.less"))), Ok) 
+  }
 
   override def afterAll(): Unit =
     super.afterAll()
