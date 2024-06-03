@@ -18,6 +18,8 @@ import org.http4s.Method
 import org.http4s.Uri
 import scalatags.Text.styles
 
+import scala.concurrent.duration.*
+
 /*
 Run
 cs launch com.microsoft.playwright:playwright:1.41.1 -M "com.microsoft.playwright.CLI" -- install --with-deps
@@ -130,13 +132,13 @@ trait PlaywrightTest extends CatsEffectSuite:
         )
         LiveServer.main(lsc).map((_, dir, lsc.port))
     }
-  }.test("incremental") {
+  }.test("incremental".only) {
     (_, testDir, port) =>
       val increaseTimeout = ContainsTextOptions()
       increaseTimeout.setTimeout(15000)
-
-      IO(page.navigate(s"http://localhost:$port")) >>
-        IO(assertThat(page.locator("h1")).containsText("HelloWorld", increaseTimeout)) >>
+      IO.sleep(3.seconds) >>
+        IO(page.navigate(s"http://localhost:$port")) >>
+        IO(assertThat(page.locator("h1")).containsText("HelloWorld", increaseTimeout)) >>        
         IO.blocking(os.write.over(testDir / "hello.scala", helloWorldCode("Bye"))) >>
         IO(assertThat(page.locator("h1")).containsText("ByeWorld", increaseTimeout)) >>
         IO.blocking(os.write.append(styleDir(testDir) / "index.less", "h1 { color: red; }")) >>

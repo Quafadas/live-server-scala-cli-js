@@ -204,7 +204,7 @@ def routes[F[_]: Files: MonadThrow](
         Router(spaRoute -> r)
 
   val refreshRoutes = HttpRoutes.of[IO] {
-    case GET -> Root / "api" / "v1" / "sse" =>
+    case GET -> Root / "refresh" / "v1" / "sse" =>
       val keepAlive = fs2.Stream.fixedRate[IO](10.seconds).as(KeepAlive())
       Ok(
         keepAlive
