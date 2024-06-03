@@ -14,6 +14,10 @@ import cats.effect.unsafe.implicits.global
 import munit.CatsEffectSuite
 import LiveServer.LiveServerConfig
 import LiveServer.openBrowserAtOpt
+import org.http4s.ember.client.EmberClientBuilder
+import org.http4s.Method
+import org.http4s.syntax.literals.uri
+import org.http4s.Uri
 
 /*
 Run
@@ -73,13 +77,10 @@ trait PlaywrightTest extends CatsEffectSuite:
 
   val files =
     IO {
-      // create a temp folder
       val tempDir = os.temp.dir()
-      // create a file in the folder
       os.makeDir.all(styleDir(tempDir))
       os.write.over(tempDir / "hello.scala", helloWorldCode("Hello"))
       os.write.over(styleDir(tempDir) / "index.less", "")
-
       tempDir
     }.flatTap {
         tempDir =>
@@ -105,6 +106,8 @@ trait PlaywrightTest extends CatsEffectSuite:
   //     os.remove.all(tempDir._1)
   // )
 
+  val client = EmberClientBuilder.default[IO].build
+
   ResourceFunFixture {
     files.flatMap {
       dir =>
@@ -115,9 +118,9 @@ trait PlaywrightTest extends CatsEffectSuite:
           openBrowserAt = "",
           preventBrowserOpen = true
         )
+        val client = EmberClientBuilder.default[IO].build
         LiveServer.main(lsc).map((_, dir, lsc.port))
     }
-
   }.test("incremental") {
     (_, testDir, port) =>
       val increaseTimeout = ContainsTextOptions()
@@ -131,29 +134,27 @@ trait PlaywrightTest extends CatsEffectSuite:
         IO(assertThat(page.locator("h1")).hasCSS("color", "rgb(255, 0, 0)"))
   }
 
-  // files.test("no proxy server") {
-  //   testDir =>
-  //     val thisTestPort = basePort + 2
-  //     LiveServer
-  //       .run(
-  //         List(
-  //           "--build-tool",
-  //           "scala-cli",
-  //           "--project-dir",
-  //           testDir.toString,
-  //           "--styles-dir",
-  //           styleDir(testDir).toString,
-  //           "--port",
-  //           thisTestPort.toString
-  //         )
-  //       )
-  //       .unsafeToFuture()
-
-  //     Thread.sleep(1000) // give the thing time to start.
-
-  //     val out = requests.get(s"http://localhost:$thisTestPort/api/hello", check = false)
-  //     assertEquals(out.statusCode, 404)
-  // }
+  ResourceFunFixture {
+    files
+      .both(client)
+      .flatMap {
+        (dir, client) =>
+          val lsc = LiveServerConfig(
+            baseDir = Some(dir.toString),
+            stylesDir = Some(styleDir(dir).toString),
+            port = Port.fromInt(basePort).get,
+            openBrowserAt = "",
+            preventBrowserOpen = true
+          )
+          LiveServer.main(lsc).map((_, dir, lsc.port, client))
+      }
+  }.test("no proxy server") {
+    (_, _, port, client) =>
+      assertIO(
+        client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port/api/hello"))),
+        NotFound
+      )
+  }
 
   // files.test("proxy server") {
   //   testDir =>
