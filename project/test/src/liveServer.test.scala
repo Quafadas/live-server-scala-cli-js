@@ -130,7 +130,7 @@ trait PlaywrightTest extends CatsEffectSuite:
         )
         LiveServer.main(lsc).map((_, dir, lsc.port))
     }
-  }.test("incremental".only) {
+  }.test("incremental") {
     (_, testDir, port) =>
       val increaseTimeout = ContainsTextOptions()
       increaseTimeout.setTimeout(15000)
