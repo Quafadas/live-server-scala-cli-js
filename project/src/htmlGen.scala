@@ -20,7 +20,7 @@ def lessStyle(withStyles: Boolean): Seq[Modifier] =
     )
   else Seq.empty
 
-val refreshScript = script(raw("""const sse = new EventSource('/api/v1/sse');
+val refreshScript = script(raw("""const sse = new EventSource('/refresh/v1/sse');
 sse.addEventListener('message', (e) => {
   const msg = JSON.parse(e.data)
 

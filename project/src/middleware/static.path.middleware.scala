@@ -68,7 +68,7 @@ inline def cachedFileResponse(epochInstant: Instant, fullPath: Path, req: Reques
                   response
             }
           case _ =>
-            OptionT.liftF(logger.debug("No headers in query, service it")) >>
+            OptionT.liftF(logger.debug("No If-Modified-Since headers in request")) >>
               service(req).map {
                 resp =>
                   respondWithCacheLastModified(

@@ -201,7 +201,7 @@ def routes[F[_]: Files: MonadThrow](
               dir / "index.html"
             )(logger)
 
-        Router(s"/$spaRoute" -> r)
+        Router(spaRoute -> r)
 
   val refreshRoutes = HttpRoutes.of[IO] {
     case GET -> Root / "api" / "v1" / "sse" =>

@@ -81,8 +81,6 @@ object HttpProxy:
       proxyPass: String,
       upstreams: Map[String, NonEmptyList[ProxyConfig.UpstreamServer]]
   ): F[Uri] =
-    println(s"proxypass $proxyPass")
-    println(upstreams)
     if !proxyPass.contains("$") then Uri.fromString(proxyPass).liftTo[F]
     else
       extractVariable(proxyPass).flatMap {
@@ -140,8 +138,6 @@ object HttpProxy:
 
   def xForwardedMiddleware[G[_], F[_]](http: Http[G, F]): Http[G, F] = Kleisli {
     (req: Request[F]) =>
-      println("in middleware")
-      println(req)
       req
         .remote
         .fold(http.run(req)) {

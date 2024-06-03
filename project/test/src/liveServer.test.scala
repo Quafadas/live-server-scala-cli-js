@@ -10,13 +10,11 @@ import com.microsoft.playwright.assertions.LocatorAssertions.ContainsTextOptions
 import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 
 import cats.effect.IO
-import cats.effect.unsafe.implicits.global
 import munit.CatsEffectSuite
 import LiveServer.LiveServerConfig
-import LiveServer.openBrowserAtOpt
+
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.Method
-import org.http4s.syntax.literals.uri
 import org.http4s.Uri
 
 /*
@@ -88,25 +86,36 @@ trait PlaywrightTest extends CatsEffectSuite:
       }
       .toResource
 
-  // val externalHtmlStyles = FunFixture[(os.Path, os.Path)](
-  //   setup = test =>
-  //     // create a temp folder
-  //     val tempDir = os.temp.dir()
-  //     val staticDir = tempDir / "assets"
-  //     os.makeDir(staticDir)
-  //     // create a file in the folder
-  //     os.write.over(tempDir / "hello.scala", helloWorldCode("Hello"))
-  //     os.write.over(staticDir / "index.less", "h1{color:red}")
-  //     os.write.over(staticDir / "index.html", vanillaTemplate(true).render)
-  //     os.proc("scala-cli", "compile", tempDir.toString).call(cwd = tempDir)
-  //     (tempDir, staticDir)
-  //   ,
-  //   teardown = tempDir =>
-  //     // Always gets called, even if test failed.
-  //     os.remove.all(tempDir._1)
-  // )
+  val externalHtmlStyles = IO{      
+      val tempDir = os.temp.dir()
+      val staticDir = tempDir / "assets"
+      os.makeDir(staticDir)      
+      os.write.over(tempDir / "hello.scala", helloWorldCode("Hello"))
+      os.write.over(staticDir / "index.less", "h1{color:red}")
+      os.write.over(staticDir / "index.html", vanillaTemplate(true).render)      
+      (tempDir, staticDir)
+    }.flatTap{
+      tempDir =>
+          IO.blocking(os.proc("scala-cli", "compile", tempDir._1.toString).call(cwd = tempDir._1))
+    }.toResource
+    
 
   val client = EmberClientBuilder.default[IO].build
+
+  val backendPort = 8999
+
+  val simpleBackend = EmberServerBuilder
+          .default[IO]
+          .withHttpApp(
+            HttpRoutes
+              .of[IO] {
+                case GET -> Root / "api" / "hello" =>
+                  Ok("hello world")
+              }
+              .orNotFound
+          )
+          .withPort(Port.fromInt(backendPort).get)
+          .build
 
   ResourceFunFixture {
     files.flatMap {
@@ -120,7 +129,7 @@ trait PlaywrightTest extends CatsEffectSuite:
         )
         LiveServer.main(lsc).map((_, dir, lsc.port))
     }
-  }.test("incremental") {
+  }.test("incremental".only) {
     (_, testDir, port) =>
       val increaseTimeout = ContainsTextOptions()
       increaseTimeout.setTimeout(15000)
@@ -155,111 +164,92 @@ trait PlaywrightTest extends CatsEffectSuite:
       )
   }
 
-  // files.test("proxy server") {
-  //   testDir =>
-  //     val backendPort = 8089
-  //     val thisTestPort = basePort + 3
-  //     // use http4s to instantiate a simple server that responds to /api/hello with 200, use Http4sEmberServer
-  //     EmberServerBuilder
-  //       .default[IO]
-  //       .withHttpApp(
-  //         HttpRoutes
-  //           .of[IO] {
-  //             case GET -> Root / "api" / "hello" =>
-  //               Ok("hello world")
-  //           }
-  //           .orNotFound
-  //       )
-  //       .withPort(Port.fromInt(backendPort).get)
-  //       .build
-  //       .allocated
-  //       .unsafeToFuture()
+  ResourceFunFixture {
+    files
+      .both(client)
+      .flatMap {
+        (dir, client) =>
+          val backendPort = 8999
 
-  //     LiveServer
-  //       .run(
-  //         List(
-  //           "--build-tool",
-  //           "scala-cli",
-  //           "--project-dir",
-  //           testDir.toString,
-  //           "--styles-dir",
-  //           styleDir(testDir).toString,
-  //           "--port",
-  //           thisTestPort.toString,
-  //           "--proxy-target-port",
-  //           backendPort.toString,
-  //           "--proxy-prefix-path",
-  //           "/api"
-  //         )
-  //       )
-  //       .unsafeToFuture()
+          val lsc = LiveServerConfig(
+            baseDir = Some(dir.toString),
+            stylesDir = Some(styleDir(dir).toString),
+            port = Port.fromInt(basePort).get,
+            openBrowserAt = "",
+            preventBrowserOpen = true,
+            proxyPortTarget = Port.fromInt(backendPort),
+            proxyPathMatchPrefix = Some("/api")
+          )
+          
+          simpleBackend.flatMap{ _ => 
+            LiveServer.main(lsc).map(_ => (lsc.port, client))
+          }
+      }
+  }.test("proxy server forwards to a backend server") {
+    (port, client) =>      
+      
+      assertIO(
+        client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port/api/hello"))),
+        Ok
+      ) >> 
+      assertIO(
+        client.expect[String](s"http://localhost:$port/api/hello"),
+        "hello world"
+      ) >>
+      assertIO(
+        client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port/api/nope"))),
+        NotFound
+      )
+  }
 
-  //     Thread.sleep(1000) // give the thing time to start.
+  ResourceFunFixture {externalHtmlStyles.both(client).flatMap{
+    case((dir, extHtmlDir), client) => 
+      println(dir)
+      println(extHtmlDir)
+      val lsc = LiveServerConfig(
+        baseDir = Some(dir.toString),
+        indexHtmlTemplate = Some(extHtmlDir.toString),
+        port = Port.fromInt(basePort).get,
+        openBrowserAt = "",
+        preventBrowserOpen = true,
+        proxyPortTarget = Port.fromInt(backendPort),
+        proxyPathMatchPrefix = Some("/api"),
+        clientRoutingPrefix = Some("/app"),
+        logLevel = "info"
+      )
 
-  //     val out = requests.get(s"http://localhost:$thisTestPort/api/hello", check = false)
-  //     assertEquals(out.statusCode, 200)
-  //     assertEquals(out.text(), "hello world")
+      simpleBackend.flatMap{ _ => 
+        LiveServer.main(lsc).map(_ => (lsc.port, client))
+      }      
+    }
+  }.test("proxy server and SPA client apps") {
+    (port, client) =>
+      assertIO(
+        client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port/api/hello"))),
+        Ok
+      ) >> 
+      assertIO(
+        client.expect[String](s"http://localhost:$port/api/hello"),
+        "hello world"
+      ) >>
+      assertIO(
+        client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port/api/nope"))),
+        NotFound
+      ) >> 
+      assertIO(
+        client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port"))),
+        Ok
+      ) >>
+      assertIO(
+        client.expect[String](s"http://localhost:$port"),
+        vanillaTemplate(true).render
+      ) >>
+      assertIO(
+        client.expect[String](s"http://localhost:$port/app/spaRoute"),
+        vanillaTemplate(true).render
+      )
 
-  //     val outFail = requests.get(s"http://localhost:$thisTestPort/api/nope", check = false)
-  //     assertEquals(outFail.statusCode, 404)
-  // }
-
-  // externalHtmlStyles.test("proxy server and SPA client apps") {
-  //   testDir =>
-  //     val backendPort = 8090
-  //     val thisTestPort = basePort + 3
-  //     // use http4s to instantiate a simple server that responds to /api/hello with 200, use Http4sEmberServer
-  //     EmberServerBuilder
-  //       .default[IO]
-  //       .withHttpApp(
-  //         HttpRoutes
-  //           .of[IO] {
-  //             case GET -> Root / "api" / "hello" =>
-  //               Ok("hello world")
-  //           }
-  //           .orNotFound
-  //       )
-  //       .withPort(Port.fromInt(backendPort).get)
-  //       .build
-  //       .allocated
-  //       .unsafeToFuture()
-
-  //     LiveServer
-  //       .run(
-  //         List(
-  //           "--build-tool",
-  //           "scala-cli",
-  //           "--project-dir",
-  //           testDir._1.toString,
-  //           "--path-to-index-html",
-  //           testDir._2.toString,
-  //           "--client-routes-prefix",
-  //           "/app",
-  //           "--port",
-  //           thisTestPort.toString,
-  //           "--proxy-target-port",
-  //           backendPort.toString,
-  //           "--proxy-prefix-path",
-  //           "/api",
-  //           "--log-level",
-  //           "trace"
-  //         )
-  //       )
-  //       .unsafeToFuture()
-
-  //     Thread.sleep(1000) // give the thing time to start.
-
-  //     val out = requests.get(s"http://localhost:$thisTestPort/api/hello", check = false)
-  //     assertEquals(out.statusCode, 200)
-  //     assertEquals(out.text(), "hello world")
-
-  //     val outFail = requests.get(s"http://localhost:$thisTestPort/api/nope", check = false)
-  //     assertEquals(outFail.statusCode, 404)
-
-  //     val canGetHtml = requests.get(s"http://localhost:$thisTestPort", check = false)
-  //     assertEquals(canGetHtml.statusCode, 200)
-
-  // }
+  }
 
   // files.test("no styles") {
   //   testDir =>
