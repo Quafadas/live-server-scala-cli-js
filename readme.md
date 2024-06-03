@@ -147,7 +147,7 @@ You'll need to make sure it includes this script. Otherwise no reload on change.
 
 ```html
     <script>
-      const sse = new EventSource("/api/v1/sse");
+      const sse = new EventSource("/refresh/v1/sse");
       sse.addEventListener("message", (e) => {
         const msg = JSON.parse(e.data);
 
