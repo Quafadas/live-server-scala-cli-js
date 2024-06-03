@@ -5,6 +5,7 @@ import org.http4s.*
 import org.http4s.HttpApp
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.ember.server.EmberServerBuilder
+import org.http4s.server.Server
 
 import com.comcast.ip4s.Port
 import com.comcast.ip4s.host
@@ -22,7 +23,6 @@ import cats.implicits.*
 
 import _root_.io.circe.*
 import _root_.io.circe.Encoder
-import org.http4s.server.Server
 
 sealed trait FrontendEvent derives Encoder.AsObject
 

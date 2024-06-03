@@ -1,7 +1,11 @@
 import scala.compiletime.uninitialized
+import scala.concurrent.duration.*
 
 import org.http4s.HttpRoutes
+import org.http4s.Method
+import org.http4s.Uri
 import org.http4s.dsl.io.*
+import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.ember.server.EmberServerBuilder
 
 import com.comcast.ip4s.Port
@@ -10,15 +14,9 @@ import com.microsoft.playwright.assertions.LocatorAssertions.ContainsTextOptions
 import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 
 import cats.effect.IO
-import munit.CatsEffectSuite
+
 import LiveServer.LiveServerConfig
-
-import org.http4s.ember.client.EmberClientBuilder
-import org.http4s.Method
-import org.http4s.Uri
-import scalatags.Text.styles
-
-import scala.concurrent.duration.*
+import munit.CatsEffectSuite
 
 /*
 Run
