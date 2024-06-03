@@ -287,7 +287,7 @@ object LiveServer extends IOApp:
       _ <- logger.info(s"Start dev server on http://localhost:${lsc.port}").toResource
       server <- buildServer(app.orNotFound, lsc.port)
 
-    // - <- openBrowser(Some(openBrowserAt), port)(logger).toResource
+      _ <- IO.whenA(!lsc.preventBrowserOpen)(openBrowser(Some(lsc.openBrowserAt), lsc.port)(logger)).toResource
     yield server
 
     server
