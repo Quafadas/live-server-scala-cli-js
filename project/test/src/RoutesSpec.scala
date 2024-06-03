@@ -57,7 +57,7 @@ class RoutesSuite extends CatsEffectSuite:
       // create a file in the folder
       val tempFile = tempDir / "index.html"
       os.write(tempFile, """<head><title>Test</title></head><body><h1>Test</h1></body>""")
-      os.write(tempDir / "index.less", testStr)
+      os.write(tempDir / "index.less", simpleCss)
       tempDir
     ,
     teardown = tempDir =>
@@ -82,7 +82,7 @@ class RoutesSuite extends CatsEffectSuite:
       .root
       .clearHandlers()
       .clearModifiers()
-      .withHandler(minimumLevel = Some(Level.get("trace").get))
+      .withHandler(minimumLevel = Some(Level.get("info").get))
       .replace()
 
   files.test("seed map puts files in the map on start") {
@@ -109,7 +109,7 @@ class RoutesSuite extends CatsEffectSuite:
         linkingTopic <- Topic[IO, Unit].toResource
         refreshTopic <- Topic[IO, Unit].toResource
         _ <- fileWatcher(fs2.io.file.Path(tempDir.toString), fileToHashRef, linkingTopic, refreshTopic)(logger)
-        _ <- IO.sleep(100.millis).toResource // wait for watcher to start
+        _ <- IO.sleep(200.millis).toResource // wait for watcher to start
         _ <- updateMapRef(tempDir.toFs2, fileToHashRef)(logger).toResource
         _ <- IO.blocking(os.write.over(tempDir / "test.js", "const hi = 'bye, world'")).toResource
         _ <- linkingTopic.publish1(()).toResource
