@@ -118,7 +118,6 @@ trait PlaywrightTest extends CatsEffectSuite:
           openBrowserAt = "",
           preventBrowserOpen = true
         )
-        val client = EmberClientBuilder.default[IO].build
         LiveServer.main(lsc).map((_, dir, lsc.port))
     }
   }.test("incremental") {
@@ -148,7 +147,7 @@ trait PlaywrightTest extends CatsEffectSuite:
           )
           LiveServer.main(lsc).map((_, dir, lsc.port, client))
       }
-  }.test("no proxy server") {
+  }.test("no proxy server gives not found for a request to an API") {
     (_, _, port, client) =>
       assertIO(
         client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port/api/hello"))),
