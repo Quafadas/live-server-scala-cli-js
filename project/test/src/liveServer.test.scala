@@ -129,7 +129,8 @@ trait PlaywrightTest extends CatsEffectSuite:
           port = Port.fromInt(basePort).get,
           openBrowserAt = "",
           preventBrowserOpen = true,
-          extraBuildArgs = List("--js-cli-on-jvm")
+          extraBuildArgs = List("--js-cli-on-jvm"), 
+          logLevel = "trace"
         )
         LiveServer.main(lsc).map((_, dir, lsc.port))
     }
