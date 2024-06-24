@@ -46,6 +46,9 @@ jobs:
           restore-keys: |
             playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.sc') }}
 
+      - name: Setup git config
+        run: git config --global core.autocrlf false            
+
       - name: formatCheck
         run: mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
 
