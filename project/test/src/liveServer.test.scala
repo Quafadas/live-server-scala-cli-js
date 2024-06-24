@@ -62,7 +62,7 @@ end ChromeSuite
 
 trait PlaywrightTest extends CatsEffectSuite:
 
-  override val munitTimeout = Duration(60, "s") // windows super slow?
+  override val munitTimeout = Duration(90, "s") // windows super slow?
 
   var basePort: Int = uninitialized
   var pw: Playwright = uninitialized
