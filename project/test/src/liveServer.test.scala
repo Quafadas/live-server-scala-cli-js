@@ -139,7 +139,7 @@ trait PlaywrightTest extends CatsEffectSuite:
       increaseTimeout.setTimeout(30000)
       IO.sleep(3.seconds) >>
         IO(page.navigate(s"http://localhost:$port")) >>
-        IO(assertThat(page.locator("h1")).containsText("HelloWorld", increaseTimeout)) >>
+        IO(assertThat(page.locator("h1")).containsText("HelloWorld", increaseTimeout)) // >>
       // IO.blocking(os.write.over(testDir / "hello.scala", helloWorldCode("Bye"))) >>
       // IO(assertThat(page.locator("h1")).containsText("ByeWorld", increaseTimeout)) >>
       // IO.blocking(os.write.append(styleDir(testDir) / "index.less", "h1 { color: red; }")) >>
