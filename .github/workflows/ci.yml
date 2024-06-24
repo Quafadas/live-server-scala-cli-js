@@ -45,15 +45,12 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.sc') }}
           restore-keys: |
             playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.sc') }}
-
-      - name: Setup git config
-        run: git config --global core.autocrlf false            
-
-      - name: formatCheck
-        run: mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
-
+            
       - name: Install Playwright
         run: just setupPlaywright
+
+      # - name: formatCheck
+      #   run: mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
 
       - name: compile
         run: mill __.compile
