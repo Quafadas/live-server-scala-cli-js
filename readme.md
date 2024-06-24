@@ -158,3 +158,7 @@ You'll need to make sure it includes this script. Otherwise no reload on change.
     </script>
 
 ```
+
+# Windows
+
+Ought to work. However, it appears impossible to get it to work in CI. See the `doze` branch. Therefore, windows testing is ad hoc.
