@@ -71,12 +71,13 @@ def buildRunnerScli(
     .flatMap(
       _ =>
         ProcessBuilder(
-          if isWindows then 
+          if isWindows then
             println("detected windows --> scala-cli.bat")
-            "scala-cli.bat" 
-          else 
+            "scala-cli.bat"
+          else
             println("detected not windows --> scala-cli")
-            "scala-cli",
+            "scala-cli"
+          ,
           scalaCliArgs
         ).withWorkingDirectory(workDir)
           .spawn[IO]
