@@ -83,7 +83,7 @@ trait PlaywrightTest extends CatsEffectSuite:
       tempDir
     }.flatTap {
         tempDir =>
-          IO.blocking(os.proc("scala-cli", "compile", tempDir.toString).call(cwd = tempDir))
+          IO.blocking(os.proc(invokeScalaCliString, "compile", tempDir.toString).call(cwd = tempDir))
       }
       .toResource
 
@@ -97,7 +97,7 @@ trait PlaywrightTest extends CatsEffectSuite:
     (tempDir, staticDir)
   }.flatTap {
       tempDir =>
-        IO.blocking(os.proc("scala-cli", "compile", tempDir._1.toString).call(cwd = tempDir._1))
+        IO.blocking(os.proc(invokeScalaCliString, "compile", tempDir._1.toString).call(cwd = tempDir._1))
     }
     .toResource
 
