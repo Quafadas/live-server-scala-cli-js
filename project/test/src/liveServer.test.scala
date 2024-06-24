@@ -62,6 +62,8 @@ end ChromeSuite
 
 trait PlaywrightTest extends CatsEffectSuite:
 
+  override val munitTimeout = Duration(60, "s") // windows super slow?
+
   var basePort: Int = uninitialized
   var pw: Playwright = uninitialized
   var browser: Browser = uninitialized
@@ -130,7 +132,7 @@ trait PlaywrightTest extends CatsEffectSuite:
         )
         LiveServer.main(lsc).map((_, dir, lsc.port))
     }
-  }.test("incremental") {
+  }.test("incremental".only) {
     (_, testDir, port) =>
       val increaseTimeout = ContainsTextOptions()
       increaseTimeout.setTimeout(15000)

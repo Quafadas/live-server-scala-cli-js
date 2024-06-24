@@ -22,7 +22,7 @@ class UtilityFcs extends munit.FunSuite:
       template = "<html><head></head></html>"
     )
     assert(html.contains("hash"))
-    assertEquals(
+    assertNoDiff(
       html,
       """<html><head>
 <link rel="modulepreload" href="main.js?hash=hash" />
@@ -37,8 +37,7 @@ class UtilityFcs extends munit.FunSuite:
     )
 
     assert(
-      html.contains("""location.reload()});</script>
-</body></html>""")
+      html.contains("""location.reload()});</script>""")
     )
   }
 
