@@ -128,7 +128,8 @@ trait PlaywrightTest extends CatsEffectSuite:
           stylesDir = Some(styleDir(dir).toString),
           port = Port.fromInt(basePort).get,
           openBrowserAt = "",
-          preventBrowserOpen = true
+          preventBrowserOpen = true,
+          extraBuildArgs = List("--js-cli-on-jvm")
         )
         LiveServer.main(lsc).map((_, dir, lsc.port))
     }
