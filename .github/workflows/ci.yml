@@ -20,7 +20,7 @@ jobs:
     name: Build and Test
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest]
         scala: [3]
         java: [temurin@17]
         project: [jvm]
