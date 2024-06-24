@@ -27,6 +27,13 @@ class Mill extends BuildTool
 private lazy val isWindows: Boolean =
   System.getProperty("os.name").toLowerCase(Locale.ENGLISH).contains("windows")
 
+lazy val invokeScalaCliString = if isWindows then
+  println("detected windows --> scala-cli.bat")
+  "scala-cli.bat"
+else
+  println("detected not windows --> scala-cli")
+  "scala-cli"
+
 def buildRunner(
     tool: BuildTool,
     linkingTopic: Topic[IO, Unit],
@@ -71,13 +78,7 @@ def buildRunnerScli(
     .flatMap(
       _ =>
         ProcessBuilder(
-          if isWindows then
-            println("detected windows --> scala-cli.bat")
-            "scala-cli.bat"
-          else
-            println("detected not windows --> scala-cli")
-            "scala-cli"
-          ,
+          invokeScalaCliString,
           scalaCliArgs
         ).withWorkingDirectory(workDir)
           .spawn[IO]
