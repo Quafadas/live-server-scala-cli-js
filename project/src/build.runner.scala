@@ -1,3 +1,5 @@
+import java.util.Locale
+
 import scala.concurrent.duration.*
 
 import fs2.*
@@ -21,6 +23,9 @@ import cats.syntax.all.*
 sealed trait BuildTool
 class ScalaCli extends BuildTool
 class Mill extends BuildTool
+
+private lazy val isWindows: Boolean =
+  System.getProperty("os.name").toLowerCase(Locale.ENGLISH).contains("windows")
 
 def buildRunner(
     tool: BuildTool,
@@ -66,7 +71,7 @@ def buildRunnerScli(
     .flatMap(
       _ =>
         ProcessBuilder(
-          "scala-cli",
+          if isWindows then "scala-cli.bat" else "scala-cli",
           scalaCliArgs
         ).withWorkingDirectory(workDir)
           .spawn[IO]
@@ -135,7 +140,7 @@ def buildRunnerMill(
   ) ++ extraBuildArgs
   // TODO pipe this to stdout so that we can see linker progress / errors.
   val builder = ProcessBuilder(
-    "mill",
+    if isWindows then "mill.bat" else "mill",
     millargs
   ).withWorkingDirectory(workDir)
     .spawn[IO]
