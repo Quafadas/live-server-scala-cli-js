@@ -31,7 +31,7 @@ class FirefoxSuite extends PlaywrightTest:
     pw = Playwright.create()
     browser = pw.firefox().launch(options);
     page = browser.newPage();
-    page.setDefaultTimeout(30000)
+    page.setDefaultTimeout(60000)
   end beforeAll
 
 end FirefoxSuite
@@ -62,7 +62,7 @@ end ChromeSuite
 
 trait PlaywrightTest extends CatsEffectSuite:
 
-  override val munitTimeout = Duration(90, "s") // windows super slow?
+  override val munitTimeout = Duration(120, "s") // windows super slow?
 
   var basePort: Int = uninitialized
   var pw: Playwright = uninitialized
