@@ -175,6 +175,14 @@ object LiveServer extends IOApp:
     }
     .orNone
 
+  val buildToolInvocation: Opts[Option[String]] = Opts
+    .option[String](
+      "build-tool-invocation",
+      "This string will be passed to an fs2 process which invokes the build tool. By default it's 'scala-cli', or `mill`, " +
+        "and is assumed is on the path"
+    )
+    .orNone
+
   case class LiveServerConfig(
       baseDir: Option[String],
       outDir: Option[String] = None,
@@ -189,7 +197,8 @@ object LiveServer extends IOApp:
       extraBuildArgs: List[String] = List.empty,
       millModuleName: Option[String] = None,
       stylesDir: Option[String] = None,
-      indexHtmlTemplate: Option[String] = None
+      indexHtmlTemplate: Option[String] = None,
+      buildToolInvocation: Option[String] = None
   )
 
   def parseOpts = (
@@ -206,7 +215,8 @@ object LiveServer extends IOApp:
     extraBuildArgsOpt,
     millModuleNameOpt,
     stylesDirOpt,
-    indexHtmlTemplateOpt
+    indexHtmlTemplateOpt,
+    buildToolInvocation
   ).mapN(LiveServerConfig.apply)
 
   def main(lsc: LiveServerConfig): Resource[IO, Server] =
@@ -270,7 +280,8 @@ object LiveServer extends IOApp:
         baseDirPath,
         outDirPath,
         lsc.extraBuildArgs,
-        lsc.millModuleName
+        lsc.millModuleName,
+        lsc.buildToolInvocation
       )(logger)
 
       app <- routes(outDirString, refreshTopic, indexOpts, proxyRoutes, fileToHashRef, lsc.clientRoutingPrefix)(logger)

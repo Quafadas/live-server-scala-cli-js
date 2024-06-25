@@ -20,9 +20,15 @@ import cats.effect.IO
 import cats.effect.ResourceIO
 import cats.syntax.all.*
 
-sealed trait BuildTool
-class ScalaCli extends BuildTool
-class Mill extends BuildTool
+sealed trait BuildTool(val invokedVia: String)
+class ScalaCli
+    extends BuildTool(
+      if isWindows then "scala-cli.bat" else "scala-cli"
+    )
+class Mill
+    extends BuildTool(
+      if isWindows then "mill.bat" else "mill"
+    )
 
 private lazy val isWindows: Boolean =
   System.getProperty("os.name").toLowerCase(Locale.ENGLISH).contains("windows")
@@ -33,23 +39,31 @@ def buildRunner(
     workDir: fs2.io.file.Path,
     outDir: fs2.io.file.Path,
     extraBuildArgs: List[String],
-    millModuleName: Option[String]
+    millModuleName: Option[String],
+    buildToolInvocation: Option[String]
 )(
     logger: Scribe[IO]
-): ResourceIO[Unit] = tool match
-  case scli: ScalaCli => buildRunnerScli(linkingTopic, workDir, outDir, extraBuildArgs)(logger)
-  case m: Mill =>
-    buildRunnerMill(
-      linkingTopic,
-      workDir,
-      millModuleName.getOrElse(throw new Exception("must have a module name when running with mill")),
-      extraBuildArgs
-    )(logger)
+): ResourceIO[Unit] =
+  val invokeVia = buildToolInvocation.getOrElse(tool.invokedVia)
+  tool match
+    case scli: ScalaCli =>
+      buildRunnerScli(linkingTopic, workDir, outDir, invokeVia, extraBuildArgs)(logger)
+    case m: Mill =>
+      buildRunnerMill(
+        linkingTopic,
+        workDir,
+        millModuleName.getOrElse(throw new Exception("must have a module name when running with mill")),
+        invokeVia,
+        extraBuildArgs
+      )(logger)
+  end match
+end buildRunner
 
 def buildRunnerScli(
     linkingTopic: Topic[IO, Unit],
     workDir: fs2.io.file.Path,
     outDir: fs2.io.file.Path,
+    invokeVia: String,
     extraBuildArgs: List[String]
 )(
     logger: Scribe[IO]
@@ -66,12 +80,12 @@ def buildRunnerScli(
   ) ++ extraBuildArgs
 
   logger
-    .trace(scalaCliArgs.toString())
+    .trace(s"Invoking via : $invokeVia with args :  ${scalaCliArgs.toString()}")
     .toResource
     .flatMap(
       _ =>
         ProcessBuilder(
-          if isWindows then "scala-cli.bat" else "scala-cli",
+          invokeVia,
           scalaCliArgs
         ).withWorkingDirectory(workDir)
           .spawn[IO]
@@ -103,6 +117,7 @@ def buildRunnerMill(
     linkingTopic: Topic[IO, Unit],
     workDir: fs2.io.file.Path,
     moduleName: String,
+    invokeVia: String,
     extraBuildArgs: List[String]
 )(
     logger: Scribe[IO]
@@ -140,7 +155,7 @@ def buildRunnerMill(
   ) ++ extraBuildArgs
   // TODO pipe this to stdout so that we can see linker progress / errors.
   val builder = ProcessBuilder(
-    if isWindows then "mill.bat" else "mill",
+    invokeVia,
     millargs
   ).withWorkingDirectory(workDir)
     .spawn[IO]
