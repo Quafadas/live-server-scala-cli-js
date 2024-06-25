@@ -38,8 +38,8 @@ serveMill:
 setupPlaywright:
   cs launch com.microsoft.playwright:playwright:1.41.1 -M "com.microsoft.playwright.CLI" -- install --with-deps
 
-publish:
-  mill
+publishLocal:
+  mill project.publishLocal
 
 setupMill:
   curl -L https://raw.githubusercontent.com/lefou/millw/0.4.11/millw > mill && chmod +x mill

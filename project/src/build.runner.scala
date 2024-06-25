@@ -122,30 +122,30 @@ def buildRunnerMill(
 )(
     logger: Scribe[IO]
 ): ResourceIO[Unit] =
-  val watchLinkComplePath = workDir / "out" / moduleName / "fastLinkJS.json"
+  // val watchLinkComplePath = workDir / "out" / moduleName / "fastLinkJS.json"
 
-  val watcher = fs2
-    .Stream
-    .resource(Watcher.default[IO].evalTap(_.watch(watchLinkComplePath.toNioPath)))
-    .flatMap {
-      _.events(100.millis)
-        .evalTap {
-          (e: Event) =>
-            e match
-              case Created(path, count) => logger.info("fastLinkJs.json was created")
-              case Deleted(path, count) => logger.info("fastLinkJs.json was deleted")
-              case Modified(path, count) =>
-                logger.info("fastLinkJs.json was modified - link successful => trigger a refresh") >>
-                  linkingTopic.publish1(())
-              case Overflow(count)                         => logger.info("overflow")
-              case NonStandard(event, registeredDirectory) => logger.info("non-standard")
+  // val watcher = fs2
+  //   .Stream
+  //   .resource(Watcher.default[IO].evalTap(_.watch(watchLinkComplePath.toNioPath)))
+  //   .flatMap {
+  //     _.events(100.millis)
+  //       .evalTap {
+  //         (e: Event) =>
+  //           e match
+  //             case Created(path, count) => logger.info("fastLinkJs.json was created")
+  //             case Deleted(path, count) => logger.info("fastLinkJs.json was deleted")
+  //             case Modified(path, count) =>
+  //               logger.info("fastLinkJs.json was modified - link successful => trigger a refresh") >>
+  //                 linkingTopic.publish1(())
+  //             case Overflow(count)                         => logger.info("overflow")
+  //             case NonStandard(event, registeredDirectory) => logger.info("non-standard")
 
-        }
-    }
-    .compile
-    .drain
-    .background
-    .void
+  //       }
+  //   }
+  //   .compile
+  //   .drain
+  //   .background
+  //   .void
 
   val millargs = List(
     "-w",
@@ -162,17 +162,37 @@ def buildRunnerMill(
     .use {
       p =>
         // p.stderr.through(fs2.io.stdout).compile.drain >>
-        p.stdout.through(text.utf8.decode).debug().compile.drain
+        // val stdOut = p.stdout.through(text.utf8.decode).debug().compile.drain
+        // val stdErr = p.stderr.through(text.utf8.decode).debug().compile.drain
+        // stdOut.both(stdErr).void
+
+        p.stderr
+          .through(text.utf8.decode)
+          .debug()
+          .chunks
+          .evalMap(
+            aChunk =>
+              if aChunk.head.exists(_.startsWith("Emitter")) then
+                logger.trace("Detected that linking was successful, emitting refresh event") >>
+                  linkingTopic.publish1(())
+              else
+                logger.trace(s"$aChunk :: Linking unfinished") >>
+                  IO.unit
+              end if
+          )
+          .compile
+          .drain
+        // .both(stdOut)
+        // .both(stdErr).void
     }
     .background
     .void
 
   for
     _ <- logger.trace("Starting buildRunnerMill").toResource
-    _ <- logger.trace(s"watching path $watchLinkComplePath").toResource
-    _ <- logger.trace(s"running mill with args $millargs").toResource
+    _ <- logger.debug(s"running $invokeVia with args $millargs").toResource
     _ <- builder
-    _ <- watcher
+  // _ <- watcher
   yield ()
   end for
 
