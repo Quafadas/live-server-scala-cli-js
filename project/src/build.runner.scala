@@ -172,7 +172,7 @@ def buildRunnerMill(
           .chunks
           .evalMap(
             aChunk =>
-              if aChunk.head.exists(_.startsWith("Emitter")) then
+              if aChunk.head.exists(_.contains("BasicBackend: total modules:")) then
                 logger.trace("Detected that linking was successful, emitting refresh event") >>
                   linkingTopic.publish1(())
               else
