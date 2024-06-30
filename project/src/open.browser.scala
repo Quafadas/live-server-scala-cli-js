@@ -12,7 +12,7 @@ def openBrowser(openBrowserAt: Option[String], port: Port)(logger: Scribe[IO]): 
     case None => logger.trace("No openBrowserAt flag set, so no browser will be opened")
     case Some(value) =>
       val openAt = URI(s"http://localhost:$port$value")
-      logger.info(s"Attemptiong to open browser to $openAt") >>
+      logger.info(s"Attempting to open browser to $openAt") >>
         IO(
           if Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE) then
             IO(Desktop.getDesktop().browse(openAt))
