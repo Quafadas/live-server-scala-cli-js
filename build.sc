@@ -1,4 +1,4 @@
-import $ivy.`io.github.quafadas::millSite::0.0.19`
+import $ivy.`io.github.quafadas::millSite::0.0.24`
 import $ivy.`de.tototec::de.tobiasroeser.mill.vcs.version::0.4.0`
 import $ivy.`com.goyeau::mill-scalafix::0.4.0`
 import $file.playwrightVersion // used to cache in GHA
@@ -60,6 +60,14 @@ object project extends ScalaModule with PublishModule with FormatFix /*with Scal
     )
   }
   //def scalaNativeVersion = "0.4.17" // aspirational :-)
+
+}
+
+object site extends SiteModule {
+
+   def scalaVersion = project.scalaVersion
+
+  override def moduleDeps = Seq(project)
 
 }
 

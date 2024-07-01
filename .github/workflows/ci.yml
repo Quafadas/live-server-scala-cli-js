@@ -90,3 +90,47 @@ jobs:
 
       - name: Publish to Maven Central
         run: mill -i mill.scalalib.PublishModule/publishAll project.publishArtifacts --sonatypeUri https://s01.oss.sonatype.org/service/local --sonatypeCreds "${{ secrets.PUBLISH_USER }}:${{ secrets.PUBLISH_PASSWORD }}" --gpgArgs "--passphrase=${{secrets.PUBLISH_SECRET_KEY_PASSWORD}},--no-tty,--pinentry-mode,loopback,--batch,--yes,-a,-b" --readTimeout 600000 --awaitTimeout 600000 --release true --signed true
+
+  site:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'temurin'
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - run: ./mill site.publishDocs
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      - uses: actions/upload-artifact@v3
+        with:
+          name: page
+          path: out/site/publishDocs.dest
+          if-no-files-found: error
+
+  deploy:
+    needs: site
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v3
+      with:
+        name: page
+        path: .
+    - uses: actions/configure-pages@v4
+    - uses: actions/upload-pages-artifact@v2
+      with:
+        path: .
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v3
