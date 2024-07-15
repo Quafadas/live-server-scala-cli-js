@@ -1,4 +1,8 @@
-class UtilityFcs extends munit.FunSuite:
+import munit.CatsEffectSuite
+import cats.effect.kernel.Ref
+import cats.effect.IO
+
+class UtilityFcs extends CatsEffectSuite:
 
   test("That we actually inject the preloads ") {
 
@@ -14,20 +18,17 @@ class UtilityFcs extends munit.FunSuite:
 
   }
 
-  test(" That we can inject preloads into a template") {
-    val html = injectModulePreloads(
-      modules = Seq(
-        (fs2.io.file.Path("main.js"), "hash")
-      ),
-      template = "<html><head></head></html>"
-    )
-    assert(html.contains("hash"))
-    assertEquals(
-      html,
-      """<html><head>
-<link rel="modulepreload" href="main.js?hash=hash" />
-</head></html>"""
-    )
+  ResourceFunFixture {
+    for
+      ref <- Ref.of[IO, Map[String, String]](Map.empty).toResource
+      _ <- ref.update(_.updated("internal.js", "hash")).toResource
+    yield ref
+  }.test("That we can make internal preloads") {
+    ref =>
+      val html = injectModulePreloads(ref, "<html><head></head><body></body></html>")
+      html.map: html =>
+        assert(html.contains("modulepreload"))
+        assert(html.contains("internal.js"))
   }
 
   test(" That we can inject a refresh script") {

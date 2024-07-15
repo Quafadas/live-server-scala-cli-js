@@ -17,6 +17,7 @@ import cats.effect.IO
 
 import LiveServer.LiveServerConfig
 import munit.CatsEffectSuite
+import cats.effect.kernel.Ref
 
 /*
 Run
@@ -68,11 +69,13 @@ trait PlaywrightTest extends CatsEffectSuite:
   var page: Page = uninitialized
 
   val options = new BrowserType.LaunchOptions()
-  // options.setHeadless(false);
+  options.setHeadless(false);
 
   // def testDir(base: os.Path) = os.pwd / "testDir"
   def outDir(base: os.Path) = base / ".out"
   def styleDir(base: os.Path) = base / "styles"
+
+  val vanilla = vanillaTemplate(true, Ref.unsafe(Map[String, String]())).unsafeRunSync()
 
   val files =
     IO {
@@ -93,7 +96,8 @@ trait PlaywrightTest extends CatsEffectSuite:
     os.makeDir(staticDir)
     os.write.over(tempDir / "hello.scala", helloWorldCode("Hello"))
     os.write.over(staticDir / "index.less", "h1{color:red}")
-    os.write.over(staticDir / "index.html", vanillaTemplate(true).render)
+    println(vanilla.render)
+    os.write.over(staticDir / "index.html", vanilla.render)
     (tempDir, staticDir)
   }.flatTap {
       tempDir =>
@@ -245,11 +249,11 @@ trait PlaywrightTest extends CatsEffectSuite:
         ) >>
         assertIO(
           client.expect[String](s"http://localhost:$port"),
-          vanillaTemplate(true).render
+          vanilla.render
         ) >>
         assertIO(
           client.expect[String](s"http://localhost:$port/app/spaRoute"),
-          vanillaTemplate(true).render
+          vanilla.render
         )
 
   }

@@ -19,6 +19,7 @@ import org.http4s.server.middleware.Logger
 import org.http4s.server.staticcontent.*
 import org.http4s.server.staticcontent.FileService
 import org.typelevel.ci.CIStringSyntax
+import org.http4s.EntityBody
 
 import fs2.*
 import fs2.concurrent.Topic
@@ -70,8 +71,8 @@ def routes[F[_]: Files: MonadThrow](
       ref
     )(logger)
 
-  val hashFalse = vanillaTemplate(false).render.hashCode.toString
-  val hashTrue = vanillaTemplate(true).render.hashCode.toString
+  // val hashFalse = vanillaTemplate(false).render.hashCode.toString
+  // val hashTrue = vanillaTemplate(true).render.hashCode.toString
   val zdt = ZonedDateTime.now()
 
   def userBrowserCacheHeaders(resp: Response[IO], lastModZdt: ZonedDateTime, injectStyles: Boolean) =
@@ -97,31 +98,24 @@ def routes[F[_]: Files: MonadThrow](
   object StaticHtmlMiddleware:
     def apply(service: HttpRoutes[IO], injectStyles: Boolean)(logger: Scribe[IO]): HttpRoutes[IO] = Kleisli {
       (req: Request[IO]) =>
-        req.headers.get(ci"If-None-Match").map(_.toList) match
-          case Some(h :: Nil) if h.value == hashFalse => OptionT.liftF(IO(Response[IO](Status.NotModified)))
-          case Some(h :: Nil) if h.value == hashTrue  => OptionT.liftF(IO(Response[IO](Status.NotModified)))
-          case _ => service(req).semiflatMap(userBrowserCacheHeaders(_, zdt, injectStyles))
-        end match
-
+        service(req).semiflatMap(userBrowserCacheHeaders(_, zdt, injectStyles))
     }
 
   end StaticHtmlMiddleware
 
-  def generatedIndexHtml(injectStyles: Boolean) =
+  def generatedIndexHtml(injectStyles: Boolean, modules: Ref[IO, Map[String, String]]) =
     StaticHtmlMiddleware(
       HttpRoutes.of[IO] {
         case req @ GET -> Root =>
           logger.trace("Generated index.html") >>
-            IO(
+            vanillaTemplate(injectStyles, modules).map: html =>
               Response[IO]()
-                .withEntity(vanillaTemplate(injectStyles))
+                .withEntity(html)
                 .withHeaders(
                   Header.Raw(ci"Cache-Control", "no-cache"),
                   Header.Raw(
                     ci"ETag",
-                    injectStyles match
-                      case true  => hashTrue
-                      case false => hashFalse
+                    html.hashCode.toString
                   ),
                   Header.Raw(ci"Last-Modified", formatter.format(zdt)),
                   Header.Raw(
@@ -129,24 +123,24 @@ def routes[F[_]: Files: MonadThrow](
                     httpCacheFormat(ZonedDateTime.ofInstant(Instant.now().plusSeconds(10000000), ZoneId.of("GMT")))
                   )
                 )
-            )
+
       },
       injectStyles
     )(logger).combineK(
       StaticHtmlMiddleware(
         HttpRoutes.of[IO] {
           case GET -> Root / "index.html" =>
-            IO {
-              Response[IO]().withEntity(vanillaTemplate(injectStyles))
-            }
+            vanillaTemplate(injectStyles, modules).map: html =>
+              Response[IO]().withEntity(html)
+
         },
         injectStyles
       )(logger)
     )
 
   // val formatter = DateTimeFormatter.RFC_1123_DATE_TIME
-  val staticAssetRoutes: HttpRoutes[IO] = indexOpts match
-    case None => generatedIndexHtml(injectStyles = false)
+  def staticAssetRoutes(modules: Ref[IO, Map[String, String]]): HttpRoutes[IO] = indexOpts match
+    case None => generatedIndexHtml(injectStyles = false, modules)
 
     case Some(IndexHtmlConfig.IndexHtmlPath(path)) =>
       StaticMiddleware(
@@ -161,9 +155,9 @@ def routes[F[_]: Files: MonadThrow](
         Router(
           "" -> fileService[IO](FileService.Config(stylesPath.toString()))
         )
-      )(logger).combineK(generatedIndexHtml(injectStyles = true))
+      )(logger).combineK(generatedIndexHtml(injectStyles = true, modules))
 
-  val clientSpaRoutes: HttpRoutes[IO] =
+  def clientSpaRoutes(modules: Ref[IO, Map[String, String]]): HttpRoutes[IO] =
     clientRoutingPrefix match
       case None => HttpRoutes.empty[IO]
       case Some(spaRoute) =>
@@ -173,9 +167,9 @@ def routes[F[_]: Files: MonadThrow](
             StaticHtmlMiddleware(
               HttpRoutes.of[IO] {
                 case req @ GET -> root /: path =>
-                  IO(
-                    Response[IO]().withEntity(vanillaTemplate(false))
-                  )
+                  vanillaTemplate(false, modules).map: html =>
+                    Response[IO]().withEntity(html)
+
               },
               false
             )(logger)
@@ -184,9 +178,8 @@ def routes[F[_]: Files: MonadThrow](
             StaticHtmlMiddleware(
               HttpRoutes.of[IO] {
                 case GET -> root /: spaRoute /: path =>
-                  IO(
-                    Response[IO]().withEntity(vanillaTemplate(true))
-                  )
+                  vanillaTemplate(true, modules).map: html =>
+                    Response[IO]().withEntity(html)
               },
               true
             )(logger)
@@ -195,7 +188,24 @@ def routes[F[_]: Files: MonadThrow](
             StaticFileMiddleware(
               HttpRoutes.of[IO] {
                 case req @ GET -> spaRoute /: path =>
-                  StaticFile.fromPath(dir / "index.html", Some(req)).getOrElseF(NotFound())
+                  StaticFile
+                    .fromPath(dir / "index.html", Some(req))
+                    .getOrElseF(NotFound())
+                    .flatMap {
+                      f =>
+                        f.body
+                          .through(text.utf8.decode)
+                          .compile
+                          .string
+                          .flatMap: body =>
+                            for str <- injectModulePreloads(modules, body)
+                            yield
+                              val bytes = str.getBytes()
+                              f.withEntity(bytes)
+                              f
+
+                    }
+
               },
               dir / "index.html"
             )(logger)
@@ -215,8 +225,8 @@ def routes[F[_]: Files: MonadThrow](
     refreshRoutes
       .combineK(linkedAppWithCaching)
       .combineK(proxyRoutes)
-      .combineK(clientSpaRoutes)
-      .combineK(staticAssetRoutes)
+      .combineK(clientSpaRoutes(ref))
+      .combineK(staticAssetRoutes(ref))
   )
 
   clientRoutingPrefix.fold(IO.unit)(s => logger.trace(s"client spa at : $s")).toResource >>

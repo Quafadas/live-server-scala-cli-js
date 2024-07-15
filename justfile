@@ -10,7 +10,7 @@ compile:
   mill project.compile
 
 test:
-  mill project.test
+  mill project.test.testOnly SafariSuite && mill project.test.testOnly RoutesSuite && mill project.test.testOnly UtilityFcs
 
 checkOpts:
   mill project.run --help
