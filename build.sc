@@ -49,6 +49,7 @@ object routes extends FormatFix {
     ivy"org.http4s::http4s-core:${V.http4sVersion}",
     ivy"org.http4s::http4s-client:${V.http4sVersion}",
     ivy"org.http4s::http4s-server:${V.http4sVersion}",
+    ivy"com.outr::scribe-cats::3.15.0"
   )
 
 }
@@ -66,8 +67,10 @@ object project extends FormatFix {
     ivy"com.lihaoyi::scalatags::0.13.1",
     ivy"com.monovore::decline::2.4.1",
     ivy"com.monovore::decline-effect::2.4.1",
-    ivy"com.outr::scribe-cats::3.15.0"
+
   )
+
+  def moduleDeps = Seq(routes)
 
   def artifactName = "live-server-scala-cli-js"
 
