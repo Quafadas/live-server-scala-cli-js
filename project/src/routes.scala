@@ -75,24 +75,23 @@ def routes[F[_]: Files: MonadThrow](
   val zdt = ZonedDateTime.now()
 
   def userBrowserCacheHeaders(resp: Response[IO], lastModZdt: ZonedDateTime, injectStyles: Boolean) =
-    resp.putHeaders(
-      Header.Raw(ci"Cache-Control", "no-cache"),
-      Header.Raw(
-        ci"ETag",
-        injectStyles match
-          case true  => hashTrue
-          case false => hashFalse
-      ),
-      Header.Raw(
-        ci"Last-Modified",
-        formatter.format(lastModZdt)
-      ),
-      Header.Raw(
-        ci"Expires",
-        httpCacheFormat(ZonedDateTime.ofInstant(Instant.now().plusSeconds(10000000), ZoneId.of("GMT")))
+    val hash = resp.body.through(fs2.hash.md5).through(fs2.text.hex.encode).compile.string
+    hash.map: h =>
+      resp.putHeaders(
+        Header.Raw(ci"Cache-Control", "no-cache"),
+        Header.Raw(
+          ci"ETag",
+          h
+        ),
+        Header.Raw(
+          ci"Last-Modified",
+          formatter.format(lastModZdt)
+        ),
+        Header.Raw(
+          ci"Expires",
+          httpCacheFormat(ZonedDateTime.ofInstant(Instant.now().plusSeconds(10000000), ZoneId.of("GMT")))
+        )
       )
-    )
-    resp
   end userBrowserCacheHeaders
 
   object StaticHtmlMiddleware:
@@ -101,7 +100,7 @@ def routes[F[_]: Files: MonadThrow](
         req.headers.get(ci"If-None-Match").map(_.toList) match
           case Some(h :: Nil) if h.value == hashFalse => OptionT.liftF(IO(Response[IO](Status.NotModified)))
           case Some(h :: Nil) if h.value == hashTrue  => OptionT.liftF(IO(Response[IO](Status.NotModified)))
-          case _                                      => service(req).map(userBrowserCacheHeaders(_, zdt, injectStyles))
+          case _ => service(req).semiflatMap(userBrowserCacheHeaders(_, zdt, injectStyles))
         end match
 
     }

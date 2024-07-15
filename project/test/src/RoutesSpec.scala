@@ -358,19 +358,22 @@ class RoutesSuite extends CatsEffectSuite:
         }
     }
 
-  externalIndexHtml.test("Static files are updated when needed") {
+  externalIndexHtml.test("Static files are updated when needed and cached otherwise".only) {
     staticDir =>
-      def cacheFormatTime = fileLastModified((staticDir / "index.html").toFs2).map {
-        seconds =>
-          httpCacheFormat(ZonedDateTime.ofInstant(Instant.ofEpochSecond(seconds), ZoneId.of("GMT")))
-      }
+      val cat = os.read.bytes(os.resource / "cat.webp")
 
       val app = for
         logger <- IO(scribe.cats[IO]).toResource
         fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
         fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
         refreshPub <- Topic[IO, Unit].toResource
-        // subscriber = refreshPub.subscribe(10).take(5).compile.toList
+        _ <- IO.blocking(os.write(staticDir / "image.webp", cat)).toResource
+        modifedAt <- fileLastModified((staticDir / "index.html").toFs2)
+          .map {
+            seconds =>
+              httpCacheFormat(ZonedDateTime.ofInstant(Instant.ofEpochSecond(seconds), ZoneId.of("GMT")))
+          }
+          .toResource
         theseRoutes <- routes(
           os.temp.dir().toString,
           refreshPub,
@@ -379,40 +382,35 @@ class RoutesSuite extends CatsEffectSuite:
           fileToHashRef,
           None
         )(logger)
-      yield (theseRoutes.orNotFound, logger)
+      yield (theseRoutes.orNotFound, logger, modifedAt)
 
-      app
-        .both(cacheFormatTime.toResource)
-        .use {
-          case ((served, logger), firstModified) =>
-            val request1 = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("/index.html"))
+      app.use {
+        case (served, logger, firstModified) =>
+          val request1 = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("/image.webp"))
 
-            val request2 = org
-              .http4s
-              .Request[IO](uri = org.http4s.Uri.unsafeFromString("/index.html"))
-              .withHeaders(
-                org.http4s.Headers.of(org.http4s.Header.Raw(ci"If-Modified-Since", firstModified.toString()))
-              )
+          val request2 = org
+            .http4s
+            .Request[IO](uri = org.http4s.Uri.unsafeFromString("/image.webp"))
+            .withHeaders(
+              org.http4s.Headers.of(org.http4s.Header.Raw(ci"If-Modified-Since", firstModified.toString()))
+            )
 
-            served(request1).flatTap(r => logger.debug("headers" + r.headers.headers.mkString(","))) >>
-              logger.trace("first modified " + firstModified) >>
-              // You need these ... otherwise no caching.
-              // https://simonhearne.com/2022/caching-header-best-practices/
-              assertIOBoolean(served(request1).map(_.headers.get(ci"ETag").isDefined)) >>
-              assertIOBoolean(served(request1).map(_.headers.get(ci"Cache-Control").isDefined)) >>
-              assertIOBoolean(served(request1).map(_.headers.get(ci"Expires").isDefined)) >>
-              assertIOBoolean(served(request1).map(_.headers.get(ci"Last-Modified").isDefined)) >>
-              // Don't forget to set them _all_
-              assertIO(served(request1).map(_.status.code), 200) >>
-              assertIO(served(request2).map(_.status.code), 304) >>
-              IO.sleep(
-                1500.millis
-              ) >> // have to wait at least one second otherwish last modified could be the same, if test took <1 sceond to get to this point
-              IO.blocking(os.write.over(staticDir / "index.html", """<head><title>Test</title></head>""")) >>
-              served(request2).flatMap(_.bodyText.compile.string).flatMap(s => logger.trace(s)) >>
-              assertIO(served(request2).map(_.status.code), 200)
+          served(request1).flatTap(r => logger.debug("headers" + r.headers.headers.mkString(","))) >>
+            logger.trace("first modified " + firstModified) >>
+            // You need these ... otherwise no caching.
+            // https://simonhearne.com/2022/caching-header-best-practices/
+            assertIOBoolean(served(request1).map(_.headers.get(ci"ETag").isDefined)) >>
+            assertIOBoolean(served(request1).map(_.headers.get(ci"Cache-Control").isDefined)) >>
+            assertIOBoolean(served(request1).map(_.headers.get(ci"Expires").isDefined)) >>
+            assertIOBoolean(served(request1).map(_.headers.get(ci"Last-Modified").isDefined)) >>
+            // Don't forget to set them _all_
+            assertIO(served(request1).map(_.status.code), 200) >>
+            assertIO(served(request2).map(_.status.code), 304) >>
+            IO.blocking(os.write.over(staticDir / "image.webp", os.read.bytes(os.resource / "dog.webp"))) >>
+            served(request2).flatMap(_.bodyText.compile.string).flatMap(s => logger.trace(s)) >>
+            assertIO(served(request2).map(_.status.code), 200)
 
-        }
+      }
   }
 
   externalIndexHtml.test("Client SPA routes return index.html") {

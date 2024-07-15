@@ -87,7 +87,7 @@ trait PlaywrightTest extends CatsEffectSuite:
       }
       .toResource
 
-  val externalHtmlStyles = IO {
+  val externalHtml = IO {
     val tempDir = os.temp.dir()
     val staticDir = tempDir / "assets"
     os.makeDir(staticDir)
@@ -204,12 +204,10 @@ trait PlaywrightTest extends CatsEffectSuite:
   }
 
   ResourceFunFixture {
-    externalHtmlStyles
+    externalHtml
       .both(client)
       .flatMap {
         case ((dir, extHtmlDir), client) =>
-          println(dir)
-          println(extHtmlDir)
           val lsc = LiveServerConfig(
             baseDir = Some(dir.toString),
             indexHtmlTemplate = Some(extHtmlDir.toString),
