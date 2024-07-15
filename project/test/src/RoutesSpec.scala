@@ -58,12 +58,26 @@ class RoutesSuite extends CatsEffectSuite:
       val tempFile = tempDir / "index.html"
       os.write(tempFile, """<head><title>Test</title></head><body><h1>Test</h1></body>""")
       os.write(tempDir / "index.less", simpleCss)
+      os.write(tempDir / "image.webp", os.read.bytes(os.resource / "cat.webp"))
       tempDir
     ,
     teardown = tempDir =>
       // Always gets called, even if test failed.
       os.remove.all(tempDir)
   )
+
+  val externalIndexR =
+    ResourceFunFixture {
+      IO {
+        val tempDir = os.temp.dir()
+        // create a file in the folder
+        val tempFile = tempDir / "index.html"
+        os.write(tempFile, """<head><title>Test</title></head><body><h1>Test</h1></body>""")
+        os.write(tempDir / "index.less", simpleCss)
+        os.write(tempDir / "image.webp", os.read.bytes(os.resource / "cat.webp"))
+        tempDir
+      }.toResource
+    }
 
   val externalSyles = FunFixture[os.Path](
     setup = test =>
@@ -358,17 +372,15 @@ class RoutesSuite extends CatsEffectSuite:
         }
     }
 
-  externalIndexHtml.test("Static files are updated when needed and cached otherwise".only) {
+  externalIndexHtml.test("Static files are updated when needed and cached otherwise") {
     staticDir =>
-      val cat = os.read.bytes(os.resource / "cat.webp")
-
       val app = for
         logger <- IO(scribe.cats[IO]).toResource
         fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
         fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
         refreshPub <- Topic[IO, Unit].toResource
-        _ <- IO.blocking(os.write(staticDir / "image.webp", cat)).toResource
-        modifedAt <- fileLastModified((staticDir / "index.html").toFs2)
+        _ <- logger.trace(os.stat(staticDir / "image.webp").toString()).toResource
+        modifedAt <- fileLastModified((staticDir / "image.webp").toFs2)
           .map {
             seconds =>
               httpCacheFormat(ZonedDateTime.ofInstant(Instant.ofEpochSecond(seconds), ZoneId.of("GMT")))
@@ -406,6 +418,9 @@ class RoutesSuite extends CatsEffectSuite:
             // Don't forget to set them _all_
             assertIO(served(request1).map(_.status.code), 200) >>
             assertIO(served(request2).map(_.status.code), 304) >>
+            IO.sleep(
+              1500.millis
+            ) >>
             IO.blocking(os.write.over(staticDir / "image.webp", os.read.bytes(os.resource / "dog.webp"))) >>
             served(request2).flatMap(_.bodyText.compile.string).flatMap(s => logger.trace(s)) >>
             assertIO(served(request2).map(_.status.code), 200)
