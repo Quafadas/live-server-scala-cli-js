@@ -11,7 +11,15 @@ import de.tobiasroeser.mill.vcs.version._
 import com.goyeau.mill.scalafix.ScalafixModule
 import java.text.Format
 
+object V{
+
+  val http4sVersion = "0.23.27"
+  val circeVersion = "0.14.9"
+}
+
+
 trait FormatFix extends ScalaModule with ScalafmtModule with ScalafixModule with PublishModule{
+  override def scalaVersion = "3.5.0-RC4"
 
   override def scalacOptions: Target[Seq[String]] = super.scalacOptions() ++ Seq("-Wunused:all")
 
@@ -37,25 +45,28 @@ object routes extends FormatFix {
 
   def artifactName = "scala-live-server-routes"
 
-
+  def ivyDeps = Agg(
+    ivy"org.http4s::http4s-core:${V.http4sVersion}",
+    ivy"org.http4s::http4s-client:${V.http4sVersion}",
+    ivy"org.http4s::http4s-server:${V.http4sVersion}",
+  )
 
 }
 
 object project extends FormatFix {
-  def scalaVersion = "3.5.0-RC4"
 
   def ivyDeps = super.ivyDeps() ++ Seq(
-    ivy"org.http4s::http4s-ember-server::0.23.26",
-    ivy"org.http4s::http4s-ember-client::0.23.26",
-    ivy"org.http4s::http4s-dsl::0.23.26",
+    ivy"org.http4s::http4s-ember-server::${V.http4sVersion}",
+    ivy"org.http4s::http4s-ember-client::${V.http4sVersion}",
+    ivy"org.http4s::http4s-dsl::${V.http4sVersion}",
     ivy"org.http4s::http4s-scalatags::0.25.2",
-    ivy"io.circe::circe-core::0.14.6",
-    ivy"io.circe::circe-generic::0.14.6",
+    ivy"io.circe::circe-core::${V.circeVersion}",
+    ivy"io.circe::circe-generic::${V.circeVersion}",
     ivy"co.fs2::fs2-io::3.10.2",
-    ivy"com.lihaoyi::scalatags::0.12.0",
+    ivy"com.lihaoyi::scalatags::0.13.1",
     ivy"com.monovore::decline::2.4.1",
     ivy"com.monovore::decline-effect::2.4.1",
-    ivy"com.outr::scribe-cats::3.13.5"
+    ivy"com.outr::scribe-cats::3.15.0"
   )
 
   def artifactName = "live-server-scala-cli-js"
@@ -65,9 +76,9 @@ object project extends FormatFix {
       ivy"org.scalameta::munit::1.0.0",
       ivy"com.microsoft.playwright:playwright:${playwrightVersion.pwV}",
       ivy"com.microsoft.playwright:driver-bundle:${playwrightVersion.pwV}",
-      ivy"org.typelevel::munit-cats-effect::2.0.0-M1",
-      ivy"com.lihaoyi::requests::0.8.2",
-      ivy"com.lihaoyi::os-lib:0.10.1"
+      ivy"org.typelevel::munit-cats-effect::2.0.0",
+      ivy"com.lihaoyi::requests::0.8.3",
+      ivy"com.lihaoyi::os-lib:0.10.2"
     )
   }
   //def scalaNativeVersion = "0.4.17" // aspirational :-)
