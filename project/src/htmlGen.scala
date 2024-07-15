@@ -97,7 +97,7 @@ def makeInternalPreloads(ref: Ref[IO, Map[String, String]]) =
       for
         m <- modules
         if m._1.toString.endsWith(".js") && m._1.toString.startsWith("internal")
-      yield link(rel := "modulepreload", src := s"${m._1}")
+      yield link(rel := "modulepreload", href := s"${m._1}?h=${m._2}")
       end for
   }
 

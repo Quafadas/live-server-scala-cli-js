@@ -248,12 +248,12 @@ trait PlaywrightTest extends CatsEffectSuite:
           Ok
         ) >>
         assertIO(
-          client.expect[String](s"http://localhost:$port"),
-          vanilla.render
+          client.expect[String](s"http://localhost:$port").map(_.filterNot(_.isWhitespace)),
+          vanilla.render.filterNot(_.isWhitespace)
         ) >>
         assertIO(
-          client.expect[String](s"http://localhost:$port/app/spaRoute"),
-          vanilla.render
+          client.expect[String](s"http://localhost:$port/app/spaRoute").map(_.filterNot(_.isWhitespace)),
+          vanilla.render.filterNot(_.isWhitespace)
         )
 
   }

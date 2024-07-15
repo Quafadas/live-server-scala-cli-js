@@ -37,6 +37,7 @@ import cats.effect.kernel.Resource
 import cats.syntax.all.*
 
 import _root_.io.circe.syntax.EncoderOps
+import org.http4s.Http
 
 def routes[F[_]: Files: MonadThrow](
     stringPath: String,
@@ -143,12 +144,41 @@ def routes[F[_]: Files: MonadThrow](
     case None => generatedIndexHtml(injectStyles = false, modules)
 
     case Some(IndexHtmlConfig.IndexHtmlPath(path)) =>
-      StaticMiddleware(
-        Router(
-          "" -> fileService[IO](FileService.Config(path.toString()))
-        ),
-        fs2.io.file.Path(path.toString())
-      )(logger)
+      // StaticMiddleware(
+      // Router(
+      //   "" ->
+      HttpRoutes
+        .of[IO] {
+          case req @ GET -> Root =>
+            StaticFile
+              .fromPath[IO](path / "index.html")
+              .getOrElseF(NotFound())
+              .flatMap {
+                f =>
+                  f.body
+                    .through(text.utf8.decode)
+                    .compile
+                    .string
+                    .flatMap {
+                      body =>
+                        for str <- injectModulePreloads(modules, body)
+                        yield
+                          val bytes = str.getBytes()
+                          f.withEntity(bytes)
+                          Response[IO]().withEntity(bytes).putHeaders("Content-Type" -> "text/html")
+
+                    }
+              }
+
+        }
+        .combineK(
+          StaticMiddleware(
+            Router(
+              "" -> fileService[IO](FileService.Config(path.toString()))
+            ),
+            fs2.io.file.Path(path.toString())
+          )(logger)
+        )
 
     case Some(IndexHtmlConfig.StylesOnly(stylesPath)) =>
       NoCacheMiddlware(
