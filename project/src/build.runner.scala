@@ -19,6 +19,7 @@ import scribe.Scribe
 import cats.effect.IO
 import cats.effect.ResourceIO
 import cats.syntax.all.*
+import cats.effect.kernel.Resource
 
 sealed trait BuildTool(val invokedVia: String)
 class ScalaCli
@@ -29,6 +30,8 @@ class Mill
     extends BuildTool(
       if isWindows then "mill.bat" else "mill"
     )
+
+class None extends BuildTool("")
 
 private lazy val isWindows: Boolean =
   System.getProperty("os.name").toLowerCase(Locale.ENGLISH).contains("windows")
@@ -56,6 +59,7 @@ def buildRunner(
         invokeVia,
         extraBuildArgs
       )(logger)
+    case n: None => logger.info("No build tool specified, skipping build").toResource
   end match
 end buildRunner
 

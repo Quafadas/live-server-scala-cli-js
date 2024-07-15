@@ -127,6 +127,7 @@ object LiveServer extends IOApp:
     .validate("Invalid build tool") {
       case "scala-cli" => true
       case "mill"      => true
+      case "none"      => true
       case _           => false
     }
     .withDefault("scala-cli")
@@ -134,6 +135,7 @@ object LiveServer extends IOApp:
       _ match
         case "scala-cli" => ScalaCli()
         case "mill"      => Mill()
+        case "none"      => None()
     }
 
   val extraBuildArgsOpt: Opts[List[String]] = Opts

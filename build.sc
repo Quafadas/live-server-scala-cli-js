@@ -9,13 +9,40 @@ import mill.scalalib.scalafmt.ScalafmtModule
 import de.tobiasroeser.mill.vcs.version._
 
 import com.goyeau.mill.scalafix.ScalafixModule
+import java.text.Format
 
-trait FormatFix extends ScalafmtModule with ScalafixModule{
+trait FormatFix extends ScalaModule with ScalafmtModule with ScalafixModule with PublishModule{
+
   override def scalacOptions: Target[Seq[String]] = super.scalacOptions() ++ Seq("-Wunused:all")
+
+  def publishVersion = VcsVersion.vcsState().format()
+
+  override def pomSettings = T {
+    PomSettings(
+      description = "An experimental live server for scala JS projects",
+      organization = "io.github.quafadas",
+      url = "https://github.com/Quafadas/live-server-scala-cli-js",
+      licenses = Seq(License.`Apache-2.0`),
+      versionControl =
+        VersionControl.github("quafadas", "live-server-scala-cli-js"),
+      developers = Seq(
+        Developer("quafadas", "Simon Parten", "https://github.com/quafadas")
+      )
+    )
+  }
+
 }
 
-object project extends ScalaModule with PublishModule with FormatFix /*with ScalaNativeModule*/ {
-  def scalaVersion = "3.4.2"
+object routes extends FormatFix {
+
+  def artifactName = "scala-live-server-routes"
+
+
+
+}
+
+object project extends FormatFix {
+  def scalaVersion = "3.5.0-RC4"
 
   def ivyDeps = super.ivyDeps() ++ Seq(
     ivy"org.http4s::http4s-ember-server::0.23.26",
@@ -33,8 +60,6 @@ object project extends ScalaModule with PublishModule with FormatFix /*with Scal
 
   def artifactName = "live-server-scala-cli-js"
 
-  def publishVersion = VcsVersion.vcsState().format()
-
   object test extends ScalaTests with TestModule.Munit with FormatFix {
     def ivyDeps = super.ivyDeps() ++ project.ivyDeps() ++ Seq(
       ivy"org.scalameta::munit::1.0.0",
@@ -43,20 +68,6 @@ object project extends ScalaModule with PublishModule with FormatFix /*with Scal
       ivy"org.typelevel::munit-cats-effect::2.0.0-M1",
       ivy"com.lihaoyi::requests::0.8.2",
       ivy"com.lihaoyi::os-lib:0.10.1"
-    )
-  }
-
-  override def pomSettings = T {
-    PomSettings(
-      description = "An experimental live server for scala JS projects",
-      organization = "io.github.quafadas",
-      url = "https://github.com/Quafadas/live-server-scala-cli-js",
-      licenses = Seq(License.`Apache-2.0`),
-      versionControl =
-        VersionControl.github("quafadas", "live-server-scala-cli-js"),
-      developers = Seq(
-        Developer("quafadas", "Simon Parten", "https://github.com/quafadas")
-      )
     )
   }
   //def scalaNativeVersion = "0.4.17" // aspirational :-)
