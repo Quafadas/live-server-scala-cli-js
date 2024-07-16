@@ -27,10 +27,25 @@ object ETagMiddleware:
               map.get(req.uri.path.toString.drop(1)) match
                 case Some(hash) =>
                   logger.debug(req.uri.toString) >>
-                    IO(resp.putHeaders(Header.Raw(ci"ETag", hash)))
+                    IO(
+                      resp.putHeaders(
+                        Header.Raw(ci"ETag", hash),
+                        Header.Raw(ci"Cache-control", "Must-Revalidate"),
+                        Header.Raw(ci"Cache-control", "No-cache"),
+                        Header.Raw(ci"Cache-control", "max-age=0"),
+                        Header.Raw(ci"Cache-control", "public")
+                      )
+                    )
                 case None =>
                   logger.debug(req.uri.toString) >>
-                    IO(resp)
+                    IO(
+                      resp.putHeaders(
+                        Header.Raw(ci"Cache-control", "Must-Revalidate"),
+                        Header.Raw(ci"Cache-control", "No-cache"),
+                        Header.Raw(ci"Cache-control", "max-age=0"),
+                        Header.Raw(ci"Cache-control", "public")
+                      )
+                    )
             end match
           }
       end respondWithEtag
