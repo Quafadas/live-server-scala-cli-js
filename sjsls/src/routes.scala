@@ -52,56 +52,21 @@ def routes[F[_]: Files: MonadThrow](
   val traceLogger = traceLoggerMiddleware(logger)
   val zdt = ZonedDateTime.now()
 
-  val linkedAppWithCaching: HttpRoutes[IO] =
-    ETagMiddleware(
-      HttpRoutes.of[IO] {
-        case req @ GET -> Root / fName ~ "js" =>
-          StaticFile
-            .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
-            .getOrElseF(NotFound())
+  val linkedAppWithCaching: HttpRoutes[IO] = ETagMiddleware(appRoute[IO](stringPath), ref)(logger)
+  val spaRoutes = clientRoutingPrefix.map(s => (s, buildSpaRoute(indexOpts, ref, zdt)(logger)))
+  val staticRoutes = Some(staticAssetRoutes(indexOpts, ref, zdt)(logger))
 
-        case req @ GET -> Root / fName ~ "map" =>
-          StaticFile
-            .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
-            .getOrElseF(NotFound())
-
-      },
-      ref
-    )(logger)
-
-  val linkedAppWithCaching2: HttpRoutes[IO] = ETagMiddleware(appRoute[IO](stringPath), ref)(logger)
-
-  def clientSpaRoutes(modules: Ref[IO, Map[String, String]]): HttpRoutes[IO] =
-    clientRoutingPrefix match
-      case None => HttpRoutes.empty[IO]
-      case Some(spaRoute) =>
-        Router(spaRoute -> buildSpaRoute(indexOpts, modules, zdt)(logger))
-
-  val app = traceLogger(
-    refreshRoutes(refreshTopic)
-      .combineK(proxyRoutes)
-      .combineK(linkedAppWithCaching)
-      .combineK(clientSpaRoutes(ref))
-      .combineK(staticAssetRoutes(indexOpts, ref, zdt)(logger))
-  )
-  val routes = traceLogger(
+  val routes =
     buildRoutes[IO](
-      clientSpaRoutes = clientRoutingPrefix.map(
-        s => (s, buildSpaRoute(indexOpts, ref, zdt)(logger))
-      ), // clientRoutingPrefix.map(spa => (spa, clientSpaRoutes(ref))),
-      staticAssetRoutes = Some(staticAssetRoutes(indexOpts, ref, zdt)(logger)),
+      clientSpaRoutes = spaRoutes,
+      staticAssetRoutes = staticRoutes,
       appRoutes = Some(linkedAppWithCaching)
     )
+
+  val refreshableApp = traceLogger(
+    refreshRoutes(refreshTopic).combineK(proxyRoutes).combineK(routes)
   )
 
-  val app2 = traceLogger(
-    refreshRoutes(refreshTopic)
-      .combineK(proxyRoutes)
-      .combineK(
-        routes
-      )
-  )
-
-  IO(app2).toResource
+  IO(refreshableApp).toResource
 
 end routes
