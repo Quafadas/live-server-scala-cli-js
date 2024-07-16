@@ -21,7 +21,7 @@ object V{
 trait FormatFix extends ScalafmtModule with ScalafixModule with ScalaModule
 
 trait FormatFixPublish extends ScalaModule with FormatFix with PublishModule{
-  override def scalaVersion = "3.5.0-RC4"
+  override def scalaVersion = "3.4.2"
 
   override def scalacOptions: Target[Seq[String]] = super.scalacOptions() ++ Seq("-Wunused:all")
 
@@ -94,7 +94,7 @@ object sjsls extends FormatFix {
 
   def moduleDeps = Seq(routes)
 
-  def artifactName = "live-server-scala-cli-js"
+  def artifactName = "sjsls"
 
   object test extends Testy with ScalaTests {
     def ivyDeps = super.ivyDeps() ++ sjsls.ivyDeps() ++ Seq(

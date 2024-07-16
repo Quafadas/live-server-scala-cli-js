@@ -58,7 +58,23 @@ def routes[F[_]: Files: MonadThrow](
   )
 
   val linkedAppWithCaching: HttpRoutes[IO] =
-    ETagMiddleware(appRoute(stringPath), ref)(logger)
+    ETagMiddleware(
+      HttpRoutes.of[IO] {
+        case req @ GET -> Root / fName ~ "js" =>
+          StaticFile
+            .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
+            .getOrElseF(NotFound())
+
+        case req @ GET -> Root / fName ~ "map" =>
+          StaticFile
+            .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
+            .getOrElseF(NotFound())
+
+      },
+      ref
+    )(logger)
+
+  val linkedAppWithCaching2: HttpRoutes[IO] = ETagMiddleware(appRoute[IO](stringPath), ref)(logger)
 
   // val hashFalse = vanillaTemplate(false).render.hashCode.toString
   // val hashTrue = vanillaTemplate(true).render.hashCode.toString
@@ -132,9 +148,6 @@ def routes[F[_]: Files: MonadThrow](
     case None => generatedIndexHtml(injectStyles = false, modules)
 
     case Some(IndexHtmlConfig.IndexHtmlPath(path)) =>
-      // StaticMiddleware(
-      // Router(
-      //   "" ->
       HttpRoutes
         .of[IO] {
           case req @ GET -> Root =>
@@ -243,11 +256,25 @@ def routes[F[_]: Files: MonadThrow](
     refreshRoutes
       .combineK(proxyRoutes)
       .combineK(linkedAppWithCaching)
-      .combineK(clientSpaRoutes(ref))
+      // .combineK(clientSpaRoutes(ref))
       .combineK(staticAssetRoutes(ref))
   )
+  val routes = logMiddler(
+    buildRoutes(
+      // clientSpaRoutes = None, // clientRoutingPrefix.map(spa => (spa, clientSpaRoutes(ref))),
+      // staticAssetRoutes = None, // Some(staticAssetRoutes(ref)),
+      appRoutes = linkedAppWithCaching
+    )
+  )
 
-  clientRoutingPrefix.fold(IO.unit)(s => logger.trace(s"client spa at : $s")).toResource >>
-    IO(app).toResource
+  val app2 = logMiddler(
+    refreshRoutes
+      .combineK(proxyRoutes)
+      .combineK(
+        linkedAppWithCaching
+      )
+  )
+
+  IO(app).toResource
 
 end routes

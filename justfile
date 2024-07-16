@@ -12,7 +12,7 @@ compile:
   mill {{projectName}}.compile
 
 test:
-  mill {{projectName}}.test.testOnly io.github.quafadas.sjsls.SafariSuite && mill project.test.testOnly io.github.quafadas.sjsls.RoutesSuite && mill project.test.testOnly io.github.quafadas.sjsls.UtilityFcs
+  mill {{projectName}}.test.testOnly io.github.quafadas.sjsls.SafariSuite && mill {{projectName}}.test.testOnly io.github.quafadas.sjsls.RoutesSuite && mill {{projectName}}.test.testOnly io.github.quafadas.sjsls.UtilityFcs
 
 checkOpts:
   mill {{projectName}}.run --help

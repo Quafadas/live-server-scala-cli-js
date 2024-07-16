@@ -9,7 +9,7 @@
             "request": "attach",
             "name": "Attach debugger",
             // name of the module that is being debugging
-            "buildTarget": "project.test",
+            "buildTarget": "sjsls.test",
             // Host of the jvm to connect to
             "hostName": "localhost",
             // Port to connect to

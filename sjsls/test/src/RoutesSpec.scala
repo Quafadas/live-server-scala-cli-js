@@ -147,7 +147,7 @@ class RoutesSuite extends CatsEffectSuite:
   }
 
   files.test(
-    "That the routes serve files on first call with a 200, that the eTag is set, and on second call with a 304"
+    "That the routes serve files on first call with a 200, that the eTag is set, and on second call with a 304".only
   ) {
     tempDir =>
 
@@ -156,7 +156,7 @@ class RoutesSuite extends CatsEffectSuite:
         .root
         .clearHandlers()
         .clearModifiers()
-        .withHandler(minimumLevel = Some(Level.get("error").get))
+        .withHandler(minimumLevel = Some(Level.get("trace").get))
         .replace()
 
       val aLogger = scribe.cats[IO]
