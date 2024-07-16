@@ -56,7 +56,7 @@ jobs:
         run: mill __.compile
 
       - name: Test
-        run: mill project.test
+        run: mill __.test
 
   publish:
     if: github.repository == 'Quafadas/live-server-scala-cli-js' && contains(github.ref, 'refs/tags/')

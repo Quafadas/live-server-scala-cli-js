@@ -15,15 +15,11 @@ import org.http4s.Status
 def appRoute[F[_]: Files: MonadThrow](stringPath: String)(using f: Async[F]): HttpRoutes[F] = HttpRoutes.of[F] {
 
   case req @ GET -> Root / fName ~ "js" =>
-    println(stringPath)
-    println(req.uri.path.renderString)
     StaticFile
       .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
       .getOrElseF(f.pure(Response[F](Status.NotFound)))
 
   case req @ GET -> Root / fName ~ "map" =>
-    println(req.uri.path.renderString)
-    println(req.uri.path.renderString)
     StaticFile
       .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
       .getOrElseF(f.pure(Response[F](Status.NotFound)))

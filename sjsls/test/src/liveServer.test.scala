@@ -98,7 +98,6 @@ trait PlaywrightTest extends CatsEffectSuite:
     os.makeDir(staticDir)
     os.write.over(tempDir / "hello.scala", helloWorldCode("Hello"))
     os.write.over(staticDir / "index.less", "h1{color:red}")
-    println(vanilla.render)
     os.write.over(staticDir / "index.html", vanilla.render)
     (tempDir, staticDir)
   }.flatTap {
