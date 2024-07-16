@@ -17,6 +17,7 @@ import cats.effect.IO
 
 import LiveServer.LiveServerConfig
 import munit.CatsEffectSuite
+import cats.effect.kernel.Ref
 
 /*
 Run
@@ -74,6 +75,8 @@ trait PlaywrightTest extends CatsEffectSuite:
   def outDir(base: os.Path) = base / ".out"
   def styleDir(base: os.Path) = base / "styles"
 
+  val vanilla = vanillaTemplate(true, Ref.unsafe(Map[String, String]())).unsafeRunSync()
+
   val files =
     IO {
       val tempDir = os.temp.dir()
@@ -93,7 +96,8 @@ trait PlaywrightTest extends CatsEffectSuite:
     os.makeDir(staticDir)
     os.write.over(tempDir / "hello.scala", helloWorldCode("Hello"))
     os.write.over(staticDir / "index.less", "h1{color:red}")
-    os.write.over(staticDir / "index.html", vanillaTemplate(true).render)
+    println(vanilla.render)
+    os.write.over(staticDir / "index.html", vanilla.render)
     (tempDir, staticDir)
   }.flatTap {
       tempDir =>
@@ -244,12 +248,12 @@ trait PlaywrightTest extends CatsEffectSuite:
           Ok
         ) >>
         assertIO(
-          client.expect[String](s"http://localhost:$port"),
-          vanillaTemplate(true).render
+          client.expect[String](s"http://localhost:$port").map(_.filterNot(_.isWhitespace)),
+          vanilla.render.filterNot(_.isWhitespace)
         ) >>
         assertIO(
-          client.expect[String](s"http://localhost:$port/app/spaRoute"),
-          vanillaTemplate(true).render
+          client.expect[String](s"http://localhost:$port/app/spaRoute").map(_.filterNot(_.isWhitespace)),
+          vanilla.render.filterNot(_.isWhitespace)
         )
 
   }

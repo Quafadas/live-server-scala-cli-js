@@ -1,6 +1,8 @@
 import scalatags.Text.all.*
 
 import fs2.io.file.Path
+import cats.effect.kernel.Ref
+import cats.effect.IO
 
 def lessStyle(withStyles: Boolean): Seq[Modifier] =
   if withStyles then
@@ -49,22 +51,17 @@ def injectRefreshScript(template: String) =
 
 end injectRefreshScript
 
-def injectModulePreloads(modules: Seq[(Path, String)], template: String) =
-  val modulesStrings =
-    for
-      m <- modules
-      if m._1.toString.endsWith(".js")
-    yield link(rel := "modulepreload", href := s"${m._1}?hash=${m._2}").render
+def injectModulePreloads(ref: Ref[IO, Map[String, String]], template: String) =
+  val preloads = makeInternalPreloads(ref)
+  preloads.map: modules =>
+    val modulesStringsInject = modules.mkString("\n", "\n", "\n")
+    val headCloseTag = "</head>"
+    val insertionPoint = template.indexOf(headCloseTag)
 
-  val modulesStringsInject = modulesStrings.mkString("\n", "\n", "\n")
-  val headCloseTag = "</head>"
-  val insertionPoint = template.indexOf(headCloseTag)
-
-  val newHtmlContent = template.substring(0, insertionPoint) +
-    modulesStringsInject +
-    template.substring(insertionPoint)
-
-  newHtmlContent
+    val newHtmlContent = template.substring(0, insertionPoint) +
+      modulesStringsInject +
+      template.substring(insertionPoint)
+    newHtmlContent
 
 end injectModulePreloads
 
@@ -93,17 +90,35 @@ def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean) =
   )
 end makeHeader
 
-def vanillaTemplate(withStyles: Boolean) = html(
-  head(
-    meta(
-      httpEquiv := "Cache-control",
-      content := "no-cache, no-store, must-revalidate"
+def makeInternalPreloads(ref: Ref[IO, Map[String, String]]) =
+  val keys = ref.get.map(_.toSeq)
+  keys.map {
+    modules =>
+      for
+        m <- modules
+        if m._1.toString.endsWith(".js") && m._1.toString.startsWith("internal")
+      yield link(rel := "modulepreload", href := s"${m._1}?h=${m._2}")
+      end for
+  }
+
+end makeInternalPreloads
+
+def vanillaTemplate(withStyles: Boolean, ref: Ref[IO, Map[String, String]]) =
+  val preloads = makeInternalPreloads(ref)
+  preloads.map: modules =>
+    html(
+      head(
+        meta(
+          httpEquiv := "Cache-control",
+          content := "no-cache, no-store, must-revalidate",
+          modules
+        )
+      ),
+      body(
+        lessStyle(withStyles),
+        script(src := "/main.js", `type` := "module"),
+        div(id := "app"),
+        refreshScript
+      )
     )
-  ),
-  body(
-    lessStyle(withStyles),
-    script(src := "/main.js", `type` := "module"),
-    div(id := "app"),
-    refreshScript
-  )
-)
+end vanillaTemplate
