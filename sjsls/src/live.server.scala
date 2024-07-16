@@ -23,14 +23,6 @@ import scribe.Level
 import cats.effect.*
 import cats.implicits.*
 
-import _root_.io.circe.*
-import _root_.io.circe.Encoder
-
-sealed trait FrontendEvent derives Encoder.AsObject
-
-case class KeepAlive() extends FrontendEvent derives Encoder.AsObject
-case class PageRefresh() extends FrontendEvent derives Encoder.AsObject
-
 def makeProxyConfig(frontendPort: Port, proxyTo: Port, matcher: String) = s"""
 http:
   servers:

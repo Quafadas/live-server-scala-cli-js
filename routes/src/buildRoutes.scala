@@ -53,20 +53,16 @@ import cats.Monad
   * @param f
   * @return
   */
-def buildRoutes(
-    appRoutes: HttpRoutes[IO]
-): HttpRoutes[IO] =
-  // val allRoutes = appRoutes.map(r => ("", r)) ++ clientSpaRoutes ++ staticAssetRoutes.map(r => ("", r))
-  // val tmp = f.pure(
-  //   Router(allRoutes.toList*)
-  // )
+def buildRoutes[F[_]](
+    clientSpaRoutes: Option[(String, HttpRoutes[F])],
+    staticAssetRoutes: Option[(HttpRoutes[F])],
+    appRoutes: Option[HttpRoutes[F]]
+)(using f: Monad[F]): HttpRoutes[F] =
 
-  // val spaRoutes2: HttpRoutes[F] = clientSpaRoutes.map(s => Router(s)).getOrElse(HttpRoutes.empty[F])
-  // val staticAssetRoutes2: HttpRoutes[F] = staticAssetRoutes.getOrElse(HttpRoutes.empty[F])
-  // val appRoutes2: HttpRoutes[F] = appRoutes.getOrElse(HttpRoutes.empty[F])
+  val spaRoutes2: HttpRoutes[F] = clientSpaRoutes.map(s => Router(s)).getOrElse(HttpRoutes.empty[F])
+  val staticAssetRoutes2: HttpRoutes[F] = staticAssetRoutes.getOrElse(HttpRoutes.empty[F])
+  val appRoutes2: HttpRoutes[F] = appRoutes.getOrElse(HttpRoutes.empty[F])
 
-  // val routed: HttpRoutes[F] = appRoutes2.combineK(spaRoutes2).combineK(staticAssetRoutes2)
-
-  appRoutes
+  appRoutes2.combineK(spaRoutes2).combineK(staticAssetRoutes2)
 
 end buildRoutes

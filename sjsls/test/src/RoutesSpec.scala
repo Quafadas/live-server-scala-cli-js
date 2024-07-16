@@ -147,7 +147,7 @@ class RoutesSuite extends CatsEffectSuite:
   }
 
   files.test(
-    "That the routes serve files on first call with a 200, that the eTag is set, and on second call with a 304".only
+    "That the routes serve files on first call with a 200, that the eTag is set, and on second call with a 304, that index.html is served from SPA"
   ) {
     tempDir =>
 
@@ -156,7 +156,7 @@ class RoutesSuite extends CatsEffectSuite:
         .root
         .clearHandlers()
         .clearModifiers()
-        .withHandler(minimumLevel = Some(Level.get("trace").get))
+        .withHandler(minimumLevel = Some(Level.get("error").get))
         .replace()
 
       val aLogger = scribe.cats[IO]
@@ -236,17 +236,6 @@ class RoutesSuite extends CatsEffectSuite:
                 assertEquals(respH.headers.get(ci"ETag").isDefined, true)
                 IO.unit
             }
-
-          // val requestHtml2 = Request[IO](uri = uri"/").withHeaders(Header.Raw(ci"If-None-Match", etag))
-
-          // val checkRespHtml2 = client
-          //   .run(requestHtml2)
-          //   .use {
-          //     respH =>
-          //       assertEquals(respH.status.code, 304)
-          //       IO.unit
-          //   }
-
           checkResp1 >> checkResp2 >> checkRespSpa >> checkRespHtml
 
       }
