@@ -1,3 +1,5 @@
+package io.github.quafadas.sjsls
+
 import org.http4s.HttpRoutes
 import org.http4s.client.Client
 import org.http4s.server.Router

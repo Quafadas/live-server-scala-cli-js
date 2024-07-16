@@ -1,3 +1,5 @@
+package io.github.quafadas.sjsls
+
 import org.http4s.*
 import org.http4s.client.Client
 import org.http4s.headers.Host

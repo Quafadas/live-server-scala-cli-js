@@ -1,3 +1,5 @@
+package io.github.quafadas.sjsls
+
 import java.security.MessageDigest
 import java.time.Instant
 import java.time.ZoneId

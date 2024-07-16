@@ -1,3 +1,4 @@
+import os.copy.over
 import $ivy.`io.github.quafadas::millSite::0.0.24`
 import $ivy.`de.tototec::de.tobiasroeser.mill.vcs.version::0.4.0`
 import $ivy.`com.goyeau::mill-scalafix::0.4.0`
@@ -17,8 +18,9 @@ object V{
   val circeVersion = "0.14.9"
 }
 
+trait FormatFix extends ScalafmtModule with ScalafixModule with ScalaModule
 
-trait FormatFix extends ScalaModule with ScalafmtModule with ScalafixModule with PublishModule{
+trait FormatFixPublish extends ScalaModule with FormatFix with PublishModule{
   override def scalaVersion = "3.5.0-RC4"
 
   override def scalacOptions: Target[Seq[String]] = super.scalacOptions() ++ Seq("-Wunused:all")
@@ -41,7 +43,21 @@ trait FormatFix extends ScalaModule with ScalafmtModule with ScalafixModule with
 
 }
 
+trait Testy extends TestModule.Munit with FormatFix {
+
+  override def defaultCommandName(): String = "test"
+
+  def ivyDeps = super.ivyDeps() ++ sjsls.ivyDeps() ++ Seq(
+    ivy"org.typelevel::munit-cats-effect::2.0.0",
+    ivy"org.scalameta::munit::1.0.0",
+    ivy"com.lihaoyi::os-lib:0.10.2"
+  )
+
+}
+
 object routes extends FormatFix {
+
+  def scalaVersion: T[String] = sjsls.scalaVersion
 
   def artifactName = "scala-live-server-routes"
 
@@ -49,17 +65,23 @@ object routes extends FormatFix {
     ivy"org.http4s::http4s-core:${V.http4sVersion}",
     ivy"org.http4s::http4s-client:${V.http4sVersion}",
     ivy"org.http4s::http4s-server:${V.http4sVersion}",
+    ivy"org.http4s::http4s-dsl::${V.http4sVersion}",
     ivy"com.outr::scribe-cats::3.15.0"
   )
 
+  object test extends Testy with ScalaTests{
+    def ivyDeps = super.ivyDeps() ++ sjsls.ivyDeps()
+  }
+
 }
 
-object project extends FormatFix {
+object sjsls extends FormatFix {
+
+  override def scalaVersion = "3.5.0-RC4"
 
   def ivyDeps = super.ivyDeps() ++ Seq(
     ivy"org.http4s::http4s-ember-server::${V.http4sVersion}",
     ivy"org.http4s::http4s-ember-client::${V.http4sVersion}",
-    ivy"org.http4s::http4s-dsl::${V.http4sVersion}",
     ivy"org.http4s::http4s-scalatags::0.25.2",
     ivy"io.circe::circe-core::${V.circeVersion}",
     ivy"io.circe::circe-generic::${V.circeVersion}",
@@ -74,14 +96,11 @@ object project extends FormatFix {
 
   def artifactName = "live-server-scala-cli-js"
 
-  object test extends ScalaTests with TestModule.Munit with FormatFix {
-    def ivyDeps = super.ivyDeps() ++ project.ivyDeps() ++ Seq(
-      ivy"org.scalameta::munit::1.0.0",
+  object test extends Testy with ScalaTests {
+    def ivyDeps = super.ivyDeps() ++ sjsls.ivyDeps() ++ Seq(
+
       ivy"com.microsoft.playwright:playwright:${playwrightVersion.pwV}",
-      ivy"com.microsoft.playwright:driver-bundle:${playwrightVersion.pwV}",
-      ivy"org.typelevel::munit-cats-effect::2.0.0",
-      ivy"com.lihaoyi::requests::0.8.3",
-      ivy"com.lihaoyi::os-lib:0.10.2"
+      ivy"com.microsoft.playwright:driver-bundle:${playwrightVersion.pwV}"
     )
   }
   //def scalaNativeVersion = "0.4.17" // aspirational :-)
@@ -90,9 +109,9 @@ object project extends FormatFix {
 
 object site extends SiteModule {
 
-   def scalaVersion = project.scalaVersion
+   def scalaVersion = sjsls.scalaVersion
 
-  override def moduleDeps = Seq(project)
+  override def moduleDeps = Seq(sjsls)
 
 }
 

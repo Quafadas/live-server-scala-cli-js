@@ -1,3 +1,5 @@
+package io.github.quafadas.sjsls
+
 import scalatags.Text.all.*
 
 import fs2.io.file.Path

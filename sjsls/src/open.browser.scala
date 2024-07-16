@@ -1,3 +1,5 @@
+package io.github.quafadas.sjsls
+
 import java.awt.Desktop
 import java.net.URI
 

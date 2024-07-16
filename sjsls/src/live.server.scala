@@ -1,3 +1,5 @@
+package io.github.quafadas.sjsls
+
 import scala.concurrent.duration.*
 import scala.util.control.NoStackTrace
 
@@ -46,11 +48,6 @@ http:
           port: $proxyTo
           weight: 5
 """
-
-enum IndexHtmlConfig:
-  case IndexHtmlPath(path: Path)
-  case StylesOnly(path: Path)
-end IndexHtmlConfig
 
 case class CliValidationError(message: String) extends NoStackTrace
 

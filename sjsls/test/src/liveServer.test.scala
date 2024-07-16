@@ -1,3 +1,5 @@
+package io.github.quafadas.sjsls
+
 import scala.compiletime.uninitialized
 import scala.concurrent.duration.*
 

@@ -1,3 +1,5 @@
+package io.github.quafadas.sjsls
+
 import fs2.io.file.*
 
 import cats.effect.IO

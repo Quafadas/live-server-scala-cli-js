@@ -1,3 +1,5 @@
+package io.github.quafadas.sjsls
+
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 

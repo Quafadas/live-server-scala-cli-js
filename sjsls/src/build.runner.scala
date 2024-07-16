@@ -1,3 +1,5 @@
+package io.github.quafadas.sjsls
+
 import java.util.Locale
 
 import scala.concurrent.duration.*

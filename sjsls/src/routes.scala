@@ -1,3 +1,5 @@
+package io.github.quafadas.sjsls
+
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
@@ -56,21 +58,7 @@ def routes[F[_]: Files: MonadThrow](
   )
 
   val linkedAppWithCaching: HttpRoutes[IO] =
-    ETagMiddleware(
-      HttpRoutes.of[IO] {
-        case req @ GET -> Root / fName ~ "js" =>
-          StaticFile
-            .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
-            .getOrElseF(NotFound())
-
-        case req @ GET -> Root / fName ~ "map" =>
-          StaticFile
-            .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
-            .getOrElseF(NotFound())
-
-      },
-      ref
-    )(logger)
+    ETagMiddleware(appRoute(stringPath), ref)(logger)
 
   // val hashFalse = vanillaTemplate(false).render.hashCode.toString
   // val hashTrue = vanillaTemplate(true).render.hashCode.toString
@@ -253,8 +241,8 @@ def routes[F[_]: Files: MonadThrow](
   }
   val app = logMiddler(
     refreshRoutes
-      .combineK(linkedAppWithCaching)
       .combineK(proxyRoutes)
+      .combineK(linkedAppWithCaching)
       .combineK(clientSpaRoutes(ref))
       .combineK(staticAssetRoutes(ref))
   )

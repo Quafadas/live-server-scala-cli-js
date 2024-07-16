@@ -1,3 +1,5 @@
+package io.github.quafadas.sjsls
+
 import com.comcast.ip4s.*
 
 import cats.data.NonEmptyList
