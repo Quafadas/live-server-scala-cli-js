@@ -69,7 +69,7 @@ trait PlaywrightTest extends CatsEffectSuite:
   var page: Page = uninitialized
 
   val options = new BrowserType.LaunchOptions()
-  options.setHeadless(false);
+  // options.setHeadless(false);
 
   // def testDir(base: os.Path) = os.pwd / "testDir"
   def outDir(base: os.Path) = base / ".out"
