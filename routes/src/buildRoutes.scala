@@ -61,6 +61,12 @@ def frontendRoutes[F[_]](
 
 end frontendRoutes
 
+/** Assumes that assets are served from the server route from resources
+  *
+  * @param spaPrefix
+  *   \- configure the route you want the SPA to be served under
+  * @return
+  */
 def defaultFrontendRoutes[F[_]](spaPrefix: String = "ui") =
   val frontendJs = org.http4s.server.staticcontent.resourceServiceBuilder[IO]("").toRoutes
   val serveIndexHtmlBelowSpaPrefix = HttpRoutes.of[IO] {
