@@ -55,11 +55,9 @@ trait Testy extends TestModule.Munit with FormatFix {
 
 }
 
-object routes extends FormatFix {
+object routes extends FormatFixPublish {
 
-  def scalaVersion: T[String] = sjsls.scalaVersion
-
-  def artifactName = "scala-live-server-routes"
+  def scalaVersion: T[String] = "3.3.3" // Latest LTS
 
   def ivyDeps = Agg(
     ivy"org.http4s::http4s-core:${V.http4sVersion}",
@@ -69,15 +67,17 @@ object routes extends FormatFix {
     ivy"com.outr::scribe-cats::3.15.0"
   )
 
+  override def artifactName = "frontend-routes"
+
   object test extends Testy with ScalaTests{
     def ivyDeps = super.ivyDeps() ++ sjsls.ivyDeps()
   }
 
 }
 
-object sjsls extends FormatFix {
+object sjsls extends FormatFixPublish {
 
-  override def scalaVersion = "3.5.0-RC4"
+  override def scalaVersion = "3.4.2" // Latest
 
   def ivyDeps = super.ivyDeps() ++ Seq(
     ivy"org.http4s::http4s-ember-server::${V.http4sVersion}",
