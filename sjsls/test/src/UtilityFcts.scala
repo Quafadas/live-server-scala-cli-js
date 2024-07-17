@@ -1,8 +1,9 @@
 package io.github.quafadas.sjsls
 
-import munit.CatsEffectSuite
-import cats.effect.kernel.Ref
 import cats.effect.IO
+import cats.effect.kernel.Ref
+
+import munit.CatsEffectSuite
 
 class UtilityFcs extends CatsEffectSuite:
 

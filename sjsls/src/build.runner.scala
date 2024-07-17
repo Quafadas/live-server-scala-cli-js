@@ -2,17 +2,10 @@ package io.github.quafadas.sjsls
 
 import java.util.Locale
 
-import scala.concurrent.duration.*
-
 import fs2.*
 import fs2.concurrent.Topic
 import fs2.io.Watcher
 import fs2.io.Watcher.Event
-import fs2.io.Watcher.Event.Created
-import fs2.io.Watcher.Event.Deleted
-import fs2.io.Watcher.Event.Modified
-import fs2.io.Watcher.Event.NonStandard
-import fs2.io.Watcher.Event.Overflow
 import fs2.io.process.ProcessBuilder
 import fs2.io.process.Processes
 
@@ -20,8 +13,8 @@ import scribe.Scribe
 
 import cats.effect.IO
 import cats.effect.ResourceIO
-import cats.syntax.all.*
 import cats.effect.kernel.Resource
+import cats.syntax.all.*
 
 sealed trait BuildTool(val invokedVia: String)
 class ScalaCli

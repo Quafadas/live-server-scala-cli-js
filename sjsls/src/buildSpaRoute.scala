@@ -1,17 +1,16 @@
 package io.github.quafadas.sjsls
-
-import io.github.quafadas.sjsls.StaticFileMiddleware
-import cats.effect.IO
-import org.http4s.HttpRoutes
-import scribe.Scribe
-import org.http4s.dsl.io.*
-import org.http4s.StaticFile
-import fs2.text
-import cats.effect.kernel.Ref
-import org.http4s.Response
-import cats.effect.kernel.Async
-import org.http4s.scalatags.*
 import java.time.ZonedDateTime
+
+import org.http4s.HttpRoutes
+import org.http4s.Response
+import org.http4s.dsl.io.*
+import org.http4s.scalatags.*
+
+import scribe.Scribe
+
+import cats.effect.IO
+import cats.effect.kernel.Async
+import cats.effect.kernel.Ref
 
 /** This is expected to be hidden behind a route with the SPA prefix. It will serve the index.html file from all routes.
   *

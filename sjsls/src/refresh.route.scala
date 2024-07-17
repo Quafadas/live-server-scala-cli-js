@@ -1,11 +1,14 @@
 package io.github.quafadas.sjsls
 
-import cats.effect.IO
-import org.http4s.HttpRoutes
-import org.http4s.dsl.io.*
 import scala.concurrent.duration.DurationInt
-import fs2.concurrent.Topic
+
+import org.http4s.HttpRoutes
 import org.http4s.ServerSentEvent
+import org.http4s.dsl.io.*
+
+import fs2.concurrent.Topic
+
+import cats.effect.IO
 
 import _root_.io.circe.syntax.EncoderOps
 

@@ -1,27 +1,8 @@
 package io.github.quafadas.sjsls
 
-import java.time.Instant
-import java.time.ZoneId
 import java.time.ZonedDateTime
 
-import scala.concurrent.duration.DurationInt
-
-import org.http4s.Header
 import org.http4s.HttpRoutes
-import org.http4s.Request
-import org.http4s.Response
-import org.http4s.ServerSentEvent
-import org.http4s.StaticFile
-import org.http4s.Status
-import org.http4s.Uri.Path.SegmentEncoder
-import org.http4s.dsl.io.*
-import org.http4s.scalatags.*
-import org.http4s.server.Router
-import org.http4s.server.middleware.Logger
-import org.http4s.server.staticcontent.*
-import org.http4s.server.staticcontent.FileService
-import org.typelevel.ci.CIStringSyntax
-import org.http4s.EntityBody
 
 import fs2.*
 import fs2.concurrent.Topic
@@ -37,8 +18,6 @@ import cats.effect.IO
 import cats.effect.kernel.Ref
 import cats.effect.kernel.Resource
 import cats.syntax.all.*
-
-import org.http4s.Http
 
 def routes[F[_]: Files: MonadThrow](
     stringPath: String,

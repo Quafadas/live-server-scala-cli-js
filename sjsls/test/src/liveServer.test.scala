@@ -16,10 +16,10 @@ import com.microsoft.playwright.assertions.LocatorAssertions.ContainsTextOptions
 import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 
 import cats.effect.IO
-
-import LiveServer.LiveServerConfig
-import munit.CatsEffectSuite
 import cats.effect.kernel.Ref
+
+import io.github.quafadas.sjsls.LiveServer.LiveServerConfig
+import munit.CatsEffectSuite
 
 /*
 Run

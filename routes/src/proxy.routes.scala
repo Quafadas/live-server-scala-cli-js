@@ -16,9 +16,9 @@ import cats.effect.kernel.Resource
 import cats.effect.std.Random
 import cats.syntax.all.*
 
-import ProxyConfig.Equilibrium
-import ProxyConfig.LocationMatcher
-import ProxyConfig.Server
+import io.github.quafadas.sjsls.ProxyConfig.Equilibrium
+import io.github.quafadas.sjsls.ProxyConfig.LocationMatcher
+import io.github.quafadas.sjsls.ProxyConfig.Server
 
 def makeProxyRoutes(
     client: Client[IO],

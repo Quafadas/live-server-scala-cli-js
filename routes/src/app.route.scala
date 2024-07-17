@@ -1,16 +1,16 @@
 package io.github.quafadas.sjsls
 
 import org.http4s.HttpRoutes
-import org.http4s.dsl.io.*
+import org.http4s.Response
 import org.http4s.StaticFile
-import cats.effect.kernel.Async
-import fs2.io.file.Files
-import cats.MonadThrow
-
+import org.http4s.Status
+import org.http4s.dsl.io.*
 import org.http4s.server.staticcontent.FileService
 import org.http4s.server.staticcontent.fileService
-import org.http4s.Response
-import org.http4s.Status
+
+import fs2.io.file.Files
+
+import cats.effect.kernel.Async
 
 def appRoute[F[_]: Files](stringPath: String)(using f: Async[F]): HttpRoutes[F] = HttpRoutes.of[F] {
 

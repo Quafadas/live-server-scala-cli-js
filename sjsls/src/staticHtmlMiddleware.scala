@@ -1,16 +1,19 @@
 package io.github.quafadas.sjsls
 
-import org.http4s.HttpRoutes
-import org.http4s.Request
-import cats.effect.IO
-import java.time.ZonedDateTime
-import scribe.Scribe
-import cats.data.Kleisli
-import org.http4s.Response
-import org.http4s.Header
-import org.typelevel.ci.CIStringSyntax
 import java.time.Instant
 import java.time.ZoneId
+import java.time.ZonedDateTime
+
+import org.http4s.Header
+import org.http4s.HttpRoutes
+import org.http4s.Request
+import org.http4s.Response
+import org.typelevel.ci.CIStringSyntax
+
+import scribe.Scribe
+
+import cats.data.Kleisli
+import cats.effect.IO
 
 object StaticHtmlMiddleware:
   def apply(service: HttpRoutes[IO], injectStyles: Boolean, zdt: ZonedDateTime)(logger: Scribe[IO]): HttpRoutes[IO] =

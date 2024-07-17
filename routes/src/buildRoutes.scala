@@ -1,21 +1,13 @@
 package io.github.quafadas.sjsls
-
-import cats.effect.kernel.Ref
-import fs2.concurrent.Topic
-import fs2.io.file.Files
-import org.http4s.HttpRoutes
 import org.http4s
-
-import cats.MonadThrow
-import cats.effect.IO
-import scribe.Scribe
-import cats.effect.kernel.Resource
-import org.http4s.server.Router
-import cats.syntax.all.*
+import org.http4s.HttpRoutes
+import org.http4s.StaticFile
 import org.http4s.dsl.io.*
+import org.http4s.server.Router
 
 import cats.Monad
-import org.http4s.StaticFile
+import cats.effect.IO
+import cats.syntax.all.*
 
 /** This is a helper function which would allow you to construct a Router which mimics the behaviour of the "live
   * server".

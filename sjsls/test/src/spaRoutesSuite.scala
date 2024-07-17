@@ -1,13 +1,17 @@
 package io.github.quafadas.sjsls
 
-import munit.CatsEffectSuite
-import cats.effect.kernel.Ref
-import cats.effect.IO
 import java.time.ZonedDateTime
-import scribe.Level
+
 import org.http4s.Request
-import org.http4s.syntax.literals.uri
 import org.http4s.Status
+import org.http4s.syntax.literals.uri
+
+import scribe.Level
+
+import cats.effect.IO
+import cats.effect.kernel.Ref
+
+import munit.CatsEffectSuite
 
 class SpaRoutesSuite extends CatsEffectSuite:
 

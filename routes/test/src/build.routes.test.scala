@@ -1,12 +1,12 @@
 package io.github.quafadas.sjsls
 
-import munit.CatsEffectSuite
-import cats.effect.IO
-import org.http4s.server.Router
 import org.http4s.HttpRoutes
-import org.http4s.Status
 import org.http4s.Response
-import cats.data.OptionT
+import org.http4s.Status
+
+import cats.effect.IO
+
+import munit.CatsEffectSuite
 
 class BuildRoutesSuite extends CatsEffectSuite:
 

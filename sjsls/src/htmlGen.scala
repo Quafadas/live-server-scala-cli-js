@@ -1,17 +1,21 @@
 package io.github.quafadas.sjsls
 
+import java.time.ZonedDateTime
+
 import scalatags.Text.all.*
 
-import fs2.io.file.Path
-import cats.effect.kernel.Ref
-import cats.effect.IO
 import org.http4s.HttpRoutes
-import org.http4s.dsl.io.*
-import scribe.Scribe
 import org.http4s.Response
-import java.time.ZonedDateTime
-import org.http4s.scalatags.*
 import org.http4s.Status
+import org.http4s.dsl.io.*
+import org.http4s.scalatags.*
+
+import fs2.io.file.Path
+
+import scribe.Scribe
+
+import cats.effect.IO
+import cats.effect.kernel.Ref
 import cats.syntax.all.*
 
 def generatedIndexHtml(injectStyles: Boolean, modules: Ref[IO, Map[String, String]], zdt: ZonedDateTime)(

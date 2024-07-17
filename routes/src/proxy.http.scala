@@ -13,7 +13,7 @@ import cats.effect.kernel.*
 import cats.effect.std.Random
 import cats.syntax.all.*
 
-import ProxyConfig.Location
+import io.github.quafadas.sjsls.ProxyConfig.Location
 
 object HttpProxy:
 
