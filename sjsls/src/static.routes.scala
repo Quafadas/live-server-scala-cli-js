@@ -31,7 +31,7 @@ def staticAssetRoutes(
     case Some(IndexHtmlConfig.IndexHtmlPath(path)) =>
       HttpRoutes
         .of[IO] {
-          case req @ GET -> Root => serveIndexHtml(path)
+          case req @ GET -> Root => serveIndexHtml(path, modules)
 
         }
         .combineK(
@@ -50,7 +50,7 @@ def staticAssetRoutes(
         )
       )(logger).combineK(generatedIndexHtml(injectStyles = true, modules, zdt)(logger))
 
-def serveIndexHtml(from: fs2.io.file.Path) = StaticFile
+def serveIndexHtml(from: fs2.io.file.Path, modules: Ref[IO, Map[String, String]]) = StaticFile
   .fromPath[IO](from / "index.html")
   .getOrElseF(NotFound())
   .flatMap {

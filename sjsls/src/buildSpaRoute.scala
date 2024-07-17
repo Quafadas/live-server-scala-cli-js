@@ -54,7 +54,7 @@ def buildSpaRoute(indexOpts: Option[IndexHtmlConfig], modules: Ref[IO, Map[Strin
     case Some(IndexHtmlConfig.IndexHtmlPath(dir)) =>
       StaticFileMiddleware(
         HttpRoutes.of[IO] {
-          case req @ GET -> _ => serveIndexHtml(dir)
+          case req @ GET -> _ => serveIndexHtml(dir, modules)
         },
         dir / "index.html"
       )(logger)
