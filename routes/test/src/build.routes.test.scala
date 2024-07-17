@@ -18,7 +18,7 @@ class BuildRoutesSuite extends CatsEffectSuite:
 
   test("if no refresh route is given we get not found") {
 
-    val routes = buildRoutes[IO](
+    val routes = frontendRoutes[IO](
       clientSpaRoutes = None,
       staticAssetRoutes = None,
       appRoutes = None
@@ -31,7 +31,7 @@ class BuildRoutesSuite extends CatsEffectSuite:
 
   test("spa routes are found, i.e. the Router behaves as expected") {
 
-    val routes = buildRoutes(
+    val routes = frontendRoutes(
       clientSpaRoutes = Some(
         "spa",
         HttpRoutes.of[IO](_ => IO(Response[IO]().withStatus(Status.Ok).withEntity("spaRoute")))
