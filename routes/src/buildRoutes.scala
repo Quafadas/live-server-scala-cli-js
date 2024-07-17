@@ -12,8 +12,10 @@ import scribe.Scribe
 import cats.effect.kernel.Resource
 import org.http4s.server.Router
 import cats.syntax.all.*
+import org.http4s.dsl.io.*
 
 import cats.Monad
+import org.http4s.StaticFile
 
 /** This is a helper function which would allow you to construct a Router which mimics the behaviour of the "live
   * server".
@@ -53,7 +55,7 @@ import cats.Monad
   * @param f
   * @return
   */
-def buildRoutes[F[_]](
+def frontendRoutes[F[_]](
     clientSpaRoutes: Option[(String, HttpRoutes[F])],
     staticAssetRoutes: Option[(HttpRoutes[F])],
     appRoutes: Option[HttpRoutes[F]]
@@ -65,4 +67,17 @@ def buildRoutes[F[_]](
 
   appRoutes2.combineK(spaRoutes2).combineK(staticAssetRoutes2)
 
-end buildRoutes
+end frontendRoutes
+
+def defaultFrontendRoutes[F[_]](spaPrefix: String = "ui") =
+  val frontendJs = org.http4s.server.staticcontent.resourceServiceBuilder[IO]("").toRoutes
+  val serveIndexHtmlBelowSpaPrefix = HttpRoutes.of[IO] {
+    case req @ GET -> _ =>
+      StaticFile.fromResource("index.html", req.some).getOrElseF(NotFound())
+  }
+  frontendRoutes(
+    Some("ui", serveIndexHtmlBelowSpaPrefix),
+    None,
+    Some(frontendJs)
+  )
+end defaultFrontendRoutes

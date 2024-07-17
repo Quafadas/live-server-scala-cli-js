@@ -57,7 +57,7 @@ def routes[F[_]: Files: MonadThrow](
   val staticRoutes = Some(staticAssetRoutes(indexOpts, ref, zdt)(logger))
 
   val routes =
-    buildRoutes[IO](
+    frontendRoutes[IO](
       clientSpaRoutes = spaRoutes,
       staticAssetRoutes = staticRoutes,
       appRoutes = Some(linkedAppWithCaching)

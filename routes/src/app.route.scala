@@ -12,7 +12,7 @@ import org.http4s.server.staticcontent.fileService
 import org.http4s.Response
 import org.http4s.Status
 
-def appRoute[F[_]: Files: MonadThrow](stringPath: String)(using f: Async[F]): HttpRoutes[F] = HttpRoutes.of[F] {
+def appRoute[F[_]: Files](stringPath: String)(using f: Async[F]): HttpRoutes[F] = HttpRoutes.of[F] {
 
   case req @ GET -> Root / fName ~ "js" =>
     StaticFile
