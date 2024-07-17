@@ -13,6 +13,14 @@ import cats.effect.kernel.Async
 import org.http4s.scalatags.*
 import java.time.ZonedDateTime
 
+/** This is expected to be hidden behind a route with the SPA prefix. It will serve the index.html file from all routes.
+  *
+  * @param indexOpts
+  * @param modules
+  * @param zdt
+  * @param logger
+  * @return
+  */
 def buildSpaRoute(indexOpts: Option[IndexHtmlConfig], modules: Ref[IO, Map[String, String]], zdt: ZonedDateTime)(
     logger: Scribe[IO]
 )(using
@@ -23,7 +31,7 @@ def buildSpaRoute(indexOpts: Option[IndexHtmlConfig], modules: Ref[IO, Map[Strin
       // Root / spaRoute
       StaticHtmlMiddleware(
         HttpRoutes.of[IO] {
-          case req @ GET -> root /: path =>
+          case req @ GET -> _ =>
             vanillaTemplate(false, modules).map: html =>
               Response[IO]().withEntity(html)
 
@@ -35,7 +43,7 @@ def buildSpaRoute(indexOpts: Option[IndexHtmlConfig], modules: Ref[IO, Map[Strin
     case Some(IndexHtmlConfig.StylesOnly(dir)) =>
       StaticHtmlMiddleware(
         HttpRoutes.of[IO] {
-          case GET -> root /: spaRoute /: path =>
+          case GET -> _ =>
             vanillaTemplate(true, modules).map: html =>
               Response[IO]().withEntity(html)
         },
@@ -46,25 +54,7 @@ def buildSpaRoute(indexOpts: Option[IndexHtmlConfig], modules: Ref[IO, Map[Strin
     case Some(IndexHtmlConfig.IndexHtmlPath(dir)) =>
       StaticFileMiddleware(
         HttpRoutes.of[IO] {
-          case req @ GET -> spaRoute /: path =>
-            StaticFile
-              .fromPath(dir / "index.html", Some(req))
-              .getOrElseF(NotFound())
-              .flatMap {
-                f =>
-                  f.body
-                    .through(text.utf8.decode)
-                    .compile
-                    .string
-                    .flatMap: body =>
-                      for str <- injectModulePreloads(modules, body)
-                      yield
-                        val bytes = str.getBytes()
-                        f.withEntity(bytes)
-                        f
-
-              }
-
+          case req @ GET -> _ => serveIndexHtml(dir)
         },
         dir / "index.html"
       )(logger)

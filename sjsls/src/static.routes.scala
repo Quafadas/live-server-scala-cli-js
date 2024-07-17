@@ -31,26 +31,7 @@ def staticAssetRoutes(
     case Some(IndexHtmlConfig.IndexHtmlPath(path)) =>
       HttpRoutes
         .of[IO] {
-          case req @ GET -> Root =>
-            StaticFile
-              .fromPath[IO](path / "index.html")
-              .getOrElseF(NotFound())
-              .flatMap {
-                f =>
-                  f.body
-                    .through(text.utf8.decode)
-                    .compile
-                    .string
-                    .flatMap {
-                      body =>
-                        for str <- injectModulePreloads(modules, body)
-                        yield
-                          val bytes = str.getBytes()
-                          f.withEntity(bytes)
-                          Response[IO]().withEntity(bytes).putHeaders("Content-Type" -> "text/html")
-
-                    }
-              }
+          case req @ GET -> Root => serveIndexHtml(path)
 
         }
         .combineK(
@@ -68,3 +49,23 @@ def staticAssetRoutes(
           "" -> fileService[IO](FileService.Config(stylesPath.toString()))
         )
       )(logger).combineK(generatedIndexHtml(injectStyles = true, modules, zdt)(logger))
+
+def serveIndexHtml(from: fs2.io.file.Path) = StaticFile
+  .fromPath[IO](from / "index.html")
+  .getOrElseF(NotFound())
+  .flatMap {
+    f =>
+      f.body
+        .through(text.utf8.decode)
+        .compile
+        .string
+        .flatMap {
+          body =>
+            for str <- injectModulePreloads(modules, body)
+            yield
+              val bytes = str.getBytes()
+              f.withEntity(bytes)
+              Response[IO]().withEntity(bytes).putHeaders("Content-Type" -> "text/html")
+
+        }
+  }
