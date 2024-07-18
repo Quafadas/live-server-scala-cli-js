@@ -3,7 +3,7 @@
 The server is a CLI. It has a number of flags that can be used to configure it. Here is the current list of flags and what they do. You can see these flags by running ` --help` in your terminal.
 
 ```
-cs launch io.github.quafadas:live-server-scala-cli-js_3:{{projectVersion}} -- --help
+cs launch io.github.quafadas::sjsls:{{projectVersion}} -- --help
 
 ```
 

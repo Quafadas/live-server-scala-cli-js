@@ -111,9 +111,7 @@ object site extends SiteModule {
 
    def scalaVersion = sjsls.scalaVersion
 
-  override def moduleDeps = Seq(sjsls)
-
-  override def scalaDocOptions: Target[Seq[String]] = super.scalaDocOptions() ++ List("-runWith", "sjsls")
+  override def moduleDeps = Seq(sjsls)  
 }
 
 // SN deps which aren't yet there.
