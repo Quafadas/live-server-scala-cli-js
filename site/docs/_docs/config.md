@@ -144,3 +144,28 @@ cs launch io.github.quafadas::sjsls:{{projectVersion}} -- \
     --proxy-target-port 8080 \
 
 ```
+
+## Static site, no build tool. 
+
+This would serve the static site build with the `docJar` tool. 
+
+```sh 
+C:\temp\live-server-scala-cli-js> cs launch io.github.quafadas::sjsls:0.2.0 -- --path-to-index-html C:\\temp\\live-server-scala-cli-js\\out\\site\\live.dest\\site --build-tool none --browse-on-open-at /docs/index.html
+```
+
+***
+You need to include this javascript script tag in the body html - otherwise no page refresh.
+
+```
+<script>
+    const sse = new EventSource("/refresh/v1/sse");
+    sse.addEventListener("message", (e) => {
+    const msg = JSON.parse(e.data);
+
+    if ("KeepAlive" in msg) console.log("KeepAlive");
+
+    if ("PageRefresh" in msg) location.reload();
+    });
+</script>
+```
+***
