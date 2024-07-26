@@ -57,7 +57,7 @@ trait Testy extends TestModule.Munit with FormatFix {
 
 object routes extends FormatFixPublish {
 
-  def scalaVersion: T[String] = "3.4.2" // Latest LTS
+  def scalaVersion: T[String] = "3.3.3" // Latest LTS
 
   def ivyDeps = Agg(
     ivy"org.http4s::http4s-core:${V.http4sVersion}",
@@ -111,7 +111,7 @@ object site extends SiteModule {
 
    def scalaVersion = sjsls.scalaVersion
 
-  override def moduleDeps = Seq(sjsls)  
+  override def moduleDeps = Seq(sjsls)
 }
 
 // SN deps which aren't yet there.
