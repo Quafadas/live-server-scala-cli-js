@@ -36,7 +36,7 @@ class SpaRoutesSuite extends CatsEffectSuite:
 
   setupRef.test("spa routes have preloads injected for the easy case") {
     (logger, modules, _) =>
-      val spaRoute = buildSpaRoute(None, modules, ZonedDateTime.now())(logger)
+      val spaRoute = buildSpaRoute(None, modules, ZonedDateTime.now(), true)(logger)
       val resp = spaRoute(Request[IO](uri = uri"/anything")).getOrElse(fail("No response"))
       for
         body <- resp.map(_.bodyText.compile.string)
@@ -55,7 +55,8 @@ class SpaRoutesSuite extends CatsEffectSuite:
       val spaRoute = buildSpaRoute(
         Some(IndexHtmlConfig.StylesOnly(fs2.io.file.Path.apply("doestmatter"))),
         modules,
-        ZonedDateTime.now()
+        ZonedDateTime.now(),
+        true
       )(logger)
       val resp = spaRoute(Request[IO](uri = uri"/anything")).getOrElse(fail("No response"))
       for
@@ -75,7 +76,8 @@ class SpaRoutesSuite extends CatsEffectSuite:
       val spaRoute = buildSpaRoute(
         Some(IndexHtmlConfig.StylesOnly(fs2.io.file.Path.apply(tempDir.toString))),
         modules,
-        ZonedDateTime.now()
+        ZonedDateTime.now(),
+        injectPreloads = true
       )(logger)
       val resp = spaRoute(Request[IO](uri = uri"/anything")).getOrElse(fail("No response"))
       for

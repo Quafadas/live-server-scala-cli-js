@@ -20,7 +20,12 @@ import cats.effect.kernel.Ref
   * @param logger
   * @return
   */
-def buildSpaRoute(indexOpts: Option[IndexHtmlConfig], modules: Ref[IO, Map[String, String]], zdt: ZonedDateTime)(
+def buildSpaRoute(
+    indexOpts: Option[IndexHtmlConfig],
+    modules: Ref[IO, Map[String, String]],
+    zdt: ZonedDateTime,
+    injectPreloads: Boolean
+)(
     logger: Scribe[IO]
 )(using
     Async[IO]
@@ -53,7 +58,7 @@ def buildSpaRoute(indexOpts: Option[IndexHtmlConfig], modules: Ref[IO, Map[Strin
     case Some(IndexHtmlConfig.IndexHtmlPath(dir)) =>
       StaticFileMiddleware(
         HttpRoutes.of[IO] {
-          case req @ GET -> _ => serveIndexHtml(dir, modules)
+          case req @ GET -> _ => serveIndexHtml(dir, modules, injectPreloads)
         },
         dir / "index.html"
       )(logger)

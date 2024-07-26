@@ -24,7 +24,8 @@ import cats.syntax.all.*
 def staticAssetRoutes(
     indexOpts: Option[IndexHtmlConfig],
     modules: Ref[IO, Map[String, String]],
-    zdt: ZonedDateTime
+    zdt: ZonedDateTime,
+    injectPreloads: Boolean
 )(logger: Scribe[IO]): HttpRoutes[IO] =
   indexOpts match
     case None => generatedIndexHtml(injectStyles = false, modules, zdt)(logger)
@@ -32,7 +33,7 @@ def staticAssetRoutes(
     case Some(IndexHtmlConfig.IndexHtmlPath(path)) =>
       HttpRoutes
         .of[IO] {
-          case req @ GET -> Root => serveIndexHtml(path, modules)
+          case req @ GET -> Root => serveIndexHtml(path, modules, injectPreloads)
 
         }
         .combineK(
@@ -51,7 +52,7 @@ def staticAssetRoutes(
         )
       )(logger).combineK(generatedIndexHtml(injectStyles = true, modules, zdt)(logger))
 
-def serveIndexHtml(from: fs2.io.file.Path, modules: Ref[IO, Map[String, String]]) = StaticFile
+def serveIndexHtml(from: fs2.io.file.Path, modules: Ref[IO, Map[String, String]], injectPreloads: Boolean) = StaticFile
   .fromPath[IO](from / "index.html")
   .getOrElseF(NotFound())
   .flatMap {
@@ -62,7 +63,7 @@ def serveIndexHtml(from: fs2.io.file.Path, modules: Ref[IO, Map[String, String]]
         .string
         .flatMap {
           body =>
-            for str <- injectModulePreloads(modules, body)
+            for str <- if injectPreloads then (injectModulePreloads(modules, body)) else IO.pure(body)
             yield
               val bytes = str.getBytes()
               f.withEntity(bytes)

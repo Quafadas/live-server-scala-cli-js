@@ -127,6 +127,13 @@ object LiveServer extends IOApp:
         case "none"      => None()
     }
 
+  val injectPreloadsOpt = Opts
+    .flag(
+      "inject-preloads",
+      "Whether or not to attempt injecting module preloads into the index.html, potentially speeds up page load, but may not work with all servers and or cause instability in the refresh process."
+    )
+    .orFalse
+
   val extraBuildArgsOpt: Opts[List[String]] = Opts
     .options[String](
       "extra-build-args",
@@ -189,7 +196,8 @@ object LiveServer extends IOApp:
       millModuleName: Option[String] = None,
       stylesDir: Option[String] = None,
       indexHtmlTemplate: Option[String] = None,
-      buildToolInvocation: Option[String] = None
+      buildToolInvocation: Option[String] = None,
+      injectPreloads: Boolean = false
   )
 
   def parseOpts = (
@@ -207,7 +215,8 @@ object LiveServer extends IOApp:
     millModuleNameOpt,
     stylesDirOpt,
     indexHtmlTemplateOpt,
-    buildToolInvocation
+    buildToolInvocation,
+    injectPreloadsOpt
   ).mapN(LiveServerConfig.apply)
 
   def main(lsc: LiveServerConfig): Resource[IO, Server] =
@@ -275,7 +284,15 @@ object LiveServer extends IOApp:
         lsc.buildToolInvocation
       )(logger)
 
-      app <- routes(outDirString, refreshTopic, indexOpts, proxyRoutes, fileToHashRef, lsc.clientRoutingPrefix)(logger)
+      app <- routes(
+        outDirString,
+        refreshTopic,
+        indexOpts,
+        proxyRoutes,
+        fileToHashRef,
+        lsc.clientRoutingPrefix,
+        lsc.injectPreloads
+      )(logger)
 
       _ <- updateMapRef(outDirPath, fileToHashRef)(logger).toResource
       // _ <- stylesDir.fold(Resource.unit)(sd => seedMapOnStart(sd, mr))

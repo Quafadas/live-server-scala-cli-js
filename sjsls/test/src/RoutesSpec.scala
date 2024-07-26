@@ -181,7 +181,8 @@ class RoutesSuite extends CatsEffectSuite:
           None,
           HttpRoutes.empty[IO],
           fileToHashRef,
-          Some("app")
+          Some("app"),
+          false
         )(logger)
       yield errorActionFor(theseRoutes, aLogger).orNotFound
 
@@ -256,7 +257,8 @@ class RoutesSuite extends CatsEffectSuite:
             Some(IndexHtmlConfig.IndexHtmlPath(staticDir.toFs2)),
             HttpRoutes.empty[IO],
             fileToHashRef,
-            None
+            None,
+            false
           )(logger)
         yield theseRoutes.orNotFound
 
@@ -286,7 +288,8 @@ class RoutesSuite extends CatsEffectSuite:
           None,
           HttpRoutes.empty[IO],
           fileToHashRef,
-          None
+          None,
+          false
         )(logger)
       yield theseRoutes.orNotFound
 
@@ -317,7 +320,8 @@ class RoutesSuite extends CatsEffectSuite:
             Some(IndexHtmlConfig.StylesOnly(styleDir.toFs2)),
             HttpRoutes.empty[IO],
             fileToHashRef,
-            None
+            None,
+            false
           )(logger)
         yield theseRoutes.orNotFound
 
@@ -350,7 +354,8 @@ class RoutesSuite extends CatsEffectSuite:
             Some(IndexHtmlConfig.StylesOnly(styleDir.toFs2)),
             HttpRoutes.empty[IO],
             fileToHashRef,
-            Some("app")
+            Some("app"),
+            false
           )(logger)
         yield theseRoutes.orNotFound
 
@@ -383,7 +388,8 @@ class RoutesSuite extends CatsEffectSuite:
           Some(IndexHtmlConfig.IndexHtmlPath(staticDir.toFs2)),
           HttpRoutes.empty[IO],
           fileToHashRef,
-          None
+          None,
+          false
         )(logger)
       yield (theseRoutes.orNotFound, logger, modifedAt)
 
@@ -437,7 +443,8 @@ class RoutesSuite extends CatsEffectSuite:
           Some(IndexHtmlConfig.IndexHtmlPath(staticDir.toFs2)),
           HttpRoutes.empty[IO],
           fileToHashRef,
-          Some("app")
+          Some("app"),
+          false
         )(logger)
       yield (theseRoutes.orNotFound, logger)
 

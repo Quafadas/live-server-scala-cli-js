@@ -25,15 +25,16 @@ def routes[F[_]: Files: MonadThrow](
     indexOpts: Option[IndexHtmlConfig],
     proxyRoutes: HttpRoutes[IO],
     ref: Ref[IO, Map[String, String]],
-    clientRoutingPrefix: Option[String]
+    clientRoutingPrefix: Option[String],
+    injectPreloads: Boolean
 )(logger: Scribe[IO]): Resource[IO, HttpRoutes[IO]] =
 
   val traceLogger = traceLoggerMiddleware(logger)
   val zdt = ZonedDateTime.now()
 
   val linkedAppWithCaching: HttpRoutes[IO] = ETagMiddleware(appRoute[IO](stringPath), ref)(logger)
-  val spaRoutes = clientRoutingPrefix.map(s => (s, buildSpaRoute(indexOpts, ref, zdt)(logger)))
-  val staticRoutes = Some(staticAssetRoutes(indexOpts, ref, zdt)(logger))
+  val spaRoutes = clientRoutingPrefix.map(s => (s, buildSpaRoute(indexOpts, ref, zdt, injectPreloads)(logger)))
+  val staticRoutes = Some(staticAssetRoutes(indexOpts, ref, zdt, injectPreloads)(logger))
 
   val routes =
     frontendRoutes[IO](
