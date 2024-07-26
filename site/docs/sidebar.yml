@@ -5,5 +5,5 @@ subsection:
   - page: motivation.md
   - page: bundler.md
   - page: motivation.md
-  - page: deployment.md\
+  - page: deployment.md
   - page: caveats.md
