@@ -77,7 +77,7 @@ object routes extends FormatFixPublish {
 
 object sjsls extends FormatFixPublish {
 
-  override def scalaVersion = "3.4.2" // Latest
+  override def scalaVersion = "3.3.3" // Latest LTSs
 
   def ivyDeps = super.ivyDeps() ++ Seq(
     ivy"org.http4s::http4s-ember-server::${V.http4sVersion}",
