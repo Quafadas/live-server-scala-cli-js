@@ -37,5 +37,5 @@ jobs:
           runCmd: |
             # Add multiple commands to run if needed
             cs version
-            mill -v
-            mill __.compile
+            ./mill -v
+            ./mill __.compile
