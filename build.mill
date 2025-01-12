@@ -14,8 +14,8 @@ import java.text.Format
 
 object V{
 
-  val http4sVersion = "0.23.27"
-  val circeVersion = "0.14.9"
+  val http4sVersion = "0.23.30"
+  val circeVersion = "0.14.10"
 }
 
 trait FormatFix extends ScalafmtModule with ScalafixModule with ScalaModule

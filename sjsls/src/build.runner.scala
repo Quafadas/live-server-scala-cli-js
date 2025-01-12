@@ -144,11 +144,11 @@ def buildRunnerMill(
   //   .background
   //   .void
 
+  val linkCommand = s"$moduleName.fastLinkJS"
+
   val millargs = List(
     "-w",
-    s"$moduleName.fastLinkJS",
-    "-j",
-    "0"
+    linkCommand
   ) ++ extraBuildArgs
   // TODO pipe this to stdout so that we can see linker progress / errors.
   val builder = ProcessBuilder(
@@ -167,15 +167,29 @@ def buildRunnerMill(
           .through(text.utf8.decode)
           .debug()
           .chunks
+          .sliding(2)
           .evalMap(
             aChunk =>
-              if aChunk.head.exists(_.contains("BasicBackend: total modules:")) then
+
+              val chunk1 = aChunk(0).toString
+              val chunk2 = aChunk(1).toString
+              if chunk1.contains(s"= $linkCommand") && chunk2.contains("Watching for changes to ") then
                 logger.trace("Detected that linking was successful, emitting refresh event") >>
                   linkingTopic.publish1(())
               else
                 logger.trace(s"$aChunk :: Linking unfinished") >>
                   IO.unit
               end if
+
+              /** Doesn't work with new mill
+                */
+              // if aChunk.head.exists(_.contains("BasicBackend: total modules:")) then
+              //   logger.trace("Detected that linking was successful, emitting refresh event") >>
+              //     linkingTopic.publish1(())
+              // else
+              //   logger.trace(s"$aChunk :: Linking unfinished") >>
+              //     IO.unit
+              // end if
           )
           .compile
           .drain

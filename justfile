@@ -35,7 +35,7 @@ jvmLinker:
   mill {{projectName}}.run --build-tool scala-cli --project-dir /Users/simon/Code/helloScalaJs --out-dir /Users/simon/Code/helloScalaJs/out --extra-build-args --js-cli-on-jvm --port 3007
 
 serveMill:
-  mill -j 0 {{projectName}}.run --build-tool mill --project-dir /Users/simon/Code/mill-full-stack/mill-full-stack \
+  mill {{projectName}}.run --build-tool mill --project-dir /Users/simon/Code/mill-full-stack/mill-full-stack \
     --path-to-index-html /Users/simon/Code/mill-full-stack/mill-full-stack/frontend/ui \
     --out-dir /Users/simon/Code/mill-full-stack/mill-full-stack/out/frontend/fastLinkJS.dest \
     --log-level info \

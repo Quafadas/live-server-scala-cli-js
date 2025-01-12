@@ -42,9 +42,9 @@ jobs:
         uses: actions/cache@v2
         with:
           path: /home/runner/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.sc') }}
+          key: playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.mill') }}
           restore-keys: |
-            playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.sc') }}
+            playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.mill') }}
 
       - name: formatCheck
         run: mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
