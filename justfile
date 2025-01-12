@@ -45,7 +45,7 @@ serveMill:
     --proxy-target-port 8080
 
 setupPlaywright:
-  cs launch com.microsoft.playwright:playwright:1.41.1 -M "com.microsoft.playwright.CLI" -- install --with-deps
+  cs launch com.microsoft.playwright:playwright:1.45.0 -M "com.microsoft.playwright.CLI" -- install --with-deps
 
 publishLocal:
   ./mill __.publishLocal
