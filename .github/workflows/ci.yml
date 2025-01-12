@@ -31,7 +31,7 @@ jobs:
       - uses: coursier/setup-action@main
         with:
           jvm: temurin@17
-          apps: mill scala-cli
+          apps: scala-cli
       - name: Checkout current branch (full)
         uses: actions/checkout@v4
         with:
@@ -47,16 +47,16 @@ jobs:
             playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.mill') }}
 
       - name: formatCheck
-        run: mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
+        run: ./mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
 
       - name: Install Playwright
         run: just setupPlaywright
 
       - name: compile
-        run: mill __.compile
+        run: ./mill __.compile
 
       - name: Test
-        run: mill __.test
+        run: ./mill __.test
 
   publish:
     if: github.repository == 'Quafadas/live-server-scala-cli-js' && contains(github.ref, 'refs/tags/')
@@ -71,7 +71,7 @@ jobs:
       - uses: coursier/setup-action@main
         with:
           jvm: temurin@17
-          apps: mill scala-cli
+          apps: ./mill scala-cli
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v6
@@ -89,7 +89,7 @@ jobs:
         run: gpg -K
 
       - name: Publish to Maven Central
-        run: mill -i mill.scalalib.PublishModule/publishAll __.publishArtifacts --sonatypeUri https://s01.oss.sonatype.org/service/local --sonatypeCreds "${{ secrets.PUBLISH_USER }}:${{ secrets.PUBLISH_PASSWORD }}" --gpgArgs "--passphrase=${{secrets.PUBLISH_SECRET_KEY_PASSWORD}},--no-tty,--pinentry-mode,loopback,--batch,--yes,-a,-b" --readTimeout 600000 --awaitTimeout 600000 --release true --signed true
+        run: ./mill -i mill.scalalib.PublishModule/publishAll __.publishArtifacts --sonatypeUri https://s01.oss.sonatype.org/service/local --sonatypeCreds "${{ secrets.PUBLISH_USER }}:${{ secrets.PUBLISH_PASSWORD }}" --gpgArgs "--passphrase=${{secrets.PUBLISH_SECRET_KEY_PASSWORD}},--no-tty,--pinentry-mode,loopback,--batch,--yes,-a,-b" --readTimeout 600000 --awaitTimeout 600000 --release true --signed true
 
   site:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -99,12 +99,12 @@ jobs:
       - uses: coursier/setup-action@main
         with:
           jvm: temurin@17
-          apps: mill scala-cli
+          apps: ./mill scala-cli
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           fetch-tags: true
-      - run: mill site.publishDocs
+      - run: ./mill site.publishDocs
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - uses: actions/upload-artifact@v3
