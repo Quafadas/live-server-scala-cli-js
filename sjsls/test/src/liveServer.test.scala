@@ -320,11 +320,11 @@ trait PlaywrightTest extends CatsEffectSuite:
 end PlaywrightTest
 
 def helloWorldCode(greet: String) = s"""
-//> using scala 3.3.3
+//> using scala 3.3.5
 //> using platform js
 
 //> using dep org.scala-js::scalajs-dom::2.8.0
-//> using dep com.raquo::laminar::17.0.0
+//> using dep com.raquo::laminar::17.2.0
 
 //> using jsModuleKind es
 //> using jsModuleSplitStyleStr smallmodulesfor

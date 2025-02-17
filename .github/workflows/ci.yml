@@ -55,6 +55,10 @@ jobs:
       - name: compile
         run: ./mill __.compile
 
+        # Sometimes the tests will timeout if they have to fetch all the transitive scala-js deps the first time... let's have coursier put them in the cache
+      - name: cache test deps
+        run: "cs fetch com.raquo:laminar_sjs1_3: && cs fetch org.scala-js:scalajs-dom_sjs1_3:"       
+
       - name: Test
         run: ./mill __.test
 
