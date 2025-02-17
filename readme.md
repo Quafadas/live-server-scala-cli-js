@@ -30,6 +30,7 @@ Replicate the "experience" of using vite with scala JS. Without vite.
 The entry point for styles is `index.less`, and that file exists in the styles directory. It can link to other style files.
 App must be mounted to a div, with id `app`.
 
+
 ## Contributing
 
 It's so welcome. Start a dicsussion if you'd like so ideas! CI builds a container image which is ready to roll.
