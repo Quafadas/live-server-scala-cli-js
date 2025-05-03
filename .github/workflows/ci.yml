@@ -42,7 +42,7 @@ jobs:
 
       - name: Cache Playwright dependencies
         id: cache-pw
-        uses: actions/cache@v2
+        uses: actions/cache@main
         with:
           path: /home/runner/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.mill') }}
@@ -72,7 +72,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@main
         with:
           fetch-depth: 0
           fetch-tags: true
