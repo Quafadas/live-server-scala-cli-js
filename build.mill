@@ -13,6 +13,7 @@ import com.goyeau.mill.scalafix.ScalafixModule
 import java.text.Format
 
 object V{
+  val scalaLts = "3.3.5"
 
   val http4sVersion = "0.23.30"
   val circeVersion = "0.14.10"
@@ -21,7 +22,7 @@ object V{
 trait FormatFix extends ScalafmtModule with ScalafixModule with ScalaModule
 
 trait FormatFixPublish extends ScalaModule with FormatFix with PublishModule{
-  override def scalaVersion = "3.6.2"
+  override def scalaVersion = "3.6.4"
 
   override def scalacOptions: Target[Seq[String]] = super.scalacOptions() ++ Seq("-Wunused:all")
 
@@ -57,7 +58,7 @@ trait Testy extends TestModule.Munit with FormatFix {
 
 object routes extends FormatFixPublish {
 
-  def scalaVersion: T[String] = "3.3.5" // Latest LTS
+  def scalaVersion: T[String] = V.scalaLts
 
   def ivyDeps = Agg(
     ivy"org.http4s::http4s-core:${V.http4sVersion}",
@@ -77,7 +78,7 @@ object routes extends FormatFixPublish {
 
 object sjsls extends FormatFixPublish {
 
-  override def scalaVersion = "3.3.3" // Latest LTSs
+  override def scalaVersion = V.scalaLts
 
   def ivyDeps = super.ivyDeps() ++ Seq(
     ivy"org.http4s::http4s-ember-server::${V.http4sVersion}",

@@ -39,7 +39,7 @@ jobs:
 
       - name: Install required libraries
         run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libgraphene-1.0-dev libavif-dev
-  
+
       - name: Cache Playwright dependencies
         id: cache-pw
         uses: actions/cache@v2
@@ -52,8 +52,8 @@ jobs:
       - name: formatCheck
         run: ./mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
 
-      - name: Install Playwright
-        run: just setupPlaywright
+      - name: playwright
+        run: cs launch com.microsoft.playwright:playwright:1.51.0 -M "com.microsoft.playwright.CLI" -- install chromium --only-shell
 
       - name: compile
         run: ./mill __.compile
