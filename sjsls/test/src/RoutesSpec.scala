@@ -150,7 +150,6 @@ class RoutesSuite extends CatsEffectSuite:
 
   files.test(
     "That the routes serve files on first call with a 200, that the eTag is set, and on second call with a 304, that index.html is served from SPA"
-      .only
   ) {
     tempDir =>
 
