@@ -7,3 +7,4 @@ testDir
 out
 .bloop
 .DS_Store
+.vscode/mcp.json

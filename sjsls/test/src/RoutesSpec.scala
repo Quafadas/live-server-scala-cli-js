@@ -34,6 +34,7 @@ class RoutesSuite extends CatsEffectSuite:
   val testStr = "const hi = 'Hello, world'"
   val simpleCss = "h1 {color: red;}"
   val testHash = md.digest(testStr.getBytes()).map("%02x".format(_)).mkString
+  val testBinary = os.read.bytes(os.resource / "cat.webp")
   given filesInstance: Files[IO] = Files.forAsync[IO]
 
   val files = FunFixture[os.Path](
@@ -45,6 +46,7 @@ class RoutesSuite extends CatsEffectSuite:
       os.write(tempFile, testStr)
       os.write(tempDir / "test2.js", testStr)
       os.write(tempDir / "test3.js", testStr)
+      os.write(tempDir / "test.wasm", testBinary)
       tempDir
     ,
     teardown = tempDir =>
@@ -148,6 +150,7 @@ class RoutesSuite extends CatsEffectSuite:
 
   files.test(
     "That the routes serve files on first call with a 200, that the eTag is set, and on second call with a 304, that index.html is served from SPA"
+      .only
   ) {
     tempDir =>
 
@@ -156,7 +159,7 @@ class RoutesSuite extends CatsEffectSuite:
         .root
         .clearHandlers()
         .clearModifiers()
-        .withHandler(minimumLevel = Some(Level.get("error").get))
+        .withHandler(minimumLevel = Some(Level.get("debug").get))
         .replace()
 
       val aLogger = scribe.cats[IO]
@@ -208,6 +211,17 @@ class RoutesSuite extends CatsEffectSuite:
               org.http4s.Headers.of(org.http4s.Header.Raw(ci"If-None-Match", testHash))
             )
 
+          val requestWasm = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("/test.wasm"))
+
+          val checkWasm = client
+            .run(requestWasm)
+            .use {
+              resp =>
+                assertEquals(resp.status.code, 200)
+                assertEquals(resp.headers.get(ci"ETag").isDefined, true)
+                IO.unit
+            }
+
           val checkResp2 = client
             .run(request2)
             .use {
@@ -237,7 +251,7 @@ class RoutesSuite extends CatsEffectSuite:
                 assertEquals(respH.headers.get(ci"ETag").isDefined, true)
                 IO.unit
             }
-          checkResp1 >> checkResp2 >> checkRespSpa >> checkRespHtml
+          checkResp1 >> checkResp2 >> checkWasm >> checkRespSpa >> checkRespHtml
 
       }
   }

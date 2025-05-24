@@ -19,6 +19,11 @@ def appRoute[F[_]: Files](stringPath: String)(using f: Async[F]): HttpRoutes[F] 
       .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
       .getOrElseF(f.pure(Response[F](Status.NotFound)))
 
+  case req @ GET -> Root / fName ~ "wasm" =>
+    StaticFile
+      .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
+      .getOrElseF(f.pure(Response[F](Status.NotFound)))
+
   case req @ GET -> Root / fName ~ "map" =>
     StaticFile
       .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))

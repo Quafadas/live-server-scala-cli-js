@@ -87,6 +87,10 @@ def updateMapRef(stringPath: fs2.io.file.Path, mr: Ref[IO, Map[String, String]])
     .walk(stringPath)
     .evalFilter(Files[IO].isRegularFile)
     .parEvalMap(maxConcurrent = 8)(path => fileHash(path).map(path -> _))
+    // .evalTap {
+    //   case (path, hash) =>
+    //     logger.debug(s"File $path has hash $hash")
+    // }
     .compile
     .toVector
     .flatMap(

@@ -19,38 +19,41 @@ import cats.syntax.all.*
 
 object ETagMiddleware:
 
+  private def respondWithEtag(mr: Ref[IO, Map[String, String]], req: Request[IO], resp: Response[IO])(
+      logger: Scribe[IO]
+  ) =
+    mr.get
+      .flatMap {
+        map =>
+          // logger.trace(s"Responding with ETag at path: ${req.uri.path}") >>
+          map.get(req.uri.path.toString.drop(1)) match
+            case Some(hash) =>
+              logger.debug(s"Found ETag: $hash in map for ${req.uri.path}") >>
+                IO(
+                  resp.putHeaders(
+                    Header.Raw(ci"ETag", hash),
+                    Header.Raw(ci"Cache-control", "Must-Revalidate"),
+                    Header.Raw(ci"Cache-control", "No-cache"),
+                    Header.Raw(ci"Cache-control", "max-age=0"),
+                    Header.Raw(ci"Cache-control", "public")
+                  )
+                )
+            case None =>
+              logger.debug("No hash found in map at path :" + req.uri.toString) >>
+                IO(
+                  resp.putHeaders(
+                    Header.Raw(ci"Cache-control", "Must-Revalidate"),
+                    Header.Raw(ci"Cache-control", "No-cache"),
+                    Header.Raw(ci"Cache-control", "max-age=0"),
+                    Header.Raw(ci"Cache-control", "public")
+                  )
+                )
+        end match
+      }
+  end respondWithEtag
+
   def apply(service: HttpRoutes[IO], mr: Ref[IO, Map[String, String]])(logger: Scribe[IO]): HttpRoutes[IO] = Kleisli {
     (req: Request[IO]) =>
-
-      def respondWithEtag(resp: Response[IO]) =
-        mr.get
-          .flatMap {
-            map =>
-              map.get(req.uri.path.toString.drop(1)) match
-                case Some(hash) =>
-                  logger.debug(req.uri.toString) >>
-                    IO(
-                      resp.putHeaders(
-                        Header.Raw(ci"ETag", hash),
-                        Header.Raw(ci"Cache-control", "Must-Revalidate"),
-                        Header.Raw(ci"Cache-control", "No-cache"),
-                        Header.Raw(ci"Cache-control", "max-age=0"),
-                        Header.Raw(ci"Cache-control", "public")
-                      )
-                    )
-                case None =>
-                  logger.debug(req.uri.toString) >>
-                    IO(
-                      resp.putHeaders(
-                        Header.Raw(ci"Cache-control", "Must-Revalidate"),
-                        Header.Raw(ci"Cache-control", "No-cache"),
-                        Header.Raw(ci"Cache-control", "max-age=0"),
-                        Header.Raw(ci"Cache-control", "public")
-                      )
-                    )
-            end match
-          }
-      end respondWithEtag
 
       req.headers.get(ci"If-None-Match") match
         case Some(header) =>
@@ -65,23 +68,24 @@ object ETagMiddleware:
                     map.get(req.uri.path.toString.drop(1)) match
                       case Some(foundEt) =>
                         if etag == foundEt then
-                          logger.debug("ETag matches, returning 304") >>
+                          logger.debug(s"ETag $etag found in cache at path ${req.uri.path}, returning 304") >>
                             IO(Response[IO](Status.NotModified))
                         else
-                          logger.debug(etag) >>
-                            logger.debug("ETag doesn't match, returning 200") >>
-                            respondWithEtag(resp)
+                          logger.debug(s"$etag not found in cache at path ${req.uri.path} returning 200") >>
+                            respondWithEtag(mr, req, resp)(logger)
                         end if
                       case None =>
-                        respondWithEtag(resp)
+                        logger.debug(s"No path found in cache at path ${req.uri.path}") >>
+                          respondWithEtag(mr, req, resp)(logger)
                 }
           }
         case _ =>
-          OptionT.liftF(logger.debug("No ETag header in query, service it")) >>
+          OptionT.liftF(logger.debug("No If-None-Match ETag header in request")) >>
+            OptionT.liftF(logger.debug(s"Headers are : ${req.headers.headers.mkString(", ")} at ${req.uri.path}")) >>
             service(req).semiflatMap {
               resp =>
-                logger.trace(resp.toString) >>
-                  respondWithEtag(resp)
+                logger.debug(resp.toString) >>
+                  respondWithEtag(mr, req, resp)(logger)
             }
       end match
   }
