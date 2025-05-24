@@ -158,7 +158,7 @@ class RoutesSuite extends CatsEffectSuite:
         .root
         .clearHandlers()
         .clearModifiers()
-        .withHandler(minimumLevel = Some(Level.get("debug").get))
+        .withHandler(minimumLevel = Some(Level.get("info").get))
         .replace()
 
       val aLogger = scribe.cats[IO]
