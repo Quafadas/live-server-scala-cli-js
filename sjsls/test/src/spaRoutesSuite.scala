@@ -43,7 +43,6 @@ class SpaRoutesSuite extends CatsEffectSuite:
         _ <- assertIOBoolean(resp.map(_.status == Status.Ok))
         body <- resp.flatMap(_.bodyText.compile.string)
       yield
-        println(body)
         assert(body.contains("""<link rel="modulepreload" href="internal-xxxx.js?h=internalHash" />"""))
         assert(!body.contains("mainHash"))
       end for
@@ -64,7 +63,6 @@ class SpaRoutesSuite extends CatsEffectSuite:
         _ <- assertIOBoolean(resp.map(_.status == Status.Ok))
         body <- resp.flatMap(_.bodyText.compile.string)
       yield
-        println(body)
         assert(body.contains("""<link rel="modulepreload" href="internal-xxxx.js?h=internalHash" />"""))
         assert(!body.contains("""mainHash"""))
       end for
@@ -85,7 +83,6 @@ class SpaRoutesSuite extends CatsEffectSuite:
         _ <- assertIOBoolean(resp.map(_.status == Status.Ok))
         body <- resp.flatMap(_.bodyText.compile.string)
       yield
-        println(body)
         assert(!body.contains("mainHash"))
         assert(body.contains("""<link rel="modulepreload" href="internal-xxxx.js?h=internalHash" />"""))
       end for
