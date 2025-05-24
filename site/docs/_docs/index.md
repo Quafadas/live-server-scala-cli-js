@@ -12,10 +12,25 @@ git clone https://github.com/Quafadas/viteless.git && \
 cd viteless && \
 cs launch io.github.quafadas::sjsls:{{projectVersion}}
 ```
+Note that to work, you need the following directives in scala-cli:
+
+```scala
+//> using scala 3.7.0
+//> using platform js
+//> using jsModuleKind es
+//> using jsEmitSourceMaps true
+//> using jsModuleSplitStyleStr smallmodulesfor
+//> using jsSmallModuleForPackage boid
+
+```
+
 
 ## It worked... okay... I have 20 more seconds
 
 Edit `hello.scala` and save the change. You should see the change refreshed in your browser.
+
+
+
 
 ## Aw shoot - errors
 
