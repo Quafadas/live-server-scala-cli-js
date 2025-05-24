@@ -77,7 +77,7 @@ trait PlaywrightTest extends CatsEffectSuite:
   def outDir(base: os.Path) = base / ".out"
   def styleDir(base: os.Path) = base / "styles"
 
-  val vanilla = vanillaTemplate(true, Ref.unsafe(Map[String, String]())).unsafeRunSync()
+  val vanilla = vanillaTemplate(true, Ref.unsafe(Map[String, String]()), false).unsafeRunSync()
 
   val files =
     IO {
