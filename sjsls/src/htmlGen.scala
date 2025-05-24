@@ -18,14 +18,19 @@ import cats.effect.IO
 import cats.effect.kernel.Ref
 import cats.syntax.all.*
 
-def generatedIndexHtml(injectStyles: Boolean, modules: Ref[IO, Map[String, String]], zdt: ZonedDateTime)(
+def generatedIndexHtml(
+    injectStyles: Boolean,
+    modules: Ref[IO, Map[String, String]],
+    zdt: ZonedDateTime,
+    attemptPreload: Boolean
+)(
     logger: Scribe[IO]
 ) =
   StaticHtmlMiddleware(
     HttpRoutes.of[IO] {
       case req @ GET -> Root =>
         logger.trace("Generated index.html") >>
-          vanillaTemplate(injectStyles, modules).flatMap: html =>
+          vanillaTemplate(injectStyles, modules, attemptPreload).flatMap: html =>
             userBrowserCacheHeaders(Response[IO]().withEntity(html).withStatus(Status.Ok), zdt, injectStyles)
 
     },
@@ -35,7 +40,7 @@ def generatedIndexHtml(injectStyles: Boolean, modules: Ref[IO, Map[String, Strin
     StaticHtmlMiddleware(
       HttpRoutes.of[IO] {
         case GET -> Root / "index.html" =>
-          vanillaTemplate(injectStyles, modules).flatMap: html =>
+          vanillaTemplate(injectStyles, modules, attemptPreload).flatMap: html =>
             userBrowserCacheHeaders(Response[IO]().withEntity(html).withStatus(Status.Ok), zdt, injectStyles)
 
       },
@@ -105,12 +110,15 @@ def injectModulePreloads(ref: Ref[IO, Map[String, String]], template: String) =
 
 end injectModulePreloads
 
-def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean) =
+def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean, attemptPreload: Boolean = false) =
   val scripts =
     for
       m <- modules
       if m._1.toString.endsWith(".js")
-    yield link(rel := "modulepreload", href := s"${m._1}?hash=${m._2}")
+    yield link(
+      rel := "modulepreload",
+      href := s"${m._1}?hash=${m._2}"
+    )
 
   html(
     head(
@@ -118,7 +126,7 @@ def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean) =
         httpEquiv := "Cache-control",
         content := "no-cache, no-store, must-revalidate"
       ),
-      scripts
+      if attemptPreload then scripts else ()
     ),
     body(
       lessStyle(withStyles),
@@ -143,16 +151,17 @@ def makeInternalPreloads(ref: Ref[IO, Map[String, String]]) =
 
 end makeInternalPreloads
 
-def vanillaTemplate(withStyles: Boolean, ref: Ref[IO, Map[String, String]]) =
+def vanillaTemplate(withStyles: Boolean, ref: Ref[IO, Map[String, String]], attemptPreload: Boolean) =
+
   val preloads = makeInternalPreloads(ref)
   preloads.map: modules =>
     html(
       head(
         meta(
           httpEquiv := "Cache-control",
-          content := "no-cache, no-store, must-revalidate",
-          modules
-        )
+          content := "no-cache, no-store, must-revalidate"
+        ),
+        if attemptPreload then modules else ()
       ),
       body(
         lessStyle(withStyles),

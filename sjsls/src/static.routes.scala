@@ -28,7 +28,7 @@ def staticAssetRoutes(
     injectPreloads: Boolean
 )(logger: Scribe[IO]): HttpRoutes[IO] =
   indexOpts match
-    case None => generatedIndexHtml(injectStyles = false, modules, zdt)(logger)
+    case None => generatedIndexHtml(injectStyles = false, modules, zdt, injectPreloads)(logger)
 
     case Some(IndexHtmlConfig.IndexHtmlPath(path)) =>
       HttpRoutes
@@ -50,7 +50,7 @@ def staticAssetRoutes(
         Router(
           "" -> fileService[IO](FileService.Config(stylesPath.toString()))
         )
-      )(logger).combineK(generatedIndexHtml(injectStyles = true, modules, zdt)(logger))
+      )(logger).combineK(generatedIndexHtml(injectStyles = true, modules, zdt, injectPreloads)(logger))
 
 def serveIndexHtml(from: fs2.io.file.Path, modules: Ref[IO, Map[String, String]], injectPreloads: Boolean) = StaticFile
   .fromPath[IO](from / "index.html")

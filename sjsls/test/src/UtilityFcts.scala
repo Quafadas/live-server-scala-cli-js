@@ -13,7 +13,8 @@ class UtilityFcs extends CatsEffectSuite:
       modules = Seq(
         (fs2.io.file.Path("main.js"), "hash")
       ),
-      withStyles = false
+      withStyles = false,
+      attemptPreload = true
     )
 
     assert(html.render.contains("modulepreload"))
