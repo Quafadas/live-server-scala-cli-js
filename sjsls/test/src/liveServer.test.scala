@@ -23,7 +23,7 @@ import munit.CatsEffectSuite
 
 /*
 Run
-cs launch com.microsoft.playwright:playwright:1.41.1 -M "com.microsoft.playwright.CLI" -- install --with-deps
+cs launch com.microsoft.playwright:playwright:1.51.0 -M "com.microsoft.playwright.CLI" -- install --with-deps
 before this test, to make sure that the driver bundles are downloaded.
  */
 
