@@ -98,7 +98,12 @@ jobs:
         run: gpg -K
 
       - name: Publish to Maven Central
-        run: ./mill -i mill.scalalib.PublishModule/publishAll --sonatypeUri https://s01.oss.sonatype.org/service/local --sonatypeCreds "${{ secrets.PUBLISH_USER }}:${{ secrets.PUBLISH_PASSWORD }}" --gpgArgs "--passphrase=${{ secrets.PUBLISH_SECRET_KEY_PASSWORD}},--batch,--yes,-a,-b,--pinentry-mode,loopback" --readTimeout 1200000 --awaitTimeout 1200000 --release true --signed true
+        run: ./millw --import "ivy:com.lihaoyi::mill-contrib-sonatypecentral:" mill.contrib.sonatypecentral.SonatypeCentralPublishModule/publishAll --publishArtifacts __.publishArtifacts
+        env:
+          MILL_PGP_PASSPHRASE: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
+          MILL_PGP_SECRET_BASE64: ${{ secrets.PGP_SECRET }}
+          MILL_SONATYPE_PASSWORD: ${{ secrets.PUBLISH_PASSWORD }}
+          MILL_SONATYPE_USERNAME: ${{ secrets.PUBLISH_USER }}
 
   site:
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
