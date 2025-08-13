@@ -58,7 +58,13 @@ trait Testy extends TestModule.Munit with FormatFix {
 
 }
 
-// object site extends SiteModule {
+object SiteUnidoc extends ScalaModule, UnidocModule :
+  def scalaVersion = V.scalaVersion
+  def moduleDeps = Seq(build.sjsls, build.routes)
+
+  def unidocDocumentTitle = Task { "Scala JS Live Server Docs" }
+  def unidocVersion = Some(VcsVersion.vcsState().format())
+
 
 //    def scalaVersion = sjsls.scalaVersion
 
