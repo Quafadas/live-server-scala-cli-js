@@ -4,8 +4,8 @@
 # You can give the required mill version with --mill-version parameter
 # If no version is given, it falls back to the value of DEFAULT_MILL_VERSION
 #
-# Original Project page: https://github.com/lefou/millw
-# Script Version: 0.4.12
+# Project page: https://github.com/lefou/millw
+# Script Version: 0.4.10
 #
 # If you want to improve this script, please also contribute your changes back!
 #
@@ -14,7 +14,7 @@
 set -e
 
 if [ -z "${DEFAULT_MILL_VERSION}" ] ; then
-  DEFAULT_MILL_VERSION=0.12.5
+  DEFAULT_MILL_VERSION="0.11.4"
 fi
 
 
@@ -49,9 +49,9 @@ fi
 # If not already set, read .mill-version file
 if [ -z "${MILL_VERSION}" ] ; then
   if [ -f ".mill-version" ] ; then
-    MILL_VERSION="$(tr '\r' '\n' < .mill-version | head -n 1 2> /dev/null)"
+    MILL_VERSION="$(head -n 1 .mill-version 2> /dev/null)"
   elif [ -f ".config/mill-version" ] ; then
-    MILL_VERSION="$(tr '\r' '\n' < .config/mill-version | head -n 1 2> /dev/null)"
+    MILL_VERSION="$(head -n 1 .config/mill-version 2> /dev/null)"
   fi
 fi
 

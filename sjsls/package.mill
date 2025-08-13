@@ -1,0 +1,37 @@
+package build.sjsls
+
+import build.*
+import mill._
+import mill.scalalib._
+import mill.scalalib.publish._
+
+object `package` extends FormatFixPublish {
+
+  override def scalaVersion = V.scalaLts
+
+  def mvnDeps = super.mvnDeps() ++ Seq(
+    mvn"org.http4s::http4s-ember-server::${V.http4sVersion}",
+    mvn"org.http4s::http4s-ember-client::${V.http4sVersion}",
+    mvn"org.http4s::http4s-scalatags::0.25.2",
+    mvn"io.circe::circe-core::${V.circeVersion}",
+    mvn"io.circe::circe-generic::${V.circeVersion}",
+    mvn"co.fs2::fs2-io::3.11.0",
+    mvn"com.lihaoyi::scalatags::0.13.1",
+    mvn"com.monovore::decline::2.5.0",
+    mvn"com.monovore::decline-effect::2.5.0",
+
+  )
+
+  def moduleDeps = Seq(routes)
+
+  def artifactName = "sjsls"
+
+  object test extends Testy with ScalaTests {
+    def mvnDeps = super.mvnDeps() ++ sjsls.mvnDeps() ++ Seq(
+      mvn"com.microsoft.playwright:playwright:${V.pwV}",
+      mvn"com.microsoft.playwright:driver-bundle:${V.pwV}"
+    )
+  }
+  //def scalaNativeVersion = "0.4.17" // aspirational :-)
+
+}
