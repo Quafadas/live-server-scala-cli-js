@@ -59,7 +59,7 @@ jobs:
         run: ./mill __.compile
 
       - name: scala-cli version
-        run: scala-cli version
+        run: scala-cli compile -e "()" --platform js && scala-cli run -e "()"
 
       - name: Test
         run: ./mill __.test
