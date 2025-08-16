@@ -21,7 +21,7 @@ object V{
   val http4sVersion = "0.23.30"
   val circeVersion = "0.14.10"
   val scalaVersion = "3.7.2"
-  val laminar = "17.1.0"
+  val laminar = "17.2.1"
   val scalaJsDom = "2.8.1"
   val scalaJs = "1.19.0"
 }
