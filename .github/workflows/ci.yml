@@ -62,7 +62,10 @@ jobs:
       - name: cache test deps
         run: |
           cs fetch com.raquo:laminar_sjs1_3:17.2.1
-          cs fetch org.scala-js:scalajs-dom_sjs1_3:2.8.1
+          cs fetch org.scala-js:-dom_sjs1_3:2.8.1
+          cs install scala-cli
+          cs fetch org.scala-lang:scala3-compiler_3:3.3.5
+          scala-cli --version
 
       - name: Test
         run: ./mill __.test
