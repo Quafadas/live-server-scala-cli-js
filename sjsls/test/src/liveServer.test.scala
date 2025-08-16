@@ -324,7 +324,7 @@ def helloWorldCode(greet: String) = s"""
 //> using scala 3.3.5
 //> using platform js
 
-//> using dep org.scala-js::scalajs-dom::2.8.0
+//> using dep org.scala-js::scalajs-dom::2.8.1
 //> using dep com.raquo::laminar::17.2.1
 
 //> using jsModuleKind es
