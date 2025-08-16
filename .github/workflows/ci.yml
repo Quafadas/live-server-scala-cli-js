@@ -58,6 +58,9 @@ jobs:
       - name: compile
         run: ./mill __.compile
 
+      - name: scala-cli version
+        run: scala-cli version
+
       - name: Test
         run: ./mill __.test
 
