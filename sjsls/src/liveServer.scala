@@ -323,16 +323,13 @@ object LiveServer extends IOApp:
   end main
 
   def runServerHandleErrors(lsc: LiveServerConfig): IO[ExitCode] =
-    main(lsc)
-      .useForever
-      .as(ExitCode.Success)
+    main(lsc).useForever.as(ExitCode.Success)
 
   def runServerHandleErrors: Opts[IO[ExitCode]] = parseOpts.map(runServerHandleErrors(_).handleErrorWith {
-        case CliValidationError(message) =>
-          IO.println(s"${command.showHelp} \n $message \n see help above").as(ExitCode.Error)
-        case error => IO.raiseError(error)
-      })
-  
+    case CliValidationError(message) =>
+      IO.println(s"${command.showHelp} \n $message \n see help above").as(ExitCode.Error)
+    case error => IO.raiseError(error)
+  })
 
   val command =
     val versionFlag = Opts.flag(
