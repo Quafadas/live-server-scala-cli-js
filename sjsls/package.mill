@@ -32,7 +32,8 @@ object `package` extends FormatFixPublish:
     def buildInfoMembers = Seq(
       BuildInfo.Value("laminar", V.laminar),
       BuildInfo.Value("scalaJsDom", V.scalaJsDom),
-      BuildInfo.Value("scalaJsVersion", V.scalaJs)
+      BuildInfo.Value("scalaJsVersion", V.scalaJs),
+      BuildInfo.Value("scalaVersion", V.scalaLts)
     )
     def mvnDeps = super.mvnDeps() ++ sjsls.mvnDeps() ++ Seq(
       mvn"com.microsoft.playwright:playwright:${V.pwV}",
