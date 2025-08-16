@@ -41,7 +41,7 @@ http:
           weight: 5
 """
 
-case class CliValidationError(message: String) extends NoStackTrace
+private case class CliValidationError(message: String) extends NoStackTrace
 
 object LiveServer extends IOApp:
   private val logger = scribe.cats[IO]
@@ -197,7 +197,8 @@ object LiveServer extends IOApp:
       stylesDir: Option[String] = None,
       indexHtmlTemplate: Option[String] = None,
       buildToolInvocation: Option[String] = None,
-      injectPreloads: Boolean = false
+      injectPreloads: Boolean = false,
+      customRefresh: Option[Topic[IO, Unit]] = None
   )
 
   def parseOpts = (
@@ -216,7 +217,8 @@ object LiveServer extends IOApp:
     stylesDirOpt,
     indexHtmlTemplateOpt,
     buildToolInvocation,
-    injectPreloadsOpt
+    injectPreloadsOpt,
+    None.pure[Opts]
   ).mapN(LiveServerConfig.apply)
 
   def main(lsc: LiveServerConfig): Resource[IO, Server] =
@@ -237,7 +239,7 @@ object LiveServer extends IOApp:
         .toResource
 
       fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
-      refreshTopic <- Topic[IO, Unit].toResource
+      refreshTopic <- lsc.customRefresh.fold(Topic[IO, Unit])(IO(_)).toResource
       linkingTopic <- Topic[IO, Unit].toResource
       client <- EmberClientBuilder.default[IO].build
       baseDirPath <- lsc.baseDir.fold(Files[IO].currentWorkingDirectory.toResource)(toDirectoryPath)
@@ -320,17 +322,18 @@ object LiveServer extends IOApp:
 
   end main
 
-  def runServerHandleErrors: Opts[IO[ExitCode]] = parseOpts.map(
-    ops =>
-      main(ops)
+  def runServerHandleErrors(lsc: LiveServerConfig): IO[ExitCode] =
+    main(lsc)
         .useForever
         .as(ExitCode.Success)
         .handleErrorWith {
           case CliValidationError(message) =>
             IO.println(s"${command.showHelp} \n $message \n see help above").as(ExitCode.Error)
           case error => IO.raiseError(error)
-        }
-  )
+        }        
+    
+
+  def runServerHandleErrors: Opts[IO[ExitCode]] = parseOpts.map(runServerHandleErrors)
 
   val command =
     val versionFlag = Opts.flag(
