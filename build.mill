@@ -23,7 +23,7 @@ object V{
   val scalaVersion = "3.7.2"
   val laminar = "17.1.0"
   val scalaJsDom = "2.8.1"
-  val scalaJs = "1.19.1"
+  val scalaJs = "1.19.0"
 }
 
 trait FormatFix extends ScalafmtModule with ScalafixModule with ScalaModule
