@@ -324,14 +324,13 @@ object LiveServer extends IOApp:
 
   def runServerHandleErrors(lsc: LiveServerConfig): IO[ExitCode] =
     main(lsc)
-        .useForever
-        .as(ExitCode.Success)
-        .handleErrorWith {
-          case CliValidationError(message) =>
-            IO.println(s"${command.showHelp} \n $message \n see help above").as(ExitCode.Error)
-          case error => IO.raiseError(error)
-        }        
-    
+      .useForever
+      .as(ExitCode.Success)
+      .handleErrorWith {
+        case CliValidationError(message) =>
+          IO.println(s"${command.showHelp} \n $message \n see help above").as(ExitCode.Error)
+        case error => IO.raiseError(error)
+      }
 
   def runServerHandleErrors: Opts[IO[ExitCode]] = parseOpts.map(runServerHandleErrors)
 

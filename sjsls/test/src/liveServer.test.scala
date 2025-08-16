@@ -306,8 +306,9 @@ trait PlaywrightTest extends CatsEffectSuite:
           client.expect[String](s"http://localhost:$basePort").map(out => out.contains("less.watch()"))
         ) >>
         assertIO(
-          client
-            .status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$basePort/index.less"))),
+          client.status(
+            org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$basePort/index.less"))
+          ),
           Ok
         )
   }
