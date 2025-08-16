@@ -2,6 +2,7 @@
 //| mill-jvm-version: 21
 //| mvnDeps: 
 //|   - com.goyeau::mill-scalafix::0.6.0
+//|   - com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION
 
 
 import os.copy.over
@@ -13,12 +14,16 @@ import mill.util.*
 import com.goyeau.mill.scalafix.ScalafixModule
 import java.text.Format
 
+
 object V{
   val scalaLts = "3.3.5"
   val pwV = build.pwV
   val http4sVersion = "0.23.30"
   val circeVersion = "0.14.10"
   val scalaVersion = "3.7.2"
+  val laminar = "0.17.1"
+  val scalaJsDom = "2.8.1"
+  val scalaJs = "1.19.1"
 }
 
 trait FormatFix extends ScalafmtModule with ScalafixModule with ScalaModule

@@ -3,8 +3,9 @@ package build.sjsls
 import build.*
 import mill.*
 import mill.scalalib.*
+import mill.scalajslib.*
 import mill.scalalib.publish.*
-
+import mill.contrib.buildinfo.BuildInfo
 object `package` extends FormatFixPublish:
 
   override def scalaVersion = V.scalaLts
@@ -25,11 +26,36 @@ object `package` extends FormatFixPublish:
 
   def artifactName = "sjsls"
 
-  object test extends Testy with ScalaTests:
+  object test extends Testy with ScalaTests with BuildInfo:
+    val name = "sjsls"
+    val buildInfoPackageName = "sjsls"
+    def buildInfoMembers = Seq(
+      BuildInfo.Value("laminar", V.laminar),
+      BuildInfo.Value("scalaJsDom", V.scalaJsDom),
+      BuildInfo.Value("scalaJsVersion", V.scalaJs)
+    )
     def mvnDeps = super.mvnDeps() ++ sjsls.mvnDeps() ++ Seq(
       mvn"com.microsoft.playwright:playwright:${V.pwV}",
       mvn"com.microsoft.playwright:driver-bundle:${V.pwV}"
     )
+    override def resources = super.resources
+
+    override def runClasspath = Task {
+      sjsls.cacheJsLibs.resolvedMvnDeps()
+      super.runClasspath()
+    }
   end test
+    
+  object cacheJsLibs extends ScalaJSModule:
+    def scalaVersion = V.scalaVersion
+    def scalaJSVersion = V.scalaJs
+    def testFramework = "munit.Framework"
+    def mvnDeps = super.mvnDeps() ++ Seq(
+      mvn"org.scala-js::scalajs-dom:${V.scalaJsDom}",
+      mvn"com.raquo::laminar_sjs1_3:${V.laminar}"
+    )
+  end cacheJsLibs    
+
+
   // def scalaNativeVersion = "0.4.17" // aspirational :-)
 end `package`

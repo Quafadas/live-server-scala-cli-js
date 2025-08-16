@@ -323,9 +323,10 @@ end PlaywrightTest
 def helloWorldCode(greet: String) = s"""
 //> using scala 3.3.5
 //> using platform js
+//> using jsVersion ${sjsls.BuildInfo.scalaJsVersion}
 
-//> using dep org.scala-js::scalajs-dom::2.8.1
-//> using dep com.raquo::laminar::17.2.1
+//> using dep org.scala-js::scalajs-dom::${sjsls.BuildInfo.scalaJsDom}
+//> using dep com.raquo::laminar::${sjsls.BuildInfo.laminar}
 
 //> using jsModuleKind es
 //> using jsModuleSplitStyleStr smallmodulesfor
