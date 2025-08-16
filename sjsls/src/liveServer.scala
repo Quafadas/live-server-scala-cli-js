@@ -53,7 +53,7 @@ object LiveServer extends IOApp:
     .withHost(host"localhost")
     .withPort(port)
     .withHttpApp(httpApp)
-    .withShutdownTimeout(10.milli)
+    .withShutdownTimeout(1.milli)
     .build
 
   val logLevelOpt: Opts[String] = Opts
@@ -326,13 +326,13 @@ object LiveServer extends IOApp:
     main(lsc)
       .useForever
       .as(ExitCode.Success)
-      .handleErrorWith {
+
+  def runServerHandleErrors: Opts[IO[ExitCode]] = parseOpts.map(runServerHandleErrors(_).handleErrorWith {
         case CliValidationError(message) =>
           IO.println(s"${command.showHelp} \n $message \n see help above").as(ExitCode.Error)
         case error => IO.raiseError(error)
-      }
-
-  def runServerHandleErrors: Opts[IO[ExitCode]] = parseOpts.map(runServerHandleErrors)
+      })
+  
 
   val command =
     val versionFlag = Opts.flag(
