@@ -103,7 +103,7 @@ jobs:
           MILL_SONATYPE_USERNAME: ${{ secrets.PUBLISH_USER }}
 
   site:
-    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/tags/')
     needs: build
     runs-on: ubuntu-latest
     steps:
