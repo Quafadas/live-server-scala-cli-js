@@ -1,6 +1,6 @@
 //| mill-version: 1.0.3
 //| mill-jvm-version: 21
-//| mvnDeps: 
+//| mvnDeps:
 //|   - com.goyeau::mill-scalafix::0.6.0
 //|   - com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION
 
@@ -9,14 +9,14 @@ import os.copy.over
 // import io.github.quafadas.millSite._
 import mill._, scalalib._, publish._, scalanativelib._
 import mill.scalalib.scalafmt.ScalafmtModule
-import mill.util.* 
+import mill.util.*
 
 import com.goyeau.mill.scalafix.ScalafixModule
 import java.text.Format
 
 
 object V{
-  val scalaLts = "3.3.5"
+  val scalaLts = "3.3.6"
   val pwV = build.pwV
   val http4sVersion = "0.23.30"
   val circeVersion = "0.14.10"
