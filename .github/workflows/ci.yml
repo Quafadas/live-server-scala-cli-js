@@ -95,7 +95,7 @@ jobs:
         run: gpg -K
 
       - name: Publish to Maven Central
-        run: ./mill --import "ivy:com.lihaoyi::mill-contrib-sonatypecentral:" mill.contrib.sonatypecentral.SonatypeCentralPublishModule/publishAll --publishArtifacts __.publishArtifacts
+        run: ./mill mill.javalib.SonatypeCentralPublishModule/publishAll --publishArtifacts __.publishArtifacts
         env:
           MILL_PGP_PASSPHRASE: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
           MILL_PGP_SECRET_BASE64: ${{ secrets.PGP_SECRET }}
