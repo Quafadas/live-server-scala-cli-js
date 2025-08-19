@@ -3,9 +3,9 @@ name: Continuous Integration
 on:
   pull_request:
     branches: ['**', '!update/**', '!pr/**']
-  # push:
-  #   branches: ['**', '!update/**', '!pr/**']
-  #   tags: [v*]
+  push:
+    branches: ['main']
+    tags: [v*]
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
