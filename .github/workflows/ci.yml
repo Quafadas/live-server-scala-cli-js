@@ -102,46 +102,46 @@ jobs:
           MILL_SONATYPE_PASSWORD: ${{ secrets.PUBLISH_PASSWORD }}
           MILL_SONATYPE_USERNAME: ${{ secrets.PUBLISH_USER }}
 
-  site:
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/tags/')
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: coursier/setup-action@main
-        with:
-          jvm: temurin@21
-          apps: scala-cli
-      - uses: actions/checkout@main
-        with:
-          fetch-depth: 0
-          fetch-tags: true
-      - run: ./mill site.publishDocs
-      - name: Setup Pages
-        uses: actions/configure-pages@main
-      - uses: actions/upload-artifact@main
-        with:
-          name: page
-          path: out/site/publishDocs.dest
-          if-no-files-found: error
+  # site:
+  #   if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/tags/')
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: coursier/setup-action@main
+  #       with:
+  #         jvm: temurin@21
+  #         apps: scala-cli
+  #     - uses: actions/checkout@main
+  #       with:
+  #         fetch-depth: 0
+  #         fetch-tags: true
+  #     - run: ./mill site.publishDocs
+  #     - name: Setup Pages
+  #       uses: actions/configure-pages@main
+  #     - uses: actions/upload-artifact@main
+  #       with:
+  #         name: page
+  #         path: out/site/publishDocs.dest
+  #         if-no-files-found: error
 
-  deploy:
-    needs: site
-    permissions:
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/download-artifact@main
-      with:
-        name: page
-        path: .
-    - uses: actions/configure-pages@main
-    - uses: actions/upload-pages-artifact@main
-      with:
-        path: .
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@main
+  # deploy:
+  #   needs: site
+  #   permissions:
+  #     pages: write
+  #     id-token: write
+  #   environment:
+  #     name: github-pages
+  #     url: ${{ steps.deployment.outputs.page_url }}
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/download-artifact@main
+  #     with:
+  #       name: page
+  #       path: .
+  #   - uses: actions/configure-pages@main
+  #   - uses: actions/upload-pages-artifact@main
+  #     with:
+  #       path: .
+  #   - name: Deploy to GitHub Pages
+  #     id: deployment
+  #     uses: actions/deploy-pages@main
