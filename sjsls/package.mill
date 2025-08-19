@@ -1,0 +1,62 @@
+package build.sjsls
+
+import build.*
+import mill.*
+import mill.scalalib.*
+import mill.scalajslib.*
+import mill.scalalib.publish.*
+import mill.contrib.buildinfo.BuildInfo
+object `package` extends FormatFixPublish:
+
+  override def scalaVersion = V.scalaLts
+
+  def mvnDeps = super.mvnDeps() ++ Seq(
+    mvn"org.http4s::http4s-ember-server::${V.http4sVersion}",
+    mvn"org.http4s::http4s-ember-client::${V.http4sVersion}",
+    mvn"org.http4s::http4s-scalatags::0.25.2",
+    mvn"io.circe::circe-core::${V.circeVersion}",
+    mvn"io.circe::circe-generic::${V.circeVersion}",
+    mvn"co.fs2::fs2-io::3.11.0",
+    mvn"com.lihaoyi::scalatags::0.13.1",
+    mvn"com.monovore::decline::2.5.0",
+    mvn"com.monovore::decline-effect::2.5.0"
+  )
+
+  def moduleDeps = Seq(routes)
+
+  def artifactName = "sjsls"
+
+  object test extends Testy with ScalaTests with BuildInfo:
+    val name = "sjsls"
+    val buildInfoPackageName = "sjsls"
+    def buildInfoMembers = Seq(
+      BuildInfo.Value("laminar", V.laminar),
+      BuildInfo.Value("scalaJsDom", V.scalaJsDom),
+      BuildInfo.Value("scalaJsVersion", V.scalaJs),
+      BuildInfo.Value("scalaVersion", V.scalaLts)
+    )
+    def mvnDeps = super.mvnDeps() ++ sjsls.mvnDeps() ++ Seq(
+      mvn"com.microsoft.playwright:playwright:${V.pwV}",
+      mvn"com.microsoft.playwright:driver-bundle:${V.pwV}"
+    )
+    override def resources = super.resources
+
+    override def runClasspath = Task {
+      sjsls.cacheJsLibs.resolvedMvnDeps()
+      super.runClasspath()
+    }
+  end test
+    
+  object cacheJsLibs extends ScalaJSModule:
+    def scalaVersion = V.scalaVersion
+    def scalaJSVersion = V.scalaJs
+    def testFramework = "munit.Framework"
+    def mvnDeps = super.mvnDeps() ++ Seq(
+      mvn"org.scala-js::scalajs-dom::${V.scalaJsDom}",
+      mvn"com.raquo::laminar::${V.laminar}"
+    )
+  end cacheJsLibs    
+
+
+  // def scalaNativeVersion = "0.4.17" // aspirational :-)
+end `package`

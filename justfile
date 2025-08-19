@@ -59,4 +59,7 @@ format:
 fix:
   ./mill __.fix
 
+serveUnidoc: 
+  cs launch io.github.quafadas::sjsls:0.2.8 -- --path-to-index-html C:\live-server-scala-cli-js\out\SiteUnidoc\unidocLocal.dest --build-tool none
+
 gha: setupMill setupPlaywright test

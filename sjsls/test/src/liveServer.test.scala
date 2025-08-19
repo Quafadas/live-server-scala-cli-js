@@ -31,6 +31,7 @@ class FirefoxSuite extends PlaywrightTest:
 
   override def beforeAll(): Unit =
     basePort = 5000
+    backendPort = 8999
     pw = Playwright.create()
     browser = pw.firefox().launch(options);
     page = browser.newPage();
@@ -43,6 +44,7 @@ class SafariSuite extends PlaywrightTest:
 
   override def beforeAll(): Unit =
     basePort = 4000
+    backendPort = 8998
     pw = Playwright.create()
     browser = pw.webkit().launch(options);
     page = browser.newPage();
@@ -55,6 +57,7 @@ class ChromeSuite extends PlaywrightTest:
 
   override def beforeAll(): Unit =
     basePort = 3000
+    backendPort = 8997
     pw = Playwright.create()
     browser = pw.chromium().launch(options);
     page = browser.newPage();
@@ -66,6 +69,7 @@ end ChromeSuite
 trait PlaywrightTest extends CatsEffectSuite:
 
   var basePort: Int = uninitialized
+  var backendPort: Int = uninitialized
   var pw: Playwright = uninitialized
   var browser: Browser = uninitialized
   var page: Page = uninitialized
@@ -108,9 +112,7 @@ trait PlaywrightTest extends CatsEffectSuite:
 
   val client = EmberClientBuilder.default[IO].build
 
-  val backendPort = 8999
-
-  val simpleBackend = EmberServerBuilder
+  def simpleBackend(port: Int) = EmberServerBuilder
     .default[IO]
     .withHttpApp(
       HttpRoutes
@@ -120,7 +122,8 @@ trait PlaywrightTest extends CatsEffectSuite:
         }
         .orNotFound
     )
-    .withPort(Port.fromInt(backendPort).get)
+    .withPort(Port.fromInt(port).get)
+    .withShutdownTimeout(1.millis)
     .build
 
   ResourceFunFixture {
@@ -175,19 +178,17 @@ trait PlaywrightTest extends CatsEffectSuite:
       .both(client)
       .flatMap {
         (dir, client) =>
-          val backendPort = 8999
-
           val lsc = LiveServerConfig(
             baseDir = Some(dir.toString),
             stylesDir = Some(styleDir(dir).toString),
             port = Port.fromInt(basePort).get,
             openBrowserAt = "",
             preventBrowserOpen = true,
-            proxyPortTarget = Port.fromInt(backendPort),
+            proxyPortTarget = Port.fromInt(backendPort), // Now uses class-level backendPort
             proxyPathMatchPrefix = Some("/api")
           )
 
-          simpleBackend.flatMap {
+          simpleBackend(backendPort).flatMap { // Now uses class-level backendPort
             _ =>
               LiveServer.main(lsc).map(_ => (lsc.port, client))
           }
@@ -225,7 +226,7 @@ trait PlaywrightTest extends CatsEffectSuite:
             logLevel = "info"
           )
 
-          simpleBackend.flatMap {
+          simpleBackend(backendPort).flatMap {
             _ =>
               LiveServer.main(lsc).map(_ => (lsc.port, client))
           }
@@ -306,8 +307,9 @@ trait PlaywrightTest extends CatsEffectSuite:
           client.expect[String](s"http://localhost:$basePort").map(out => out.contains("less.watch()"))
         ) >>
         assertIO(
-          client
-            .status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$basePort/index.less"))),
+          client.status(
+            org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$basePort/index.less"))
+          ),
           Ok
         )
   }
@@ -320,11 +322,12 @@ trait PlaywrightTest extends CatsEffectSuite:
 end PlaywrightTest
 
 def helloWorldCode(greet: String) = s"""
-//> using scala 3.3.5
+//> using scala ${sjsls.BuildInfo.scalaVersion}
 //> using platform js
+//> using jsVersion ${sjsls.BuildInfo.scalaJsVersion}
 
-//> using dep org.scala-js::scalajs-dom::2.8.0
-//> using dep com.raquo::laminar::17.2.1
+//> using dep org.scala-js::scalajs-dom::${sjsls.BuildInfo.scalaJsDom}
+//> using dep com.raquo::laminar::${sjsls.BuildInfo.laminar}
 
 //> using jsModuleKind es
 //> using jsModuleSplitStyleStr smallmodulesfor
