@@ -3,9 +3,9 @@ name: Continuous Integration
 on:
   pull_request:
     branches: ['**', '!update/**', '!pr/**']
-  push:
-    branches: ['**', '!update/**', '!pr/**']
-    tags: [v*]
+  # push:
+  #   branches: ['**', '!update/**', '!pr/**']
+  #   tags: [v*]
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -22,7 +22,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         scala: [3]
-        java: [temurin@17]
+        java: [temurin@21]
         project: [jvm]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -30,7 +30,7 @@ jobs:
       - uses: taiki-e/install-action@just
       - uses: coursier/setup-action@main
         with:
-          jvm: temurin@17
+          jvm: temurin@21
           apps: scala-cli
       - name: Checkout current branch (full)
         uses: actions/checkout@main
@@ -76,7 +76,7 @@ jobs:
 
       - uses: coursier/setup-action@main
         with:
-          jvm: temurin@17
+          jvm: temurin@21
           apps: scala-cli
 
       - name: Import GPG key
@@ -109,7 +109,7 @@ jobs:
     steps:
       - uses: coursier/setup-action@main
         with:
-          jvm: temurin@17
+          jvm: temurin@21
           apps: scala-cli
       - uses: actions/checkout@main
         with:
