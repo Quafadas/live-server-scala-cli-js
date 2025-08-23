@@ -1,8 +1,9 @@
 //| mill-jvm-version: 21
 //| mill-version: 1.0.3
-// //| mvnDeps:
+//| mvnDeps:
+//| - com.lihaoyi::mill-contrib-buildinfo::$MILL_VERSION
 // //|   - com.goyeau::mill-scalafix:0.6.0
-// //|   - com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION
+
 
 package build
 
