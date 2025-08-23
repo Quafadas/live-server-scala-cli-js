@@ -1,9 +1,0 @@
-index: index.md
-subsection:
-  - page: advantages.md
-  - page: config.md
-  - page: motivation.md
-  - page: bundler.md
-  - page: motivation.md
-  - page: deployment.md
-  - page: caveats.md

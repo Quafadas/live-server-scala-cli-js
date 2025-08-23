@@ -1,4 +1,4 @@
-# Bundlers
+# Caveats
 
 Much of the frontend world is setup assuming that you in fact, are using a bundler.
 

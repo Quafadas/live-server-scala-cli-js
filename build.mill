@@ -1,9 +1,10 @@
-//| mill-version: 1.0.3
 //| mill-jvm-version: 21
-//| mvnDeps:
-//|   - com.goyeau::mill-scalafix::0.6.0
-//|   - com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION
+//| mill-version: 1.0.3
+// //| mvnDeps:
+// //|   - com.goyeau::mill-scalafix:0.6.0
+// //|   - com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION
 
+package build
 
 import os.copy.over
 // import io.github.quafadas.millSite._
@@ -13,6 +14,7 @@ import mill.util.*
 
 import com.goyeau.mill.scalafix.ScalafixModule
 import java.text.Format
+import io.github.quafadas.millSite.SiteModule
 
 
 object V{
@@ -63,18 +65,19 @@ trait Testy extends TestModule.Munit with FormatFix {
 
 }
 
-object SiteUnidoc extends ScalaModule, UnidocModule :
+
+object site extends SiteModule {
+
   def scalaVersion = V.scalaVersion
-  def moduleDeps = Seq(build.sjsls, build.routes)
+  def unidocDeps = Seq(build.sjsls, build.routes)
+  override def unidocTitle = "Scala JS Live Server API"
 
-  def unidocDocumentTitle = Task { "Scala JS Live Server Docs" }
-  def unidocVersion = Some(VcsVersion.vcsState().format())
+  override def repoLink = "https://github.com/Quafadas/live-server-scala-cli-js"
+
+  override def latestVersion = "0.2.11"
 
 
-//    def scalaVersion = sjsls.scalaVersion
-
-//   override def moduleDeps = Seq(sjsls)
-// }
+}
 
 // SN deps which aren't yet there.
 /**

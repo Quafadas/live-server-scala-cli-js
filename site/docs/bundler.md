@@ -1,5 +1,4 @@
----
-title: Ummm... no Bundler?
+Ummm... no Bundler?
 ---
 
 Yup, no bundler.

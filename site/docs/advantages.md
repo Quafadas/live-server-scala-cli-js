@@ -1,3 +1,5 @@
+# Advantages
+
 Here are the key advantages of this approach:
 
 - Getting started is cca 10 seconds and you are live reloading your changes in browser. No config.
