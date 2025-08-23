@@ -32,7 +32,7 @@
   },
 
   // Try do do as much as possible in the image, so that the container starts up quickly
-  "onCreateCommand": "mill -j 0 __.prepareOffline && mill -j 0 __.compile && mill mill.bsp.BSP/install && mill --import ivy:com.lihaoyi::mill-contrib-bloop:  mill.contrib.bloop.Bloop/install"
+  "onCreateCommand": "mill -j 0 __.prepareOffline && mill -j 0 __.compile"
 
   // // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
