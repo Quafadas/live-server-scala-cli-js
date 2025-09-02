@@ -1,7 +1,9 @@
 package io.github.quafadas.sjsls
 
 import com.comcast.ip4s.Port
+
 import fs2.concurrent.Topic
+
 import cats.effect.IO
 
 case class LiveServerConfig(

@@ -15,11 +15,12 @@ import com.microsoft.playwright.*
 import com.microsoft.playwright.assertions.LocatorAssertions.ContainsTextOptions
 import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 
+import fs2.concurrent.Topic
+
 import cats.effect.IO
 import cats.effect.kernel.Ref
 
 import munit.CatsEffectSuite
-import fs2.concurrent.Topic
 
 /*
 Run

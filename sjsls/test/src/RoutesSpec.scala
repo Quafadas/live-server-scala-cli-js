@@ -8,7 +8,6 @@ import java.time.ZonedDateTime
 import scala.concurrent.duration.*
 
 import org.http4s.*
-import org.http4s.HttpRoutes
 import org.http4s.client.Client
 import org.http4s.implicits.*
 import org.http4s.server.middleware.ErrorAction
@@ -16,13 +15,11 @@ import org.typelevel.ci.CIStringSyntax
 
 import fs2.concurrent.Topic
 import fs2.io.file.Files
-import fs2.io.file.Path
 
 import scribe.Level
 import scribe.Scribe
 
 import cats.effect.*
-import cats.effect.IO
 import cats.effect.kernel.Ref
 import cats.effect.std.MapRef
 

@@ -1,6 +1,7 @@
 package io.github.quafadas.sjsls
 
 import scala.concurrent.duration.*
+
 import org.http4s.*
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.ember.server.EmberServerBuilder
@@ -34,7 +35,6 @@ object LiveServer extends IOApp:
     .withHttpApp(httpApp)
     .withShutdownTimeout(1.milli)
     .build
-
 
   def parseOpts = (
     baseDirOpt,
@@ -74,18 +74,22 @@ object LiveServer extends IOApp:
         )
         .toResource
 
-      _ <- Resource.pure[IO, Boolean](lsc.dezombify).flatMap(
-        if(_)
-          Resource.eval(IO.println(s"Attempt to kill off process on port ${lsc.port}")) >>
-          dezombify(lsc.port)
-        else
-          scribe.cats[IO].debug(s"Assuming port ${lsc.port} is free").toResource
-      )
+      _ <- Resource
+        .pure[IO, Boolean](lsc.dezombify)
+        .flatMap(
+          if _ then
+            Resource.eval(IO.println(s"Attempt to kill off process on port ${lsc.port}")) >>
+              dezombify(lsc.port)
+          else scribe.cats[IO].debug(s"Assuming port ${lsc.port} is free").toResource
+        )
       fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
-      refreshTopic <- lsc.customRefresh.fold(Topic[IO, Unit])(
-        scribe.cats[IO].debug(s"Custom refresh topic supplied") >>
-        IO(_)
-      ).toResource
+      refreshTopic <- lsc
+        .customRefresh
+        .fold(Topic[IO, Unit])(
+          scribe.cats[IO].debug("Custom refresh topic supplied") >>
+            IO(_)
+        )
+        .toResource
       linkingTopic <- Topic[IO, Unit].toResource
       client <- EmberClientBuilder.default[IO].build
       baseDirPath <- lsc.baseDir.fold(Files[IO].currentWorkingDirectory.toResource)(toDirectoryPath)

@@ -20,7 +20,6 @@ import scribe.Scribe
 import cats.data.Kleisli
 import cats.data.OptionT
 import cats.effect.*
-import cats.effect.IO
 import cats.syntax.all.*
 
 inline def respondWithCacheLastModified(resp: Response[IO], lastModZdt: ZonedDateTime) =
@@ -70,8 +69,7 @@ inline def cachedFileResponse(epochInstant: Instant, fullPath: Path, req: Reques
                   response
             }
           case _ =>
-            OptionT.liftF(
-              logger.debug(s"No If-Modified-Since headers in request ${req.uri.path}") ) >>
+            OptionT.liftF(logger.debug(s"No If-Modified-Since headers in request ${req.uri.path}")) >>
               service(req).map {
                 resp =>
                   respondWithCacheLastModified(

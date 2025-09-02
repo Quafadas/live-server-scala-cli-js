@@ -33,6 +33,7 @@ object V{
 
 trait FormatFix extends ScalafmtModule with ScalafixModule with ScalaModule
 
+
 trait FormatFixPublish extends ScalaModule with FormatFix with PublishModule{
   override def scalaVersion = V.scalaVersion
 

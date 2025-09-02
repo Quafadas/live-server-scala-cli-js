@@ -2,6 +2,7 @@ package io.github.quafadas.sjsls
 
 import java.time.ZonedDateTime
 
+import scalatags.Text.TypedTag
 import scalatags.Text.all.*
 
 import org.http4s.HttpRoutes
@@ -17,7 +18,6 @@ import scribe.Scribe
 import cats.effect.IO
 import cats.effect.kernel.Ref
 import cats.syntax.all.*
-import scalatags.Text.TypedTag
 
 private def generatedIndexHtml(
     injectStyles: Boolean,
@@ -154,11 +154,15 @@ end makeInternalPreloads
 
 def vanillaTemplate(styles: Boolean): String =
   val r = Ref.of[IO, Map[String, String]](Map.empty)
-  r.flatMap( rf =>
-    vanillaTemplate(styles, rf, false).map(_.render)
-  ).unsafeRunSync()(using cats.effect.unsafe.implicits.global)
+  r.flatMap(rf => vanillaTemplate(styles, rf, false).map(_.render))
+    .unsafeRunSync()(using cats.effect.unsafe.implicits.global)
+end vanillaTemplate
 
-def vanillaTemplate(withStyles: Boolean, ref: Ref[IO, Map[String, String]], attemptPreload: Boolean): IO[TypedTag[String]] =
+def vanillaTemplate(
+    withStyles: Boolean,
+    ref: Ref[IO, Map[String, String]],
+    attemptPreload: Boolean
+): IO[TypedTag[String]] =
 
   val preloads = makeInternalPreloads(ref)
   preloads.map: modules =>

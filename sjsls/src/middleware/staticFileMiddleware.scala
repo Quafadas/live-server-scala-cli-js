@@ -20,7 +20,6 @@ import scribe.Scribe
 import cats.data.Kleisli
 import cats.data.OptionT
 import cats.effect.*
-import cats.effect.IO
 import cats.syntax.all.*
 
 def parseFromHeader(epochInstant: Instant, header: String): Long =

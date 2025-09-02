@@ -20,7 +20,6 @@ import fs2.io.file.Path
 import scribe.Scribe
 
 import cats.effect.*
-
 import cats.syntax.all.*
 
 def staticWatcher(

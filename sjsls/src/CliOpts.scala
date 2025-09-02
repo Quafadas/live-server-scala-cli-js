@@ -1,20 +1,20 @@
 package io.github.quafadas.sjsls
 
-import com.monovore.decline.Opts
 import com.comcast.ip4s.Port
+import com.monovore.decline.Opts
 
 private[sjsls] object CliOps:
   val logLevelOpt: Opts[String] = Opts
-      .option[String]("log-level", help = "The log level. info, debug, error, trace)")
-      .withDefault("info")
-      .validate("Invalid log level") {
-        case "info"  => true
-        case "debug" => true
-        case "error" => true
-        case "warn"  => true
-        case "trace" => true
-        case _       => false
-      }
+    .option[String]("log-level", help = "The log level. info, debug, error, trace)")
+    .withDefault("info")
+    .validate("Invalid log level") {
+      case "info"  => true
+      case "debug" => true
+      case "error" => true
+      case "warn"  => true
+      case "trace" => true
+      case _       => false
+    }
 
   val openBrowserAtOpt =
     Opts
@@ -135,4 +135,4 @@ private[sjsls] object CliOps:
       "Whether or not to attempt killing any processes that are using the specified port. Default: true"
     )
     .orTrue
-
+end CliOps
