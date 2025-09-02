@@ -1,4 +1,4 @@
-See [docs](https://quafadas.github.io/live-server-scala-cli-js/docs/index.html)
+See [docs](https://quafadas.github.io/live-server-scala-cli-js/)
 
 # Scala JS live server TL;DR
 
