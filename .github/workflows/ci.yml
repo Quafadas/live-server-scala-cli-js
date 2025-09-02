@@ -103,7 +103,7 @@ jobs:
           MILL_SONATYPE_USERNAME: ${{ secrets.PUBLISH_USER }}
 
   site:
-    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.ref == 'refs/tags/')
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -125,6 +125,7 @@ jobs:
           if-no-files-found: error
 
   deploy:
+    if: github.ref == 'refs/heads/main'
     needs: site
     permissions:
       pages: write
