@@ -18,7 +18,6 @@ import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 import cats.effect.IO
 import cats.effect.kernel.Ref
 
-import io.github.quafadas.sjsls.LiveServer.LiveServerConfig
 import munit.CatsEffectSuite
 
 /*

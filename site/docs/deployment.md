@@ -1,4 +1,4 @@
-title: Deployment
+Deployment
 ---
 
 This project targets the dev loop. When comes to deploy however, I always hit the same problem. From discord;

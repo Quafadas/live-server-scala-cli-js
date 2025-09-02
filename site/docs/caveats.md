@@ -12,6 +12,6 @@ It is usually possible to work around such limitations, but it is not pain free.
 
 I strongly suspect though that as time marches formward ESModules will become the norm, and this limitation will become irrelevant.
 
-# Scale
+## Support
 
-This project is not backed by anyone making money from it. Support is therefore ad hoc and limited.
+This project is not backed by any power larger than my curiosity.
