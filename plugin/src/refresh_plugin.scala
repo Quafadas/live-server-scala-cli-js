@@ -1,31 +1,15 @@
-package io.github.quafadas.RefreshPlugin
+package io.github.quafadas
 
 import io.github.quafadas.sjsls.LiveServerConfig
 import mill.*
 import mill.scalalib.*
 import mill.scalajslib.*
-import os.Path
+
 import mill.api.Task.Simple
 import fs2.concurrent.Topic
 import cats.effect.IO
-// import mill.scalajslib.*
-// import coursier.maven.MavenRepository
-// import mill.api.Result
-// import mill.util.Jvm.createJar
-// import mill.define.PathRef
-// import mill.scalalib.api.CompilationResult
-// // import de.tobiasroeser.mill.vcs.version.VcsVersion
-// import scala.util.Try
-// import mill.scalalib.publish.PomSettings
-// import mill.scalalib.publish.License
-// import mill.scalalib.publish.VersionControl
-// import os.SubPath
-// import ClasspathHelp.*
 import cats.effect.unsafe.implicits.global
 import io.github.quafadas.sjsls.LiveServerConfig
-import cats.effect.ExitCode
-import scala.util.{Try, Success, Failure}
-import scala.concurrent.Future
 import mill.api.BuildCtx
 import mill.scalajslib.api.Report
 implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
@@ -36,17 +20,17 @@ trait ScalaJsRefreshModule extends ScalaJSModule:
 
 
   def indexHtml = Task{
-    os.write.over(Task.dest / "index.html", io.github.quafadas.sjsls.vanillaTemplate)
+    os.write.over(Task.dest / "index.html", io.github.quafadas.sjsls.vanillaTemplate(withStyles()))
     PathRef(Task.dest / "index.html")
   }
 
-  def assetsDir = Task{
-     "assets"
-  }
+  def assetsDir =
+     super.moduleDir / "assets"
 
-  def assets = Task{
-    os.write.over(Task.dest / "style.css", io.github.quafadas.sjsls.lessStyle(true).render)
-    PathRef(Task.dest / assetsDir())
+  def withStyles = Task{ true}
+
+  def assets = Task.Source{
+    assetsDir
   }
 
   def port = Task {
@@ -66,33 +50,35 @@ trait ScalaJsRefreshModule extends ScalaJSModule:
   }
 
   def siteGen = Task{
-    val assets_ = assets()
-    val path = fastLinkJS().dest
-    os.copy.over(Task.dest / "index.html", indexHtml().path)
-    os.copy.over(Task.dest / assetsDir(), assets_.path)
-    updateServer.publish1(println("publishing update"))
-    (assets_.path.toString(), path.path.toString())
+      val assets_ = assets()
+      val path = fastLinkJS().dest.path
+      os.copy.over(indexHtml().path, Task.dest / "index.html")
+      os.copy(assets_.path, Task.dest, mergeFolders = true)
+      updateServer.publish1(println("publish update")).unsafeRunSync()
+      (Task.dest.toString(), assets_.path.toString(), path.toString())
+
   }
 
   def lcs = Task.Worker{
-    val (assets, js) = siteGen()
+    val (site, assets, js) = siteGen()
+    println("Gen lsc")
     LiveServerConfig(
           baseDir = None,
           outDir = Some(js),
           port = com.comcast.ip4s.Port.fromInt(port()).getOrElse(throw new IllegalArgumentException(s"invalid port: ${port()}")),
-          indexHtmlTemplate = Some(assets),
+          indexHtmlTemplate = Some(site),
           buildTool = io.github.quafadas.sjsls.NoBuildTool(), // Here we are a slave to the build tool
           openBrowserAt = "/index.html",
           preventBrowserOpen = !openBrowser(),
           dezombify = dezombify(),
-          logLevel = logLevel()
+          logLevel = logLevel(),
+          customRefresh = Some(updateServer)
         )
   }
 
   def serve = Task.Worker{
-    // Let's kill off anything that is a zombie on the port we want to use
-    val p = port()
 
+    println(lcs())
     BuildCtx.withFilesystemCheckerDisabled {
       new RefreshServer(lcs())
     }

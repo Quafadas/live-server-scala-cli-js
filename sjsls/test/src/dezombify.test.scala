@@ -1,10 +1,8 @@
 package io.github.quafadas.sjsls
 
-import cats.effect._
-import com.comcast.ip4s._
+import cats.effect.IO
+import com.comcast.ip4s.Port
 import munit.CatsEffectSuite
-
-import scala.concurrent.duration.DurationInt
 
 class DezombieTest extends CatsEffectSuite:
 

@@ -19,6 +19,7 @@ import cats.effect.IO
 import cats.effect.kernel.Ref
 
 import munit.CatsEffectSuite
+import fs2.concurrent.Topic
 
 /*
 Run
@@ -258,6 +259,8 @@ trait PlaywrightTest extends CatsEffectSuite:
         )
 
   }
+
+// TODO: Test that the map of hashes is updated, when an external build tool is responsible for refresh pulses
 
   ResourceFunFixture {
     files.flatMap {

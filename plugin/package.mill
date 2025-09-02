@@ -4,8 +4,9 @@ import mill.util.BuildInfo. millBinPlatform
 import mill._, scalalib._, publish._
 import mill.util.VcsVersion
 import build.V
+import build.FormatFixPublish
 
-object `package` extends ScalaModule with PublishModule:
+object `package` extends ScalaModule with FormatFixPublish:
   def platformSuffix = s"_mill$millBinPlatform"
 
   def scalaVersion = build.V.scalaVersion

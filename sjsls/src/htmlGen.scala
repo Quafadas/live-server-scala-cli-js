@@ -152,10 +152,10 @@ private def makeInternalPreloads(ref: Ref[IO, Map[String, String]]) =
 
 end makeInternalPreloads
 
-def vanillaTemplate: String =
+def vanillaTemplate(styles: Boolean): String =
   val r = Ref.of[IO, Map[String, String]](Map.empty)
   r.flatMap( rf =>
-    vanillaTemplate(true, rf, false).map(_.render)
+    vanillaTemplate(styles, rf, false).map(_.render)
   ).unsafeRunSync()(using cats.effect.unsafe.implicits.global)
 
 def vanillaTemplate(withStyles: Boolean, ref: Ref[IO, Map[String, String]], attemptPreload: Boolean): IO[TypedTag[String]] =

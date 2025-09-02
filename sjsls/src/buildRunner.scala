@@ -52,7 +52,8 @@ def buildRunner(
         invokeVia,
         extraBuildArgs
       )(logger)
-    case n: NoBuildTool => logger.info("No build tool specified, skipping build").toResource
+    case n: NoBuildTool =>
+      logger.info("No build tool specified, skipping build").toResource
   end match
 end buildRunner
 

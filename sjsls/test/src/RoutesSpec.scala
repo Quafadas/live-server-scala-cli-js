@@ -184,7 +184,8 @@ class RoutesSuite extends CatsEffectSuite:
           HttpRoutes.empty[IO],
           fileToHashRef,
           Some("app"),
-          false
+          false,
+          ScalaCli()
         )(logger)
       yield errorActionFor(theseRoutes, aLogger).orNotFound
 
@@ -271,7 +272,8 @@ class RoutesSuite extends CatsEffectSuite:
             HttpRoutes.empty[IO],
             fileToHashRef,
             None,
-            false
+            false,
+            ScalaCli()
           )(logger)
         yield theseRoutes.orNotFound
 
@@ -302,7 +304,8 @@ class RoutesSuite extends CatsEffectSuite:
           HttpRoutes.empty[IO],
           fileToHashRef,
           None,
-          false
+          false,
+          ScalaCli()
         )(logger)
       yield theseRoutes.orNotFound
 
@@ -334,7 +337,8 @@ class RoutesSuite extends CatsEffectSuite:
             HttpRoutes.empty[IO],
             fileToHashRef,
             None,
-            false
+            false,
+            ScalaCli()
           )(logger)
         yield theseRoutes.orNotFound
 
@@ -368,7 +372,8 @@ class RoutesSuite extends CatsEffectSuite:
             HttpRoutes.empty[IO],
             fileToHashRef,
             Some("app"),
-            false
+            false,
+            ScalaCli()
           )(logger)
         yield theseRoutes.orNotFound
 
@@ -402,7 +407,8 @@ class RoutesSuite extends CatsEffectSuite:
           HttpRoutes.empty[IO],
           fileToHashRef,
           None,
-          false
+          false,
+          ScalaCli()
         )(logger)
       yield (theseRoutes.orNotFound, logger, modifedAt)
 
@@ -457,7 +463,8 @@ class RoutesSuite extends CatsEffectSuite:
           HttpRoutes.empty[IO],
           fileToHashRef,
           Some("app"),
-          false
+          false,
+          ScalaCli()
         )(logger)
       yield (theseRoutes.orNotFound, logger)
 

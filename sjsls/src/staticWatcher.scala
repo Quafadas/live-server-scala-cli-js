@@ -20,9 +20,7 @@ import fs2.io.file.Path
 import scribe.Scribe
 
 import cats.effect.*
-import cats.effect.IO
-import cats.effect.OutcomeIO
-import cats.effect.ResourceIO
+
 import cats.syntax.all.*
 
 def staticWatcher(
@@ -87,10 +85,10 @@ def updateMapRef(stringPath: fs2.io.file.Path, mr: Ref[IO, Map[String, String]])
     .walk(stringPath)
     .evalFilter(Files[IO].isRegularFile)
     .parEvalMap(maxConcurrent = 8)(path => fileHash(path).map(path -> _))
-    // .evalTap {
-    //   case (path, hash) =>
-    //     logger.debug(s"File $path has hash $hash")
-    // }
+    .evalTap {
+      case (path, hash) =>
+        logger.debug(s"File $path has hash $hash")
+    }
     .compile
     .toVector
     .flatMap(

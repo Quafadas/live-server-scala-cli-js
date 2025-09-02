@@ -82,7 +82,10 @@ object LiveServer extends IOApp:
           scribe.cats[IO].debug(s"Assuming port ${lsc.port} is free").toResource
       )
       fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
-      refreshTopic <- lsc.customRefresh.fold(Topic[IO, Unit])(IO(_)).toResource
+      refreshTopic <- lsc.customRefresh.fold(Topic[IO, Unit])(
+        scribe.cats[IO].debug(s"Custom refresh topic supplied") >>
+        IO(_)
+      ).toResource
       linkingTopic <- Topic[IO, Unit].toResource
       client <- EmberClientBuilder.default[IO].build
       baseDirPath <- lsc.baseDir.fold(Files[IO].currentWorkingDirectory.toResource)(toDirectoryPath)
@@ -136,7 +139,8 @@ object LiveServer extends IOApp:
         proxyRoutes,
         fileToHashRef,
         lsc.clientRoutingPrefix,
-        lsc.injectPreloads
+        lsc.injectPreloads,
+        lsc.buildTool
       )(logger)
 
       _ <- updateMapRef(outDirPath, fileToHashRef)(logger).toResource
