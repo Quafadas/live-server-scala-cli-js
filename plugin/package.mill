@@ -1,0 +1,45 @@
+package build.plugin
+
+import mill.util.BuildInfo. millBinPlatform
+import mill._, scalalib._, publish._
+import mill.util.VcsVersion
+import build.V
+import build.FormatFixPublish
+
+object `package` extends ScalaModule with FormatFixPublish:
+  def platformSuffix = s"_mill$millBinPlatform"
+
+  def scalaVersion = build.V.scalaVersion
+
+  def scalaArtefactVersion: Task[String] =
+    scalaVersion.map(_.split("\\.").take(2).mkString("."))
+
+  override def artifactName = "sjsls_plugin"
+
+  def mvnDeps = Task{
+    super.mvnDeps() ++
+    Seq(
+      V.millLibs,
+      mvn"co.fs2:fs2-io_3:${V.fs2}"
+    )
+  }
+
+  def moduleDeps = Seq(build.sjsls)
+
+  def artifactSuffix = s"${platformSuffix()}_${scalaArtefactVersion()}"
+
+  def publishVersion = VcsVersion.vcsState().format()
+  // def publishVersion = "DONTUSEME"
+
+  override def pomSettings = Task {
+    PomSettings(
+      description = "Mill plugin for mdoc, static site generation",
+      organization = "io.github.quafadas",
+      url = "https://github.com/Quafadas/millSite",
+      licenses = Seq(License.`Apache-2.0`),
+      versionControl = VersionControl.github("quafadas", "millSite"),
+      developers = Seq(
+        Developer("quafadas", "Simon Parten", "https://github.com/quafadas")
+      )
+    )
+  }

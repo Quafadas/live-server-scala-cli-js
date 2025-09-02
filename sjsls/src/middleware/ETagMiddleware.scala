@@ -5,7 +5,6 @@ import org.http4s.HttpRoutes
 import org.http4s.Request
 import org.http4s.Response
 import org.http4s.Status
-import org.http4s.dsl.io.*
 import org.typelevel.ci.CIStringSyntax
 
 import scribe.Scribe
@@ -13,7 +12,6 @@ import scribe.Scribe
 import cats.data.Kleisli
 import cats.data.OptionT
 import cats.effect.*
-import cats.effect.IO
 import cats.effect.kernel.Ref
 import cats.syntax.all.*
 
@@ -24,11 +22,13 @@ object ETagMiddleware:
   ) =
     mr.get
       .flatMap {
+
         map =>
-          // logger.trace(s"Responding with ETag at path: ${req.uri.path}") >>
           map.get(req.uri.path.toString.drop(1)) match
             case Some(hash) =>
-              logger.debug(s"Found ETag: $hash in map for ${req.uri.path}") >>
+              logger.debug("Map") >>
+                logger.debug(map.toString) >>
+                logger.debug(s"Found ETag: $hash in map for ${req.uri.path}") >>
                 IO(
                   resp.putHeaders(
                     Header.Raw(ci"ETag", hash),
@@ -69,6 +69,7 @@ object ETagMiddleware:
                       case Some(foundEt) =>
                         if etag == foundEt then
                           logger.debug(s"ETag $etag found in cache at path ${req.uri.path}, returning 304") >>
+                            logger.debug("map is: " + map.toString) >>
                             IO(Response[IO](Status.NotModified))
                         else
                           logger.debug(s"$etag not found in cache at path ${req.uri.path} returning 200") >>

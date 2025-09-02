@@ -1,9 +1,9 @@
 # Config
 
-The server is a CLI. It has a number of flags that can be used to configure it. Here is the current list of flags and what they do. You can see these flags by running ` --help` in your terminal.
+The CLI launches an http server. It has a number of flags that can be used to configure it. Here is the current list of flags and what they do. You can see these flags by running ` --help` in your terminal.
 
-```
-cs launch io.github.quafadas::sjsls:{{projectVersion}} -- --help
+```sh
+cs launch io.github.quafadas::sjsls:latest.version -- --help
 
 ```
 
@@ -56,7 +56,7 @@ Fire up a terminal in projectDir
 ```
 
 ```sh
-cs launch io.github.quafadas::sjsls:{{projectVersion}}
+cs launch io.github.quafadas::sjsls:latest.version
 ```
 This is the classic [viteless](https://github.com/Quafadas/viteless/tree/main) example
 
@@ -73,7 +73,7 @@ With styles.
 Run
 
 ```sh
-cs launch io.github.quafadas::sjsls:{{projectVersion}} -- --styles-dir --fully/qualified/dir/to/styles
+cs launch io.github.quafadas::sjsls:latest.version -- --styles-dir --fully/qualified/dir/to/styles
 ```
 
 ## Did I mention I want a full blown SPA?
@@ -89,7 +89,7 @@ With client side routing under `/app`?
 Run
 
 ```sh
-cs launch io.github.quafadas::sjsls:{{projectVersion}} -- --client-routes-prefix app
+cs launch io.github.quafadas::sjsls:latest.version -- --client-routes-prefix app
 ```
 
 ## Stop generating my HTML. I want to bring my own.
@@ -105,7 +105,7 @@ Okay.
 ```
 With
 ```sh
-cs launch io.github.quafadas::sjsls:{{projectVersion}} -- --path-to-index-html fully/qualified/path/to/assets
+cs launch io.github.quafadas::sjsls:latest.version -- --path-to-index-html fully/qualified/path/to/assets
 ```
 
 Note: if you're brining your own html, drop the `--styles` flag - reference `index.less` from your html and read [docs](https://lesscss.org) to get it working in browser.
@@ -134,7 +134,7 @@ With a backend running on `8080` and a frontend on `3000`, it is configured that
 Also, we're now using mill. We need to tell the cli the frontend module name and the directory the compiles JS ends up in.
 
 ```sh
-cs launch io.github.quafadas::sjsls:{{projectVersion}} -- \
+cs launch io.github.quafadas::sjsls:latest.version -- \
     --path-to-index-html /Users/simon/Code/mill-full-stack/frontend/ui \
     --build-tool mill \
     --mill-module-name frontend \
@@ -153,7 +153,6 @@ This would serve the static site build with the `docJar` tool.
 C:\temp\live-server-scala-cli-js> cs launch io.github.quafadas::sjsls:0.2.0 -- --path-to-index-html C:\\temp\\live-server-scala-cli-js\\out\\site\\live.dest\\site --build-tool none --browse-on-open-at /docs/index.html
 ```
 
-***
 You need to include this javascript script tag in the body html - otherwise no page refresh.
 
 ```html
@@ -168,4 +167,3 @@ You need to include this javascript script tag in the body html - otherwise no p
     });
 </script>
 ```
-***

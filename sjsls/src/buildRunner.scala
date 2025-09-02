@@ -24,7 +24,7 @@ class Mill
       if isWindows then "mill.bat" else "mill"
     )
 
-class None extends BuildTool("")
+class NoBuildTool extends BuildTool("")
 
 private lazy val isWindows: Boolean =
   System.getProperty("os.name").toLowerCase(Locale.ENGLISH).contains("windows")
@@ -52,7 +52,8 @@ def buildRunner(
         invokeVia,
         extraBuildArgs
       )(logger)
-    case n: None => logger.info("No build tool specified, skipping build").toResource
+    case n: NoBuildTool =>
+      logger.info("No build tool specified, skipping build").toResource
   end match
 end buildRunner
 

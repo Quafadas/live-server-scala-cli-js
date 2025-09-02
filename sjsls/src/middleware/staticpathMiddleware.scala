@@ -20,7 +20,6 @@ import scribe.Scribe
 import cats.data.Kleisli
 import cats.data.OptionT
 import cats.effect.*
-import cats.effect.IO
 import cats.syntax.all.*
 
 inline def respondWithCacheLastModified(resp: Response[IO], lastModZdt: ZonedDateTime) =
@@ -53,13 +52,13 @@ inline def cachedFileResponse(epochInstant: Instant, fullPath: Path, req: Reques
                 val zdt = ZonedDateTime.ofInstant(Instant.ofEpochSecond(lastmod), ZoneId.of("GMT"))
                 val response =
                   if parseFromHeader(epochInstant, browserLastModifiedAt) == lastmod then
-                    logger.debug("Time matches, returning 304") >>
+                    logger.debug(s"Time matches, returning 304 for ${req.uri.path}") >>
                       IO(
                         respondWithCacheLastModified(Response[IO](Status.NotModified), zdt)
                       )
                   else
                     logger.debug(lastmod.toString()) >>
-                      logger.debug("Last modified doesn't match, returning 200") >>
+                      logger.debug(s"Last modified doesn't match, returning 200 for ${req.uri.path}") >>
                       IO(
                         respondWithCacheLastModified(resp, zdt)
                       )
@@ -70,7 +69,7 @@ inline def cachedFileResponse(epochInstant: Instant, fullPath: Path, req: Reques
                   response
             }
           case _ =>
-            OptionT.liftF(logger.debug("No If-Modified-Since headers in request")) >>
+            OptionT.liftF(logger.debug(s"No If-Modified-Since headers in request ${req.uri.path}")) >>
               service(req).map {
                 resp =>
                   respondWithCacheLastModified(

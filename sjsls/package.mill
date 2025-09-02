@@ -6,6 +6,8 @@ import mill.scalalib.*
 import mill.scalajslib.*
 import mill.scalalib.publish.*
 import mill.contrib.buildinfo.BuildInfo
+import mill.api.Task.Simple
+import scala.util.Try
 object `package` extends FormatFixPublish:
 
   override def scalaVersion = V.scalaLts
@@ -16,7 +18,7 @@ object `package` extends FormatFixPublish:
     mvn"org.http4s::http4s-scalatags::0.25.2",
     mvn"io.circe::circe-core::${V.circeVersion}",
     mvn"io.circe::circe-generic::${V.circeVersion}",
-    mvn"co.fs2::fs2-io::3.11.0",
+    mvn"co.fs2::fs2-io::${V.fs2}",
     mvn"com.lihaoyi::scalatags::0.13.1",
     mvn"com.monovore::decline::2.5.0",
     mvn"com.monovore::decline-effect::2.5.0"
@@ -39,14 +41,32 @@ object `package` extends FormatFixPublish:
       mvn"com.microsoft.playwright:playwright:${V.pwV}",
       mvn"com.microsoft.playwright:driver-bundle:${V.pwV}"
     )
-    override def resources = super.resources
+    override def resources = super.resources()
+
+    override def forkEnv: Simple[Map[String, String]] = Task{
+      squattyServer()
+      super.forkEnv()
+    }
+
+    def squattyServer = Task.Worker{
+      println("Starting up a zombie server on port 6789")
+      Try{
+        os.write.over(Task.dest / "hi.md", "hi")
+        os.spawn(
+          cmd = ("jwebserver", "-p", "6789"),
+          cwd = Task.dest
+        )
+      }
+      Task.dest
+    }
 
     override def runClasspath = Task {
       sjsls.cacheJsLibs.resolvedMvnDeps()
       super.runClasspath()
     }
+
   end test
-    
+
   object cacheJsLibs extends ScalaJSModule:
     def scalaVersion = V.scalaVersion
     def scalaJSVersion = V.scalaJs
@@ -55,8 +75,7 @@ object `package` extends FormatFixPublish:
       mvn"org.scala-js::scalajs-dom::${V.scalaJsDom}",
       mvn"com.raquo::laminar::${V.laminar}"
     )
-  end cacheJsLibs    
+  end cacheJsLibs
 
 
   // def scalaNativeVersion = "0.4.17" // aspirational :-)
-end `package`

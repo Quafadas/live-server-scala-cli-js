@@ -1,21 +1,21 @@
 //| mill-jvm-version: 21
-//| mill-version: 1.0.3
+//| mill-version: 1.0.4
 //| mvnDeps:
 //| - com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION
 //| - com.goyeau::mill-scalafix::0.6.0
-
-
-package build
+//| - io.github.quafadas:millSite_mill1_3.7:0.0.50
 
 import os.copy.over
 // import io.github.quafadas.millSite._
 import mill._, scalalib._, publish._, scalanativelib._
 import mill.scalalib.scalafmt.ScalafmtModule
 import mill.util.*
+import mill.util.BuildInfo.millVersion
 
 import com.goyeau.mill.scalafix.ScalafixModule
 import java.text.Format
-// import io.github.quafadas.millSite.SiteModule
+import io.github.quafadas.millSite.SiteModule
+import mill.util.VcsVersion
 
 
 object V{
@@ -27,9 +27,12 @@ object V{
   val laminar = "17.2.1"
   val scalaJsDom = "2.8.1"
   val scalaJs = "1.19.0"
+  val fs2 = "3.11.0"
+  val millLibs = mvn"com.lihaoyi::mill-libs:$millVersion"
 }
 
 trait FormatFix extends ScalafmtModule with ScalafixModule with ScalaModule
+
 
 trait FormatFixPublish extends ScalaModule with FormatFix with PublishModule{
   override def scalaVersion = V.scalaVersion
@@ -66,19 +69,6 @@ trait Testy extends TestModule.Munit with FormatFix {
 
 }
 
-
-// object site extends SiteModule {
-
-//   def scalaVersion = V.scalaVersion
-//   def unidocDeps = Seq(build.sjsls, build.routes)
-//   override def unidocTitle = "Scala JS Live Server API"
-
-//   override def repoLink = "https://github.com/Quafadas/live-server-scala-cli-js"
-
-//   override def latestVersion = "0.2.11"
-
-
-// }
 
 // SN deps which aren't yet there.
 /**

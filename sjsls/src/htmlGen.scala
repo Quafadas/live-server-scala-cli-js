@@ -2,6 +2,7 @@ package io.github.quafadas.sjsls
 
 import java.time.ZonedDateTime
 
+import scalatags.Text.TypedTag
 import scalatags.Text.all.*
 
 import org.http4s.HttpRoutes
@@ -18,7 +19,7 @@ import cats.effect.IO
 import cats.effect.kernel.Ref
 import cats.syntax.all.*
 
-def generatedIndexHtml(
+private def generatedIndexHtml(
     injectStyles: Boolean,
     modules: Ref[IO, Map[String, String]],
     zdt: ZonedDateTime,
@@ -49,7 +50,7 @@ def generatedIndexHtml(
     )(logger)
   )
 
-def lessStyle(withStyles: Boolean): Seq[Modifier] =
+private def lessStyle(withStyles: Boolean): Seq[Modifier] =
   if withStyles then
     Seq(
       link(
@@ -84,7 +85,7 @@ sse.addEventListener('message', (e) => {
 // def generateHtml(modules: Seq[(Path, String)]) = (template: String => String) =>
 //   template(makeHeader(modules, true).render)
 
-def injectRefreshScript(template: String) =
+private def injectRefreshScript(template: String) =
   val bodyCloseTag = "</body>"
   val insertionPoint = template.indexOf(bodyCloseTag)
 
@@ -96,7 +97,7 @@ def injectRefreshScript(template: String) =
 
 end injectRefreshScript
 
-def injectModulePreloads(ref: Ref[IO, Map[String, String]], template: String) =
+private def injectModulePreloads(ref: Ref[IO, Map[String, String]], template: String) =
   val preloads = makeInternalPreloads(ref)
   preloads.map: modules =>
     val modulesStringsInject = modules.mkString("\n", "\n", "\n")
@@ -110,7 +111,7 @@ def injectModulePreloads(ref: Ref[IO, Map[String, String]], template: String) =
 
 end injectModulePreloads
 
-def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean, attemptPreload: Boolean = false) =
+private def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean, attemptPreload: Boolean = false) =
   val scripts =
     for
       m <- modules
@@ -138,7 +139,7 @@ def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean, attemptPreload
   )
 end makeHeader
 
-def makeInternalPreloads(ref: Ref[IO, Map[String, String]]) =
+private def makeInternalPreloads(ref: Ref[IO, Map[String, String]]) =
   val keys = ref.get.map(_.toSeq)
   keys.map {
     modules =>
@@ -151,7 +152,17 @@ def makeInternalPreloads(ref: Ref[IO, Map[String, String]]) =
 
 end makeInternalPreloads
 
-def vanillaTemplate(withStyles: Boolean, ref: Ref[IO, Map[String, String]], attemptPreload: Boolean) =
+def vanillaTemplate(styles: Boolean): String =
+  val r = Ref.of[IO, Map[String, String]](Map.empty)
+  r.flatMap(rf => vanillaTemplate(styles, rf, false).map(_.render))
+    .unsafeRunSync()(using cats.effect.unsafe.implicits.global)
+end vanillaTemplate
+
+def vanillaTemplate(
+    withStyles: Boolean,
+    ref: Ref[IO, Map[String, String]],
+    attemptPreload: Boolean
+): IO[TypedTag[String]] =
 
   val preloads = makeInternalPreloads(ref)
   preloads.map: modules =>

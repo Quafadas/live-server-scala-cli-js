@@ -1,0 +1,19 @@
+package build.site
+
+import mill._, scalalib._
+import mill.scalajslib.api._
+import io.github.quafadas.millSite._
+import mill.util.VcsVersion
+import build.V
+
+object `package` extends SiteModule {
+
+  def moduleDeps = Seq(build.sjsls, build.routes)
+
+  override def unidocTitle = "Scala JS Live Server API"
+
+  override def repoLink = "https://github.com/Quafadas/live-server-scala-cli-js"
+
+  override def latestVersion = VcsVersion.vcsState().lastTag.getOrElse("0.0.0").replace("v", "")
+
+}

@@ -15,10 +15,11 @@ import com.microsoft.playwright.*
 import com.microsoft.playwright.assertions.LocatorAssertions.ContainsTextOptions
 import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 
+import fs2.concurrent.Topic
+
 import cats.effect.IO
 import cats.effect.kernel.Ref
 
-import io.github.quafadas.sjsls.LiveServer.LiveServerConfig
 import munit.CatsEffectSuite
 
 /*
@@ -259,6 +260,8 @@ trait PlaywrightTest extends CatsEffectSuite:
         )
 
   }
+
+// TODO: Test that the map of hashes is updated, when an external build tool is responsible for refresh pulses
 
   ResourceFunFixture {
     files.flatMap {
