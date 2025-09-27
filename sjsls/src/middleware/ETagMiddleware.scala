@@ -39,7 +39,7 @@ object ETagMiddleware:
                   )
                 )
             case None =>
-              logger.debug("No hash found in map at path :" + req.uri.toString) >>
+              logger.debug(s"No hash found in map at path: ${req.uri.toString}. Adding revalidate headers") >>
                 IO(
                   resp.putHeaders(
                     Header.Raw(ci"Cache-control", "Must-Revalidate"),

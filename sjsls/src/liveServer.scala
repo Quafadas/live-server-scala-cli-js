@@ -93,7 +93,14 @@ object LiveServer extends IOApp:
       linkingTopic <- Topic[IO, Unit].toResource
       client <- EmberClientBuilder.default[IO].build
       baseDirPath <- lsc.baseDir.fold(Files[IO].currentWorkingDirectory.toResource)(toDirectoryPath)
-      outDirPath <- lsc.outDir.fold(Files[IO].tempDirectory)(toDirectoryPath)
+      outDirPath <- lsc
+        .outDir
+        .fold {
+          // If we arent' responsible for linking and the user has specified a location for index html, we're essentially serving a static site.
+          (lsc.buildTool, lsc.indexHtmlTemplate) match
+            case (_: NoBuildTool, Some(indexHtml)) => toDirectoryPath(indexHtml)
+            case _                                 => Files[IO].tempDirectory
+        }(toDirectoryPath)
       outDirString = outDirPath.show
       indexHtmlTemplatePath <- lsc.indexHtmlTemplate.traverse(toDirectoryPath)
       stylesDirPath <- lsc.stylesDir.traverse(toDirectoryPath)

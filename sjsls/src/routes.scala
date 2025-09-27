@@ -50,7 +50,8 @@ def routes[F[_]: Files: MonadThrow](
       .combineK(proxyRoutes)
       .combineK(routes)
   )
-
-  IO(refreshableApp).toResource
+  logger.info("Routes created  at : ").toResource >>
+    logger.info("Path: " + stringPath).toResource >>
+    IO(refreshableApp).toResource
 
 end routes

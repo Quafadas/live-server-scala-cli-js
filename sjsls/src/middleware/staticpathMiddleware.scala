@@ -87,7 +87,7 @@ object StaticMiddleware:
     (req: Request[IO]) =>
       val epochInstant: Instant = Instant.EPOCH
       val fullPath = staticDir / req.uri.path.toString.drop(1)
-
-      cachedFileResponse(epochInstant, fullPath, req, service)(logger: Scribe[IO])
+      OptionT.liftF(logger.debug(s"Attempting to serve static file at: $fullPath")) >>
+        cachedFileResponse(epochInstant, fullPath, req, service)(logger: Scribe[IO])
   }
 end StaticMiddleware

@@ -14,18 +14,6 @@ import cats.effect.ResourceIO
 import cats.effect.kernel.Resource
 import cats.syntax.all.*
 
-sealed trait BuildTool(val invokedVia: String)
-class ScalaCli
-    extends BuildTool(
-      if isWindows then "scala-cli.bat" else "scala-cli"
-    )
-class Mill
-    extends BuildTool(
-      if isWindows then "mill.bat" else "mill"
-    )
-
-class NoBuildTool extends BuildTool("")
-
 private lazy val isWindows: Boolean =
   System.getProperty("os.name").toLowerCase(Locale.ENGLISH).contains("windows")
 

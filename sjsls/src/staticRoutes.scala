@@ -52,22 +52,23 @@ def staticAssetRoutes(
         )
       )(logger).combineK(generatedIndexHtml(injectStyles = true, modules, zdt, injectPreloads)(logger))
 
-def serveIndexHtml(from: fs2.io.file.Path, modules: Ref[IO, Map[String, String]], injectPreloads: Boolean) = StaticFile
-  .fromPath[IO](from / "index.html")
-  .getOrElseF(NotFound())
-  .flatMap {
-    f =>
-      f.body
-        .through(text.utf8.decode)
-        .compile
-        .string
-        .flatMap {
-          body =>
-            for str <- if injectPreloads then (injectModulePreloads(modules, body)) else IO.pure(body)
-            yield
-              val bytes = str.getBytes()
-              f.withEntity(bytes)
-              Response[IO]().withEntity(bytes).putHeaders("Content-Type" -> "text/html")
+def serveIndexHtml(from: fs2.io.file.Path, modules: Ref[IO, Map[String, String]], injectPreloads: Boolean) =
+  StaticFile
+    .fromPath[IO](from / "index.html")
+    .getOrElseF(NotFound())
+    .flatMap {
+      f =>
+        f.body
+          .through(text.utf8.decode)
+          .compile
+          .string
+          .flatMap {
+            body =>
+              for str <- if injectPreloads then (injectModulePreloads(modules, body)) else IO.pure(body)
+              yield
+                val bytes = str.getBytes()
+                f.withEntity(bytes)
+                Response[IO]().withEntity(bytes).putHeaders("Content-Type" -> "text/html")
 
-        }
-  }
+          }
+    }
