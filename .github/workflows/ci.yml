@@ -9,7 +9,7 @@ on:
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+  FORCE_COLOR: '1'
 
 concurrency:
   group: ${{ github.workflow }} @ ${{ github.ref }}
