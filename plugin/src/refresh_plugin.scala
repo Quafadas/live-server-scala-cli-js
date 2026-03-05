@@ -90,7 +90,7 @@ trait ScalaJsRefreshModule extends ScalaJSModule:
     override def close(): Unit =
       // This is the shutdown hook for http4s
       println("Shutting down server...")
-      server.map(_._2).flatten.unsafeRunSync()
+      server.flatMap(_._2).unsafeRunSync()
     end close
   end RefreshServer
 end ScalaJsRefreshModule
