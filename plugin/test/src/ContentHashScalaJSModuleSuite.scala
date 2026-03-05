@@ -10,9 +10,8 @@ import munit.FunSuite
 
 /** Unit tests for [[ContentHashScalaJSModule]].
   *
-  * These tests exercise the pure helper methods exposed on the companion
-  * object (`computeContentHash`, `rewriteJsReferences`) without requiring an
-  * actual Scala.js compilation step or any Mill infrastructure.
+  * These tests exercise the pure helper methods exposed on the companion object (`computeContentHash`,
+  * `rewriteJsReferences`) without requiring an actual Scala.js compilation step or any Mill infrastructure.
   */
 class ContentHashScalaJSModuleSuite extends FunSuite:
 
@@ -40,8 +39,8 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
   }
 
   test("computeContentHash matches first 8 bytes of SHA-256") {
-    val input    = "test content".getBytes("UTF-8")
-    val digest   = MessageDigest.getInstance("SHA-256")
+    val input = "test content".getBytes("UTF-8")
+    val digest = MessageDigest.getInstance("SHA-256")
     val expected = digest.digest(input).take(8).map("%02x".format(_)).mkString
     assertEquals(C.computeContentHash(input), expected)
   }
@@ -53,7 +52,7 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
   test("rewriteJsReferences rewrites double-quoted module names") {
     val mapping = Map("main.js" -> "main.abc12345.js")
     val content = """import { foo } from "main.js";"""
-    val result  = C.rewriteJsReferences(content, mapping)
+    val result = C.rewriteJsReferences(content, mapping)
     assertEquals(result, """import { foo } from "main.abc12345.js";""")
   }
 
@@ -64,7 +63,7 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
   test("rewriteJsReferences rewrites single-quoted module names") {
     val mapping = Map("chunk.js" -> "chunk.deadbeef.js")
     val content = """const m = import('chunk.js');"""
-    val result  = C.rewriteJsReferences(content, mapping)
+    val result = C.rewriteJsReferences(content, mapping)
     assertEquals(result, """const m = import('chunk.deadbeef.js');""")
   }
 
@@ -75,7 +74,7 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
   test("rewriteJsReferences rewrites sourceMappingURL comments") {
     val mapping = Map("main.js" -> "main.abc12345.js", "main.js.map" -> "main.abc12345.js.map")
     val content = "//# sourceMappingURL=main.js.map"
-    val result  = C.rewriteJsReferences(content, mapping)
+    val result = C.rewriteJsReferences(content, mapping)
     assertEquals(result, "//# sourceMappingURL=main.abc12345.js.map")
   }
 
@@ -85,9 +84,9 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
 
   test("rewriteJsReferences handles multiple replacements") {
     val mapping = Map(
-      "a.js"     -> "a.111.js",
+      "a.js" -> "a.111.js",
       "a.js.map" -> "a.111.js.map",
-      "b.js"     -> "b.222.js",
+      "b.js" -> "b.222.js",
       "b.js.map" -> "b.222.js.map"
     )
     val content =
@@ -110,13 +109,13 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
     // The filename appears un-quoted; the rewriter only touches quoted strings
     // and sourceMappingURL= patterns, so this must remain unchanged.
     val content = "// This references main.js in a comment without quotes"
-    val result  = C.rewriteJsReferences(content, mapping)
+    val result = C.rewriteJsReferences(content, mapping)
     assert(!result.contains("main.abc.js"), result)
   }
 
   test("rewriteJsReferences leaves content unchanged when mapping is empty") {
     val content = """import foo from "bar.js";"""
-    val result  = C.rewriteJsReferences(content, Map.empty)
+    val result = C.rewriteJsReferences(content, Map.empty)
     assertEquals(result, content)
   }
 
@@ -125,7 +124,7 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
   // -------------------------------------------------------------------------
 
   test("applyContentHash renames JS files and rewrites cross-module references") {
-    val srcDir  = os.temp.dir()
+    val srcDir = os.temp.dir()
     val destDir = os.temp.dir()
 
     try
@@ -133,10 +132,10 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
       val mainJs = """import * as chunk from "chunk.js";
 //# sourceMappingURL=main.js.map
 """
-      val chunkJs    = """export const x = 1;
+      val chunkJs = """export const x = 1;
 //# sourceMappingURL=chunk.js.map
 """
-      val mainJsMap  = """{"version":3,"file":"main.js"}"""
+      val mainJsMap = """{"version":3,"file":"main.js"}"""
       val chunkJsMap = """{"version":3,"file":"chunk.js"}"""
 
       os.write(srcDir / "main.js", mainJs)
@@ -148,10 +147,10 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
       val report = Report(
         publicModules = Seq(
           Report.Module(
-            moduleID      = "main",
-            jsFileName    = "main.js",
+            moduleID = "main",
+            jsFileName = "main.js",
             sourceMapName = Some("main.js.map"),
-            moduleKind    = ModuleKind.ESModule
+            moduleKind = ModuleKind.ESModule
           )
         ),
         dest = PathRef(srcDir)
@@ -173,8 +172,8 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
       assert(hashedChunkJs.isDefined, s"no hashed chunk.js found in: $files")
 
       // --- content -----------------------------------------------------
-      val mainContent  = os.read(destDir / hashedMainJs.get)
-      val chunkJsName  = hashedChunkJs.get
+      val mainContent = os.read(destDir / hashedMainJs.get)
+      val chunkJsName = hashedChunkJs.get
 
       // The hashed main.js should reference the hashed chunk name.
       assert(
@@ -198,7 +197,7 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
   // -------------------------------------------------------------------------
 
   test("applyContentHash preserves WASM binary alongside hashed JS") {
-    val srcDir  = os.temp.dir()
+    val srcDir = os.temp.dir()
     val destDir = os.temp.dir()
 
     try
@@ -210,8 +209,8 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
           |""".stripMargin
       // Minimal valid WASM magic + version bytes (not a real module, just
       // enough for the plugin to treat it as an opaque binary blob).
-      val wasmMagic  = Array[Byte](0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00)
-      val mainJsMap  = """{"version":3,"file":"main.js"}"""
+      val wasmMagic = Array[Byte](0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00)
+      val mainJsMap = """{"version":3,"file":"main.js"}"""
 
       os.write(srcDir / "main.js", mainJs)
       os.write(srcDir / "main.wasm", wasmMagic)
@@ -220,10 +219,10 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
       val report = Report(
         publicModules = Seq(
           Report.Module(
-            moduleID      = "main",
-            jsFileName    = "main.js",
+            moduleID = "main",
+            jsFileName = "main.js",
             sourceMapName = Some("main.js.map"),
-            moduleKind    = ModuleKind.ESModule
+            moduleKind = ModuleKind.ESModule
           )
         ),
         dest = PathRef(srcDir)
