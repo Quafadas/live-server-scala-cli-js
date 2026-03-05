@@ -7,7 +7,7 @@
 
 import os.copy.over
 // import io.github.quafadas.millSite._
-import mill._, scalalib._, publish._, scalanativelib._
+import mill.*, scalalib.*, publish.*, scalanativelib.*
 import mill.scalalib.scalafmt.ScalafmtModule
 import mill.util.*
 import mill.util.BuildInfo.millVersion
@@ -17,8 +17,7 @@ import java.text.Format
 import io.github.quafadas.millSite.SiteModule
 import mill.util.VcsVersion
 
-
-object V{
+object V:
   val scalaLts = "3.3.6"
   val pwV = build.pwV
   val http4sVersion = "0.23.30"
@@ -29,12 +28,11 @@ object V{
   val scalaJs = "1.19.0"
   val fs2 = "3.11.0"
   val millLibs = mvn"com.lihaoyi::mill-libs:$millVersion"
-}
+end V
 
 trait FormatFix extends ScalafmtModule with ScalafixModule with ScalaModule
 
-
-trait FormatFixPublish extends ScalaModule with FormatFix with PublishModule{
+trait FormatFixPublish extends ScalaModule with FormatFix with PublishModule:
   override def scalaVersion = V.scalaVersion
 
   override def scalacOptions = super.scalacOptions() ++ Seq("-Wunused:all")
@@ -47,17 +45,15 @@ trait FormatFixPublish extends ScalaModule with FormatFix with PublishModule{
       organization = "io.github.quafadas",
       url = "https://github.com/Quafadas/live-server-scala-cli-js",
       licenses = Seq(License.`Apache-2.0`),
-      versionControl =
-        VersionControl.github("quafadas", "live-server-scala-cli-js"),
+      versionControl = VersionControl.github("quafadas", "live-server-scala-cli-js"),
       developers = Seq(
         Developer("quafadas", "Simon Parten", "https://github.com/quafadas")
       )
     )
   }
+end FormatFixPublish
 
-}
-
-trait Testy extends TestModule.Munit with FormatFix {
+trait Testy extends TestModule.Munit with FormatFix:
 
   override def defaultTask(): String = "testForked"
 
@@ -66,22 +62,15 @@ trait Testy extends TestModule.Munit with FormatFix {
     mvn"org.scalameta::munit::1.1.0",
     mvn"com.lihaoyi::os-lib:0.11.4"
   )
-
-}
-
+end Testy
 
 // SN deps which aren't yet there.
-/**
-1 targets failed
-project.resolvedmvnDeps
-Resolution failed for 2 modules:
---------------------------------------------
-  com.outr:scribe-cats_native0.4_3:3.13.5
-        not found: /Users/simon/.ivy2/local/com.outr/scribe-cats_native0.4_3/3.13.5/ivys/ivy.xml
-        not found: https://repo1.maven.org/maven2/com/outr/scribe-cats_native0.4_3/3.13.5/scribe-cats_native0.4_3-3.13.5.pom
---------------------------------------------
-
-For additional information on library dependencies, see the docs at
-https://mill-build.com/mill/Library_Dependencies.html
-
-**/
+/** 1 targets failed project.resolvedmvnDeps Resolution failed for 2 modules:
+  * -------------------------------------------- com.outr:scribe-cats_native0.4_3:3.13.5 not found:
+  * /Users/simon/.ivy2/local/com.outr/scribe-cats_native0.4_3/3.13.5/ivys/ivy.xml not found:
+  * https://repo1.maven.org/maven2/com/outr/scribe-cats_native0.4_3/3.13.5/scribe-cats_native0.4_3-3.13.5.pom
+  * --------------------------------------------
+  *
+  * For additional information on library dependencies, see the docs at
+  * https://mill-build.com/mill/Library_Dependencies.html
+  */

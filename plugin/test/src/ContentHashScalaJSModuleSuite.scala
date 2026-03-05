@@ -11,15 +11,16 @@ import munit.FunSuite
 /** Unit tests for [[ContentHashScalaJSModule]].
   *
   * These tests exercise the pure helper methods exposed on the companion object (`computeContentHash`,
-  * `rewriteJsReferences`) without requiring an actual Scala.js compilation step or any Mill infrastructure.
+  * `rewriteJsReferences`, `parseJsImports`, `topologicalSort`, `applyContentHash`) without requiring an actual Scala.js
+  * compilation step or any Mill infrastructure.
   */
 class ContentHashScalaJSModuleSuite extends FunSuite:
 
   private val C = ContentHashScalaJSModule
 
-  // -------------------------------------------------------------------------
+  // --------------------------------------------------------------------------
   // computeContentHash
-  // -------------------------------------------------------------------------
+  // --------------------------------------------------------------------------
 
   test("computeContentHash returns a 16-character hex string") {
     val hash = C.computeContentHash("hello world".getBytes("UTF-8"))
@@ -45,9 +46,9 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
     assertEquals(C.computeContentHash(input), expected)
   }
 
-  // -------------------------------------------------------------------------
-  // rewriteJsReferences – double-quoted imports
-  // -------------------------------------------------------------------------
+  // --------------------------------------------------------------------------
+  // rewriteJsReferences
+  // --------------------------------------------------------------------------
 
   test("rewriteJsReferences rewrites double-quoted module names") {
     val mapping = Map("main.js" -> "main.abc12345.js")
@@ -56,9 +57,12 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
     assertEquals(result, """import { foo } from "main.abc12345.js";""")
   }
 
-  // -------------------------------------------------------------------------
-  // rewriteJsReferences – single-quoted imports
-  // -------------------------------------------------------------------------
+  test("rewriteJsReferences rewrites double-quoted relative-path imports (Scala.js ESModule default)") {
+    val mapping = Map("chunk.js" -> "chunk.abc12345.js")
+    val content = """import * as m from "./chunk.js";"""
+    val result = C.rewriteJsReferences(content, mapping)
+    assertEquals(result, """import * as m from "./chunk.abc12345.js";""")
+  }
 
   test("rewriteJsReferences rewrites single-quoted module names") {
     val mapping = Map("chunk.js" -> "chunk.deadbeef.js")
@@ -67,9 +71,12 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
     assertEquals(result, """const m = import('chunk.deadbeef.js');""")
   }
 
-  // -------------------------------------------------------------------------
-  // rewriteJsReferences – sourceMappingURL
-  // -------------------------------------------------------------------------
+  test("rewriteJsReferences rewrites single-quoted relative-path imports") {
+    val mapping = Map("chunk.js" -> "chunk.deadbeef.js")
+    val content = """const m = import('./chunk.js');"""
+    val result = C.rewriteJsReferences(content, mapping)
+    assertEquals(result, """const m = import('./chunk.deadbeef.js');""")
+  }
 
   test("rewriteJsReferences rewrites sourceMappingURL comments") {
     val mapping = Map("main.js" -> "main.abc12345.js", "main.js.map" -> "main.abc12345.js.map")
@@ -77,10 +84,6 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
     val result = C.rewriteJsReferences(content, mapping)
     assertEquals(result, "//# sourceMappingURL=main.abc12345.js.map")
   }
-
-  // -------------------------------------------------------------------------
-  // rewriteJsReferences – multiple replacements in one file
-  // -------------------------------------------------------------------------
 
   test("rewriteJsReferences handles multiple replacements") {
     val mapping = Map(
@@ -100,14 +103,8 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
     assert(result.contains("sourceMappingURL=a.111.js.map"), result)
   }
 
-  // -------------------------------------------------------------------------
-  // rewriteJsReferences – no false positives for bare (unquoted) occurrences
-  // -------------------------------------------------------------------------
-
   test("rewriteJsReferences does not replace bare (unquoted) filename occurrences") {
     val mapping = Map("main.js" -> "main.abc.js")
-    // The filename appears un-quoted; the rewriter only touches quoted strings
-    // and sourceMappingURL= patterns, so this must remain unchanged.
     val content = "// This references main.js in a comment without quotes"
     val result = C.rewriteJsReferences(content, mapping)
     assert(!result.contains("main.abc.js"), result)
@@ -119,22 +116,85 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
     assertEquals(result, content)
   }
 
-  // -------------------------------------------------------------------------
-  // applyContentHash – file system integration
-  // -------------------------------------------------------------------------
+  // --------------------------------------------------------------------------
+  // parseJsImports
+  // --------------------------------------------------------------------------
+
+  test("parseJsImports extracts ./relative imports (Scala.js ESModule default)") {
+    val content = """import * as m from "./chunk.js";"""
+    assertEquals(C.parseJsImports(content).toList, List("chunk.js"))
+  }
+
+  test("parseJsImports extracts bare (no prefix) imports") {
+    val content = """import * as m from "chunk.js";"""
+    assertEquals(C.parseJsImports(content).toList, List("chunk.js"))
+  }
+
+  test("parseJsImports extracts multiple imports from one file") {
+    val content =
+      """|import * as a from "./a.js";
+         |import * as b from "./b.js";
+         |""".stripMargin
+    assertEquals(C.parseJsImports(content).toSet, Set("a.js", "b.js"))
+  }
+
+  test("parseJsImports returns empty for files without imports") {
+    val content = "export const x = 1;\n//# sourceMappingURL=chunk.js.map\n"
+    assert(C.parseJsImports(content).isEmpty)
+  }
+
+  test("parseJsImports does not match sourceMappingURL") {
+    val content = "//# sourceMappingURL=main.js.map"
+    assert(C.parseJsImports(content).isEmpty)
+  }
+
+  // --------------------------------------------------------------------------
+  // topologicalSort
+  // --------------------------------------------------------------------------
+
+  test("topologicalSort: leaf comes before the file that imports it") {
+    val names = List("main.js", "chunk.js")
+    val deps = Map("main.js" -> Set("chunk.js"), "chunk.js" -> Set.empty[String])
+    val order = C.topologicalSort(names, deps)
+    assert(
+      order.indexOf("chunk.js") < order.indexOf("main.js"),
+      s"chunk.js should come before main.js, got: $order"
+    )
+  }
+
+  test("topologicalSort: three-level chain") {
+    val names = List("a.js", "b.js", "c.js")
+    val deps = Map("a.js" -> Set("b.js"), "b.js" -> Set("c.js"), "c.js" -> Set.empty[String])
+    val order = C.topologicalSort(names, deps)
+    assert(order.indexOf("c.js") < order.indexOf("b.js"), s"order: $order")
+    assert(order.indexOf("b.js") < order.indexOf("a.js"), s"order: $order")
+  }
+
+  test("topologicalSort: independent files all appear in result") {
+    val names = List("a.js", "b.js")
+    val deps = Map("a.js" -> Set.empty[String], "b.js" -> Set.empty[String])
+    val order = C.topologicalSort(names, deps)
+    assertEquals(order.toSet, Set("a.js", "b.js"))
+  }
+
+  // --------------------------------------------------------------------------
+  // applyContentHash - file system integration
+  // --------------------------------------------------------------------------
 
   test("applyContentHash renames JS files and rewrites cross-module references") {
     val srcDir = os.temp.dir()
     val destDir = os.temp.dir()
 
     try
-      // Simulate two linked Scala.js modules that reference each other.
-      val mainJs = """import * as chunk from "chunk.js";
-//# sourceMappingURL=main.js.map
-"""
-      val chunkJs = """export const x = 1;
-//# sourceMappingURL=chunk.js.map
-"""
+      // Use "./chunk.js" - the actual format Scala.js ESModule output produces.
+      val mainJs =
+        """import * as chunk from "./chunk.js";
+          |//# sourceMappingURL=main.js.map
+          |""".stripMargin
+      val chunkJs =
+        """export const x = 1;
+          |//# sourceMappingURL=chunk.js.map
+          |""".stripMargin
       val mainJsMap = """{"version":3,"file":"main.js"}"""
       val chunkJsMap = """{"version":3,"file":"chunk.js"}"""
 
@@ -143,7 +203,6 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
       os.write(srcDir / "main.js.map", mainJsMap)
       os.write(srcDir / "chunk.js.map", chunkJsMap)
 
-      // Build a minimal Report pointing at srcDir.
       val report = Report(
         publicModules = Seq(
           Report.Module(
@@ -158,30 +217,25 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
 
       val result = C.applyContentHash(report, destDir)
 
-      // --- file names --------------------------------------------------
       val files = os.list(destDir).map(_.last).toSet
 
-      // The hashed JS and map files should be present; originals should not.
       assert(!files.contains("main.js"), s"original main.js should be gone: $files")
       assert(!files.contains("chunk.js"), s"original chunk.js should be gone: $files")
 
       val hashedMainJs = files.find(f => f.startsWith("main.") && f.endsWith(".js"))
-      assert(hashedMainJs.isDefined, s"no hashed main.js found in: $files")
-
       val hashedChunkJs = files.find(f => f.startsWith("chunk.") && f.endsWith(".js"))
+      assert(hashedMainJs.isDefined, s"no hashed main.js found in: $files")
       assert(hashedChunkJs.isDefined, s"no hashed chunk.js found in: $files")
 
-      // --- content -----------------------------------------------------
       val mainContent = os.read(destDir / hashedMainJs.get)
       val chunkJsName = hashedChunkJs.get
 
-      // The hashed main.js should reference the hashed chunk name.
+      // main.js must reference the hashed chunk name using the ./prefix style.
       assert(
-        mainContent.contains(s""""$chunkJsName""""),
-        s"hashed main.js should reference $chunkJsName but got:\n$mainContent"
+        mainContent.contains("\"./" + chunkJsName + "\""),
+        s"hashed main.js should reference ./$chunkJsName but got:\n$mainContent"
       )
 
-      // --- Report ------------------------------------------------------
       val updatedModule = result.publicModules.head
       assertEquals(updatedModule.jsFileName, hashedMainJs.get)
       assert(updatedModule.sourceMapName.exists(_.endsWith(".map")))
@@ -192,23 +246,49 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
     end try
   }
 
-  // -------------------------------------------------------------------------
-  // applyContentHash – WASM integration (experimentalWasm linker output)
-  // -------------------------------------------------------------------------
+  test("applyContentHash: dependency hash change cascades to importer hash") {
+    // If B's content changes, B's hash changes; A imports B so A's rewritten
+    // import also changes, meaning A's hash must also change.
+    def runWithBContent(bContent: String): (String, String) =
+      val srcDir = os.temp.dir()
+      val destDir = os.temp.dir()
+      try
+        os.write(srcDir / "a.js", """import * as b from "./b.js";""")
+        os.write(srcDir / "b.js", bContent)
+        val report = Report(
+          publicModules = Seq(Report.Module("a", "a.js", None, ModuleKind.ESModule)),
+          dest = PathRef(srcDir)
+        )
+        val outFiles = os.list(ContentHashScalaJSModule.applyContentHash(report, destDir).dest.path).map(_.last).toSet
+        val hashedA = outFiles.find(f => f.startsWith("a.") && f.endsWith(".js")).get
+        val hashedB = outFiles.find(f => f.startsWith("b.") && f.endsWith(".js")).get
+        (hashedA, hashedB)
+      finally
+        os.remove.all(srcDir)
+        os.remove.all(destDir)
+      end try
+    end runWithBContent
+
+    val (a1, b1) = runWithBContent("export const x = 1;")
+    val (a2, b2) = runWithBContent("export const x = 2;")
+
+    assertNotEquals(b1, b2, "b hash must change when b content changes")
+    assertNotEquals(a1, a2, "a hash must change when imported b hash changes")
+  }
+
+  // --------------------------------------------------------------------------
+  // applyContentHash - WASM integration
+  // --------------------------------------------------------------------------
 
   test("applyContentHash preserves WASM binary alongside hashed JS") {
     val srcDir = os.temp.dir()
     val destDir = os.temp.dir()
 
     try
-      // Simulate Scala.js experimental-WASM linker output: one thin JS
-      // wrapper that loads a WASM binary, plus a source map.
       val mainJs =
         """import { exports } from "./main.wasm";
           |//# sourceMappingURL=main.js.map
           |""".stripMargin
-      // Minimal valid WASM magic + version bytes (not a real module, just
-      // enough for the plugin to treat it as an opaque binary blob).
       val wasmMagic = Array[Byte](0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00)
       val mainJsMap = """{"version":3,"file":"main.js"}"""
 
@@ -229,19 +309,13 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
       )
 
       val result = C.applyContentHash(report, destDir)
-
       val files = os.list(destDir).map(_.last).toSet
 
-      // The hashed JS wrapper must be present; original name must be gone.
       val hashedMainJs = files.find(f => f.startsWith("main.") && f.endsWith(".js"))
       assert(hashedMainJs.isDefined, s"no hashed main.js found in: $files")
       assert(!files.contains("main.js"), s"original main.js should not be present: $files")
-
-      // The WASM binary must be preserved (copied verbatim, name unchanged).
       assert(files.contains("main.wasm"), s"main.wasm should be present: $files")
       assertEquals(os.read.bytes(destDir / "main.wasm").toSeq, wasmMagic.toSeq)
-
-      // The Report must reflect the hashed JS filename.
       assertEquals(result.publicModules.head.jsFileName, hashedMainJs.get)
 
     finally

@@ -28,3 +28,4 @@ def app =
       )
     )
   )
+end app

@@ -43,14 +43,14 @@ object `package` extends FormatFixPublish:
     )
     override def resources = super.resources()
 
-    override def forkEnv: Simple[Map[String, String]] = Task{
+    override def forkEnv: Simple[Map[String, String]] = Task {
       squattyServer()
       super.forkEnv()
     }
 
-    def squattyServer = Task.Worker{
+    def squattyServer = Task.Worker {
       println("Starting up a zombie server on port 6789")
-      Try{
+      Try {
         os.write.over(Task.dest / "hi.md", "hi")
         os.spawn(
           cmd = ("jwebserver", "-p", "6789"),
@@ -77,5 +77,5 @@ object `package` extends FormatFixPublish:
     )
   end cacheJsLibs
 
-
   // def scalaNativeVersion = "0.4.17" // aspirational :-)
+end `package`
