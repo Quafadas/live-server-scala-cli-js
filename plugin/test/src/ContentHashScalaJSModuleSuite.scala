@@ -3,6 +3,7 @@ package io.github.quafadas
 import java.security.MessageDigest
 
 import mill.PathRef
+import mill.scalajslib.ContentHashScalaJSModule
 import mill.scalajslib.api.ModuleKind
 import mill.scalajslib.api.Report
 import munit.FunSuite
