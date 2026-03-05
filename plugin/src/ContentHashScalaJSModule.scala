@@ -55,7 +55,7 @@ object ContentHashScalaJSModule:
     val jsHashMapping: Map[String, String] = jsFiles.map { f =>
       val bytes   = os.read.bytes(f)
       val hashed  = computeContentHash(bytes)
-      val newName = s"${f.baseName}-$hashed.${f.ext}"
+      val newName = s"${f.baseName}.$hashed.${f.ext}"
       (f.last, newName)
     }.toMap
 
