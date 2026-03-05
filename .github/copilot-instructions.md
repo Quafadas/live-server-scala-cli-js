@@ -2,16 +2,20 @@
 
 ## Project Overview
 
-`live-server-scala-cli-js` (published as `io.github.quafadas::sjsls`) is a Scala JS live development server that replicates the Vite.js experience without Vite. It provides:
+`live-server-scala-cli-js` (published as `io.github.quafadas::sjsls`) is a Scala JS live development server that aims to replicates the Vite.js experience without Vite. It provides:
 - Live reload on file changes via Server-Sent Events (SSE)
 - Hot CSS/LESS application without page reload
 - HTTP proxy server support
 - Auto-open browser on startup
 - Support for Scala CLI, Mill, and no-build-tool modes
 
+ToDo: Content hashing
+
 ## Build System: Mill
 
 This project uses **Mill** (version 1.0.5) as its build tool. The Mill wrapper script (`./mill`) is checked in. JVM 21 is required.
+
+CI will fail poorly formatted files. Make sure to run formatting before pushing.
 
 ### Mill Fundamentals
 
@@ -40,33 +44,11 @@ This project uses **Mill** (version 1.0.5) as its build tool. The Mill wrapper s
 ./mill sjsls.test.testOnly io.github.quafadas.sjsls.UtilityFcs
 
 # Formatting (Scalafmt)
-./mill mill.scalalib.scalafmt.ScalafmtModule/reformatAll __.sources  # Reformat
-./mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources  # Check only (CI)
+./mill mill.scalalib.scalafmt.ScalafmtModule/
 
 # Linting (Scalafix)
 ./mill __.fix
 
-# Run the server
-./mill sjsls.run -- --help           # Show all CLI options
-./mill -w sjsls.runBackground -- --build-tool scala-cli --project-dir /path/to/project
-
-# Publishing
-./mill __.publishLocal               # Publish to local Ivy cache
-# Tags (v*) trigger Sonatype Central publish in CI
-```
-
-### `justfile` Shortcuts
-
-A `justfile` wraps common Mill commands. Run `just --list` to see all recipes:
-
-```bash
-just setupIde        # Install BSP
-just compile         # Compile sjsls module
-just test            # Run the three main test suites
-just format          # Reformat all source files
-just fix             # Run scalafix
-just publishLocal    # Publish locally
-just setupPlaywright # Install Playwright browsers for integration tests
 ```
 
 ## Module Structure
@@ -93,83 +75,18 @@ live-server-scala-cli-js/
     └── docs/
 ```
 
-### Key Source Files in `sjsls/src/`
-
-| File | Purpose |
-|---|---|
-| `liveServer.scala` | `IOApp` entry point; wires routes and starts Ember server |
-| `LiveServerConfig.scala` | Configuration case class |
-| `CliOpts.scala` | CLI argument parsing (decline) |
-| `BuildTool.scala` | ADT: `ScalaCli | Mill | NoBuildTool` |
-| `buildRunner.scala` | Invokes the configured build tool |
-| `refreshRoute.scala` | SSE endpoint for triggering browser refresh |
-| `staticRoutes.scala` | Static file serving |
-| `staticWatcher.scala` | File system watcher (fs2 + os-lib) |
-| `proxyHttp.scala` | HTTP reverse proxy |
-| `openBrowser.scala` | Auto-opens browser at startup |
-| `dezombify.scala` | Kills stale build processes |
-| `sseReload.scala` | SSE event bus for reload signals |
-| `ETagMiddleware.scala` | ETags for static assets |
 
 ## Technology Stack
 
-| Layer | Library | Version |
-|---|---|---|
-| Scala | Scala 3 (LTS 3.3.6 for published libs, 3.7.2 for dev) | — |
-| HTTP server/client | http4s (Ember) | 0.23.30 |
-| Effects | cats-effect | 3.x |
-| Streaming | fs2 | 3.11.0 |
-| JSON | Circe | 0.14.10 |
-| CLI parsing | decline + decline-effect | 2.5.0 |
-| HTML generation | scalatags | 0.13.1 |
-| Logging | scribe-cats | 3.15.0 |
-| Scala JS | Scala JS | 1.19.0 |
-| JS UI (browser side) | Laminar | 17.2.1 |
-| Testing | Munit + munit-cats-effect + Playwright | 1.1.0 / 2.0.0 / 1.51.0 |
-| File I/O (tests) | os-lib | 0.11.4 |
-| Formatting | Scalafmt | (`.scalafmt.conf`) |
-| Linting | Scalafix | (`.scalafix.conf`) |
-
-## Scala Version Notes
-
-- **Published modules** (`sjsls`, `routes`, `plugin`): Scala 3.3.6 LTS for broad compatibility
-- **Development / site**: Scala 3.7.2
-- The `V` object in `build.mill` is the single source of truth for all dependency versions
-
-## Code Style and Conventions
-
-- Scalafmt config: `.scalafmt.conf` — run `just format` before committing
-- Scalafix config: `.scalafix.conf` — run `just fix` to apply rules
-- Compiler flag `-Wunused:all` is active; remove any unused imports/values
-- Effect type is `cats.effect.IO`; avoid blocking calls without `IO.blocking`
-- Prefer `fs2.Stream` for streaming/file watching logic
-- Pattern-match on the `BuildTool` ADT when adding build-tool-specific behaviour
-
-## CLI Options (sjsls)
-
-Run `./mill sjsls.run -- --help` for the full list. Key flags:
-
-| Flag | Description |
-|---|---|
-| `--build-tool` | `scala-cli`, `mill`, or `none` |
-| `--project-dir` | Root directory of the user's project |
-| `--port` | HTTP port (default 3000) |
-| `--proxy-target-port` | Backend port to proxy API calls to |
-| `--proxy-prefix-path` | URL prefix to forward to proxy target |
-| `--log-level` | `trace`, `debug`, `info`, `warn`, `error` |
-| `--browse-on-open-at` | Path to auto-open in browser |
-| `--styles-dir` | Directory containing `index.less` |
-| `--path-to-index-html` | Directory serving `index.html` |
-| `--mill-module-name` | Mill module name (when `--build-tool mill`) |
+The typelevel stack - 
 
 ## Testing
 
 Tests use **Munit** with **Cats Effect** and **Playwright** for browser integration tests.
 
-```bash
-# Install Playwright browsers once per machine
-just setupPlaywright
+Before running tests, you'll probably need to make sure that playwright is installed and ready. It should be installed as part of the `copilot-setup-steps` workflow.
 
+```bash
 # Run individual suites
 ./mill sjsls.test.testOnly io.github.quafadas.sjsls.SafariSuite
 ./mill sjsls.test.testOnly io.github.quafadas.sjsls.RoutesSuite
@@ -190,32 +107,3 @@ The CI pipeline (`.github/workflows/ci.yml`) runs on PRs and pushes to main:
 3. **Test**: `./mill __.test`
 
 Publishing to Maven Central is triggered automatically when a `v*` tag is pushed. The Copilot agent setup workflow (`.github/workflows/copilot-setup-steps.yml`) pre-compiles semantic DB files for IDE support.
-
-## Publishing
-
-- Group ID: `io.github.quafadas`
-- Artifact IDs: `sjsls`, `sjsls-routes`, `sjsls-plugin`
-- Published via `mill.javalib.SonatypeCentralPublishModule`
-- Version is derived from VCS state: `VcsVersion.vcsState().format()`
-- To test a local publish: `./mill __.publishLocal`
-
-## Common Development Workflows
-
-### Adding a new CLI option
-1. Add the field to `LiveServerConfig` in `sjsls/src/LiveServerConfig.scala`
-2. Add the corresponding `Opts` entry in `sjsls/src/CliOpts.scala`
-3. Wire it into the config construction in `CliOpts`
-4. Use the new field in the appropriate source file
-
-### Adding a new HTTP route
-1. Define the route in `routes/src/` (or `sjsls/src/` for server-only routes)
-2. Register it in `sjsls/src/routes.scala`
-3. Add a corresponding test in `sjsls/test/src/` using Munit + http4s client
-
-### Supporting a new build tool
-1. Add a case to the `BuildTool` ADT in `sjsls/src/BuildTool.scala`
-2. Add invocation logic in `sjsls/src/buildRunner.scala`
-3. Handle the new case in `CliOpts.scala`
-
-### Updating a dependency
-Edit the version in the `V` object in `build.mill`, then run `./mill __.compile` to verify.

@@ -39,6 +39,10 @@ jobs:
       - name: Verify Java version
         run: java --version
 
+
+      - name: Install Playwright
+        run: cs launch com.microsoft.playwright:playwright:1.51.0 -M "com.microsoft.playwright.CLI" -- install --with-deps
+
       # This should resolve a JVM, download dependancies and leave mill ready for use.
       - name: setup mill
         run: ./mill sjsls.compiledClassesAndSemanticDbFiles
