@@ -1,9 +1,9 @@
 //| mill-jvm-version: 21
-//| mill-version: 1.0.5
+//| mill-version: 1.1.2
 //| mvnDeps:
 //| - com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION
 //| - com.goyeau::mill-scalafix::0.6.0
-//| - io.github.quafadas:millSite_mill1_3.7:0.0.50
+//| - io.github.quafadas:millSite_mill1_3.8:0.0.57
 
 import os.copy.over
 // import io.github.quafadas.millSite._
@@ -23,7 +23,7 @@ object V{
   val pwV = build.pwV
   val http4sVersion = "0.23.30"
   val circeVersion = "0.14.10"
-  val scalaVersion = "3.7.2"
+  val scalaVersion = "3.8.2"
   val laminar = "17.2.1"
   val scalaJsDom = "2.8.1"
   val scalaJs = "1.19.0"

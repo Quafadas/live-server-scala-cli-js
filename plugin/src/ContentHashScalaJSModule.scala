@@ -7,6 +7,7 @@ import mill.api.Result
 import mill.api.TaskCtx
 import mill.scalajslib.api.*
 import mill.scalajslib.worker.ScalaJSWorker
+import mill.api.Task.Simple
 
 /** A Mill module trait that adds content hashing to Scala.js linked output.
   *
@@ -33,6 +34,8 @@ import mill.scalajslib.worker.ScalaJSWorker
   * `out/app/fastLinkJS.dest/main.a1b2c3d4.js`.
   */
 trait ContentHashScalaJSModule extends ScalaJSModule:
+
+  override def moduleKind: Simple[ModuleKind] = ModuleKind.ESModule
 
   /** Override [[linkJs]] to capture linker output in a temporary directory, compute SHA-256 content hashes, rewrite
     * intra-bundle references, and write only the hashed files to the task output directory (`ctx.dest`).

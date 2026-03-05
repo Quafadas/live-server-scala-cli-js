@@ -1,6 +1,6 @@
 package build.plugin
 
-import mill.util.BuildInfo. millBinPlatform
+import mill.util.BuildInfo.{millVersion, millBinPlatform}
 import mill._, scalalib._, publish._
 import mill.util.VcsVersion
 import build.V
@@ -49,4 +49,11 @@ object `package` extends ScalaModule with FormatFixPublish:
       mvn"org.scalameta::munit::1.1.0"
     )
   end test
+
+  object integration extends ScalaTests with TestModule.Utest:
+    override def moduleDeps: Seq[JavaModule] = Seq(build.plugin)
+    def mvnDeps = Seq(
+      mvn"com.lihaoyi::mill-testkit::${millVersion}"
+    )
+  end integration
 end `package`
