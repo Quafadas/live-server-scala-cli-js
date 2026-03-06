@@ -148,10 +148,8 @@ object FileBasedContentHashScalaJSModule:
           "sourceMappingURL=" + name + ".map",
           "sourceMappingURL=" + hashedName + ".map"
         )
-        if(!os.exists(destDir / hashedName)) {
-          os.write.over(destDir / hashedName, finalContent.getBytes("UTF-8"))
-        }
 
+        os.write.over(destDir / hashedName, finalContent.getBytes("UTF-8"))
     }
 
     // Build full mapping including source-map file renames.
@@ -169,7 +167,7 @@ object FileBasedContentHashScalaJSModule:
       .foreach {
         f =>
           val newName = fullMapping.getOrElse(f.last, f.last)
-          os.copy(f, destDir / newName)
+          os.copy.over(f, destDir / newName)
       }
 
     // Build updated Report with hashed filenames.
