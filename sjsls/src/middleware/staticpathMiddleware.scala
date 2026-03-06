@@ -37,49 +37,61 @@ inline def respondWithCacheLastModified(resp: Response[IO], lastModZdt: ZonedDat
   )
 end respondWithCacheLastModified
 
+inline def respondWithImmutableHeaders(resp: Response[IO]) =
+  resp.putHeaders(
+    Header.Raw(ci"Cache-Control", "public, max-age=31536000, immutable")
+  )
+end respondWithImmutableHeaders
+
 inline def cachedFileResponse(epochInstant: Instant, fullPath: Path, req: Request[IO], service: HttpRoutes[IO])(
     logger: Scribe[IO]
 ) =
-  OptionT
-    .liftF(fileLastModified(fullPath))
-    .flatMap {
-      lastmod =>
-        req.headers.get(ci"If-Modified-Since") match
-          case Some(header) =>
-            val browserLastModifiedAt = header.head.value
-            service(req).semiflatMap {
-              resp =>
-                val zdt = ZonedDateTime.ofInstant(Instant.ofEpochSecond(lastmod), ZoneId.of("GMT"))
-                val response =
-                  if parseFromHeader(epochInstant, browserLastModifiedAt) == lastmod then
-                    logger.debug(s"Time matches, returning 304 for ${req.uri.path}") >>
-                      IO(
-                        respondWithCacheLastModified(Response[IO](Status.NotModified), zdt)
-                      )
-                  else
-                    logger.debug(lastmod.toString()) >>
-                      logger.debug(s"Last modified doesn't match, returning 200 for ${req.uri.path}") >>
-                      IO(
-                        respondWithCacheLastModified(resp, zdt)
-                      )
-                  end if
-                end response
-                logger.debug(lastmod.toString()) >>
-                  logger.debug(parseFromHeader(epochInstant, browserLastModifiedAt).toString()) >>
-                  response
-            }
-          case _ =>
-            OptionT.liftF(logger.debug(s"No If-Modified-Since headers in request ${req.uri.path}")) >>
-              service(req).map {
+  if fileAlreadyHashed(fullPath) then
+    OptionT.liftF(logger.debug(s"File ${fullPath.toString()} is already hashed, skipping cache validation")) >>
+      service(req).map(
+        respondWithImmutableHeaders
+      )
+  else
+    OptionT
+      .liftF(fileLastModified(fullPath))
+      .flatMap {
+        lastmod =>
+          req.headers.get(ci"If-Modified-Since") match
+            case Some(header) =>
+              val browserLastModifiedAt = header.head.value
+              service(req).semiflatMap {
                 resp =>
-                  respondWithCacheLastModified(
-                    resp,
-                    ZonedDateTime.ofInstant(Instant.ofEpochSecond(lastmod), ZoneId.of("GMT"))
-                  )
+                  val zdt = ZonedDateTime.ofInstant(Instant.ofEpochSecond(lastmod), ZoneId.of("GMT"))
+                  val response =
+                    if parseFromHeader(epochInstant, browserLastModifiedAt) == lastmod then
+                      logger.debug(s"Time matches, returning 304 for ${req.uri.path}") >>
+                        IO(
+                          respondWithCacheLastModified(Response[IO](Status.NotModified), zdt)
+                        )
+                    else
+                      logger.debug(lastmod.toString()) >>
+                        logger.debug(s"Last modified doesn't match, returning 200 for ${req.uri.path}") >>
+                        IO(
+                          respondWithCacheLastModified(resp, zdt)
+                        )
+                    end if
+                  end response
+                  logger.debug(lastmod.toString()) >>
+                    logger.debug(parseFromHeader(epochInstant, browserLastModifiedAt).toString()) >>
+                    response
               }
+            case _ =>
+              OptionT.liftF(logger.debug(s"No If-Modified-Since headers in request ${req.uri.path}")) >>
+                service(req).map {
+                  resp =>
+                    respondWithCacheLastModified(
+                      resp,
+                      ZonedDateTime.ofInstant(Instant.ofEpochSecond(lastmod), ZoneId.of("GMT"))
+                    )
+                }
 
-      end match
-    }
+        end match
+      }
 
 object StaticMiddleware:
 

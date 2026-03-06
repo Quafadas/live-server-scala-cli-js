@@ -6,7 +6,6 @@ import cats.data.NonEmptyList
 import cats.syntax.all.*
 
 object ProxyConfig:
-
   case class Equilibrium(
       http: HttpProxyConfig
   )

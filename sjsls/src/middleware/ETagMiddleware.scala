@@ -25,6 +25,16 @@ object ETagMiddleware:
 
         map =>
           map.get(req.uri.path.toString.drop(1)) match
+            case Some(hash) if uriIsHashed(req.uri.path) =>
+              logger.debug(s"File ${req.uri.path} is already hashed and assumed to be immutable") >>
+                IO(
+                  resp.putHeaders(
+                    Header.Raw(ci"Cache-control", "max-age=31536000"),
+                    Header.Raw(ci"Cache-control", "immutable"),
+                    Header.Raw(ci"Cache-control", "public")
+                  )
+                )
+
             case Some(hash) =>
               logger.debug("Map") >>
                 logger.debug(map.toString) >>
@@ -38,6 +48,7 @@ object ETagMiddleware:
                     Header.Raw(ci"Cache-control", "public")
                   )
                 )
+
             case None =>
               logger.debug(s"No hash found in map at path: ${req.uri.toString}. Adding revalidate headers") >>
                 IO(
