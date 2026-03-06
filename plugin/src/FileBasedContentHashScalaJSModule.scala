@@ -89,7 +89,7 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSModule:
         )
         .map {
           report =>
-            ContentHashScalaJSModule.applyContentHash(report, ctx.dest)
+            FileBasedContentHashScalaJSModule.applyContentHash(report, ctx.dest)
         }
     finally os.remove.all(tempDir)
     end try
