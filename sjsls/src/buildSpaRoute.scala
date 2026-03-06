@@ -36,7 +36,7 @@ def buildSpaRoute(
       StaticHtmlMiddleware(
         HttpRoutes.of[IO] {
           case req @ GET -> _ =>
-            vanillaTemplate(false, modules, injectPreloads).map: html =>
+            vanillaTemplate(false, modules, injectPreloads, false, Some("main.js"), None).map: html =>
               Response[IO]().withEntity(html)
 
         },
@@ -48,7 +48,7 @@ def buildSpaRoute(
       StaticHtmlMiddleware(
         HttpRoutes.of[IO] {
           case GET -> _ =>
-            vanillaTemplate(true, modules, injectPreloads).map: html =>
+            vanillaTemplate(true, modules, injectPreloads, false, Some("main.js"), None).map: html =>
               Response[IO]().withEntity(html)
         },
         true,
