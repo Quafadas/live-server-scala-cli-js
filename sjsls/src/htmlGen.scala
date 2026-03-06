@@ -31,7 +31,12 @@ private def generatedIndexHtml(
     HttpRoutes.of[IO] {
       case req @ GET -> Root =>
         logger.trace("Generated index.html") >>
-          vanillaTemplate(injectStyles, modules, attemptPreload, false, Some("main.js"), None).flatMap: html =>
+          vanillaTemplate(
+            injectStyles,
+            modules,
+            attemptPreload,
+            false, Some("main.js"), None
+          ).flatMap: html =>
             userBrowserCacheHeaders(Response[IO]().withEntity(html).withStatus(Status.Ok), zdt, injectStyles)
 
     },
