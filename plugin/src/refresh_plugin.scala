@@ -17,14 +17,17 @@ trait ScalaJsRefreshModule extends ScalaJSModule:
   lazy val updateServer = Topic[IO, Unit].unsafeRunSync()
 
   def indexHtml = Task {
-    os.write.over(Task.dest / "index.html", io.github.quafadas.sjsls.vanillaTemplate(withStyles()))
+    os.write.over(Task.dest / "index.html", io.github.quafadas.sjsls.vanillaTemplate(withStyles(), stylesAutoRefresh()))
     PathRef(Task.dest / "index.html")
   }
 
   def assetsDir =
     super.moduleDir / "assets"
 
+
   def withStyles = Task(true)
+
+  def stylesAutoRefresh = Task(false)
 
   def assets = Task.Source {
     assetsDir

@@ -50,7 +50,7 @@ private def generatedIndexHtml(
     )(logger)
   )
 
-private def lessStyle(withStyles: Boolean): Seq[Modifier] =
+private def lessStyle(withStyles: Boolean, stylesRefresh: Boolean): Seq[Modifier] =
   if withStyles then
     Seq(
       link(
@@ -64,7 +64,7 @@ private def lessStyle(withStyles: Boolean): Seq[Modifier] =
         )
       ),
       script(src := "https://cdn.jsdelivr.net/npm/less"),
-      script("less.watch();")
+      if(stylesRefresh) script("less.watch();")
     )
   else Seq.empty
 
@@ -130,7 +130,7 @@ private def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean, attemp
       if attemptPreload then scripts else ()
     ),
     body(
-      lessStyle(withStyles),
+      lessStyle(withStyles, true),
       script(src := "main.js", `type` := "module"),
       div(id := "app"),
       // script(src := "main"),
@@ -152,7 +152,7 @@ private def makeInternalPreloads(ref: Ref[IO, Map[String, String]]) =
 
 end makeInternalPreloads
 
-def vanillaTemplate(styles: Boolean): String =
+def vanillaTemplate(styles: Boolean, stylesRefresh: Boolean): String =
   val r = Ref.of[IO, Map[String, String]](Map.empty)
   r.flatMap(rf => vanillaTemplate(styles, rf, false).map(_.render))
     .unsafeRunSync()(using cats.effect.unsafe.implicits.global)
@@ -161,7 +161,8 @@ end vanillaTemplate
 def vanillaTemplate(
     withStyles: Boolean,
     ref: Ref[IO, Map[String, String]],
-    attemptPreload: Boolean
+    attemptPreload: Boolean,
+    stylesRefresh: Boolean = false
 ): IO[TypedTag[String]] =
 
   val preloads = makeInternalPreloads(ref)
@@ -175,7 +176,7 @@ def vanillaTemplate(
         if attemptPreload then modules else ()
       ),
       body(
-        lessStyle(withStyles),
+        lessStyle(withStyles, stylesRefresh),
         script(src := "/main.js", `type` := "module"),
         div(id := "app"),
         refreshScript
