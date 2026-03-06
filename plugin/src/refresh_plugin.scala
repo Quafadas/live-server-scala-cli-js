@@ -27,7 +27,6 @@ trait ScalaJsRefreshModule extends ScalaJSModule:
   def assetsDir =
     super.moduleDir / "assets"
 
-
   def withStyles = Task(true)
 
   def stylesAutoRefresh = Task(false)

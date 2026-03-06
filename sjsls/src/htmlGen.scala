@@ -35,7 +35,9 @@ private def generatedIndexHtml(
             injectStyles,
             modules,
             attemptPreload,
-            false, Some("main.js"), None
+            false,
+            Some("main.js"),
+            None
           ).flatMap: html =>
             userBrowserCacheHeaders(Response[IO]().withEntity(html).withStatus(Status.Ok), zdt, injectStyles)
 
@@ -69,7 +71,7 @@ private def lessStyle(withStyles: Boolean, stylesRefresh: Boolean): Seq[Modifier
         )
       ),
       script(src := "https://cdn.jsdelivr.net/npm/less"),
-      if(stylesRefresh) script("less.watch();")
+      if stylesRefresh then script("less.watch();")
     )
   else Seq.empty
 
@@ -157,7 +159,12 @@ private def makeInternalPreloads(ref: Ref[IO, Map[String, String]]) =
 
 end makeInternalPreloads
 
-def vanillaTemplate(styles: Boolean, stylesRefresh: Boolean, injectMain: Option[String] = None, injectStyleSheet: Option[String] = None): String =
+def vanillaTemplate(
+    styles: Boolean,
+    stylesRefresh: Boolean,
+    injectMain: Option[String] = None,
+    injectStyleSheet: Option[String] = None
+): String =
   val r = Ref.of[IO, Map[String, String]](Map.empty)
   r.flatMap(rf => vanillaTemplate(styles, rf, false, stylesRefresh, injectMain, injectStyleSheet).map(_.render))
     .unsafeRunSync()(using cats.effect.unsafe.implicits.global)
