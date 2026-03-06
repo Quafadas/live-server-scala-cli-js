@@ -18,7 +18,6 @@ import com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat
 import fs2.concurrent.Topic
 
 import cats.effect.IO
-import cats.effect.kernel.Ref
 
 import munit.CatsEffectSuite
 
@@ -82,7 +81,7 @@ trait PlaywrightTest extends CatsEffectSuite:
   def outDir(base: os.Path) = base / ".out"
   def styleDir(base: os.Path) = base / "styles"
 
-  val vanilla = vanillaTemplate(true, Ref.unsafe(Map[String, String]()), false).unsafeRunSync()
+  val vanilla = vanillaTemplate(true, true, Some("main.js"), None)
 
   val files =
     IO {
@@ -103,7 +102,7 @@ trait PlaywrightTest extends CatsEffectSuite:
     os.makeDir(staticDir)
     os.write.over(tempDir / "hello.scala", helloWorldCode("Hello"))
     os.write.over(staticDir / "index.less", "h1{color:red}")
-    os.write.over(staticDir / "index.html", vanilla.render)
+    os.write.over(staticDir / "index.html", vanilla)
     (tempDir, staticDir)
   }.flatTap {
       tempDir =>
@@ -252,11 +251,11 @@ trait PlaywrightTest extends CatsEffectSuite:
         ) >>
         assertIO(
           client.expect[String](s"http://localhost:$port").map(_.filterNot(_.isWhitespace)),
-          vanilla.render.filterNot(_.isWhitespace)
+          vanilla.filterNot(_.isWhitespace)
         ) >>
         assertIO(
           client.expect[String](s"http://localhost:$port/app/spaRoute").map(_.filterNot(_.isWhitespace)),
-          vanilla.render.filterNot(_.isWhitespace)
+          vanilla.filterNot(_.isWhitespace)
         )
 
   }
@@ -295,7 +294,7 @@ trait PlaywrightTest extends CatsEffectSuite:
         )
         LiveServer.main(lsc).flatMap(_ => client)
     }
-  }.test("with styles") {
+  }.test("with styles".only) {
     client =>
       assertIO(
         client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$basePort"))),

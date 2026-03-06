@@ -35,8 +35,8 @@ private def generatedIndexHtml(
             injectStyles,
             modules,
             attemptPreload,
-            false,
-            Some("main.js"),
+            true,
+            Some("/main.js"),
             None
           ).flatMap: html =>
             userBrowserCacheHeaders(Response[IO]().withEntity(html).withStatus(Status.Ok), zdt, injectStyles)
@@ -48,7 +48,7 @@ private def generatedIndexHtml(
     StaticHtmlMiddleware(
       HttpRoutes.of[IO] {
         case GET -> Root / "index.html" =>
-          vanillaTemplate(injectStyles, modules, attemptPreload, false, Some("main.js"), None).flatMap: html =>
+          vanillaTemplate(injectStyles, modules, attemptPreload, true, Some("/main.js"), None).flatMap: html =>
             userBrowserCacheHeaders(Response[IO]().withEntity(html).withStatus(Status.Ok), zdt, injectStyles)
 
       },
@@ -71,7 +71,7 @@ private def lessStyle(withStyles: Boolean, stylesRefresh: Boolean): Seq[Modifier
         )
       ),
       script(src := "https://cdn.jsdelivr.net/npm/less"),
-      if stylesRefresh then script("less.watch();")
+      if stylesRefresh then script("less.watch();") else frag()
     )
   else Seq.empty
 
