@@ -10,11 +10,14 @@ import mill.api.BuildCtx
 import mill.api.Task.Simple
 import mill.scalajslib.*
 import mill.scalajslib.api.Report
+import mill.scalajslib.api.ModuleKind
 implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
 trait ScalaJsRefreshModule extends ScalaJSModule:
 
   lazy val updateServer = Topic[IO, Unit].unsafeRunSync()
+
+  override def moduleKind: Simple[ModuleKind] = ModuleKind.ESModule
 
   def indexHtml = Task {
     os.write.over(Task.dest / "index.html", io.github.quafadas.sjsls.vanillaTemplate(withStyles(), stylesAutoRefresh()))
