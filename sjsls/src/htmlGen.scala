@@ -31,7 +31,7 @@ private def generatedIndexHtml(
     HttpRoutes.of[IO] {
       case req @ GET -> Root =>
         logger.trace("Generated index.html") >>
-          vanillaTemplate(injectStyles, modules, attemptPreload).flatMap: html =>
+          vanillaTemplate(injectStyles, modules, attemptPreload, false, Some("main.js"), None).flatMap: html =>
             userBrowserCacheHeaders(Response[IO]().withEntity(html).withStatus(Status.Ok), zdt, injectStyles)
 
     },
@@ -41,7 +41,7 @@ private def generatedIndexHtml(
     StaticHtmlMiddleware(
       HttpRoutes.of[IO] {
         case GET -> Root / "index.html" =>
-          vanillaTemplate(injectStyles, modules, attemptPreload).flatMap: html =>
+          vanillaTemplate(injectStyles, modules, attemptPreload, false, Some("main.js"), None).flatMap: html =>
             userBrowserCacheHeaders(Response[IO]().withEntity(html).withStatus(Status.Ok), zdt, injectStyles)
 
       },
@@ -152,9 +152,9 @@ private def makeInternalPreloads(ref: Ref[IO, Map[String, String]]) =
 
 end makeInternalPreloads
 
-def vanillaTemplate(styles: Boolean, stylesRefresh: Boolean): String =
+def vanillaTemplate(styles: Boolean, stylesRefresh: Boolean, injectMain: Option[String] = None, injectStyleSheet: Option[String] = None): String =
   val r = Ref.of[IO, Map[String, String]](Map.empty)
-  r.flatMap(rf => vanillaTemplate(styles, rf, false).map(_.render))
+  r.flatMap(rf => vanillaTemplate(styles, rf, false, stylesRefresh, injectMain, injectStyleSheet).map(_.render))
     .unsafeRunSync()(using cats.effect.unsafe.implicits.global)
 end vanillaTemplate
 
@@ -162,7 +162,9 @@ def vanillaTemplate(
     withStyles: Boolean,
     ref: Ref[IO, Map[String, String]],
     attemptPreload: Boolean,
-    stylesRefresh: Boolean = false
+    stylesRefresh: Boolean,
+    injectMain: Option[String],
+    injectStyleSheet: Option[String]
 ): IO[TypedTag[String]] =
 
   val preloads = makeInternalPreloads(ref)
@@ -177,7 +179,12 @@ def vanillaTemplate(
       ),
       body(
         lessStyle(withStyles, stylesRefresh),
-        script(src := "/main.js", `type` := "module"),
+        injectMain match
+          case Some(main) => script(src := main, `type` := "module")
+          case None       => frag(),
+        injectStyleSheet match
+          case Some(sheet) => link(rel := "stylesheet", href := sheet)
+          case None        => frag(),
         div(id := "app"),
         refreshScript
       )
