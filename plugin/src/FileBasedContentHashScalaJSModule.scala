@@ -148,7 +148,10 @@ object FileBasedContentHashScalaJSModule:
           "sourceMappingURL=" + name + ".map",
           "sourceMappingURL=" + hashedName + ".map"
         )
-        os.write.over(destDir / hashedName, finalContent.getBytes("UTF-8"))
+        if(!os.exists(destDir / hashedName)) {
+          os.write.over(destDir / hashedName, finalContent.getBytes("UTF-8"))
+        }
+
     }
 
     // Build full mapping including source-map file renames.
