@@ -1,11 +1,11 @@
 package build.routes
 
 import build.*
-import mill._
-import mill.scalalib._
-import mill.scalalib.publish._
+import mill.*
+import mill.scalalib.*
+import mill.scalalib.publish.*
 
-object `package` extends FormatFixPublish {
+object `package` extends FormatFixPublish:
 
   def scalaVersion: T[String] = V.scalaLts
 
@@ -19,8 +19,7 @@ object `package` extends FormatFixPublish {
 
   override def artifactName = "frontend-routes"
 
-  object test extends Testy with ScalaTests{
+  object test extends Testy with ScalaTests:
     def mvnDeps = super.mvnDeps() ++ sjsls.mvnDeps()
-  }
-
-}
+  end test
+end `package`

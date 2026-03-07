@@ -10,14 +10,17 @@ import mill.api.BuildCtx
 import mill.api.Task.Simple
 import mill.scalajslib.*
 import mill.scalajslib.api.Report
+import mill.scalajslib.api.ModuleKind
 implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
 trait ScalaJsRefreshModule extends ScalaJSModule:
 
   lazy val updateServer = Topic[IO, Unit].unsafeRunSync()
 
+  override def moduleKind: Simple[ModuleKind] = ModuleKind.ESModule
+
   def indexHtml = Task {
-    os.write.over(Task.dest / "index.html", io.github.quafadas.sjsls.vanillaTemplate(withStyles()))
+    os.write.over(Task.dest / "index.html", io.github.quafadas.sjsls.vanillaTemplate(withStyles(), stylesAutoRefresh()))
     PathRef(Task.dest / "index.html")
   }
 
@@ -25,6 +28,8 @@ trait ScalaJsRefreshModule extends ScalaJSModule:
     super.moduleDir / "assets"
 
   def withStyles = Task(true)
+
+  def stylesAutoRefresh = Task(false)
 
   def assets = Task.Source {
     assetsDir
@@ -90,7 +95,7 @@ trait ScalaJsRefreshModule extends ScalaJSModule:
     override def close(): Unit =
       // This is the shutdown hook for http4s
       println("Shutting down server...")
-      server.map(_._2).flatten.unsafeRunSync()
+      server.flatMap(_._2).unsafeRunSync()
     end close
   end RefreshServer
 end ScalaJsRefreshModule

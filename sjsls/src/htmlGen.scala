@@ -31,7 +31,14 @@ private def generatedIndexHtml(
     HttpRoutes.of[IO] {
       case req @ GET -> Root =>
         logger.trace("Generated index.html") >>
-          vanillaTemplate(injectStyles, modules, attemptPreload).flatMap: html =>
+          vanillaTemplate(
+            injectStyles,
+            modules,
+            attemptPreload,
+            true,
+            Some("/main.js"),
+            None
+          ).flatMap: html =>
             userBrowserCacheHeaders(Response[IO]().withEntity(html).withStatus(Status.Ok), zdt, injectStyles)
 
     },
@@ -41,7 +48,7 @@ private def generatedIndexHtml(
     StaticHtmlMiddleware(
       HttpRoutes.of[IO] {
         case GET -> Root / "index.html" =>
-          vanillaTemplate(injectStyles, modules, attemptPreload).flatMap: html =>
+          vanillaTemplate(injectStyles, modules, attemptPreload, true, Some("/main.js"), None).flatMap: html =>
             userBrowserCacheHeaders(Response[IO]().withEntity(html).withStatus(Status.Ok), zdt, injectStyles)
 
       },
@@ -50,7 +57,7 @@ private def generatedIndexHtml(
     )(logger)
   )
 
-private def lessStyle(withStyles: Boolean): Seq[Modifier] =
+private def lessStyle(withStyles: Boolean, stylesRefresh: Boolean): Seq[Modifier] =
   if withStyles then
     Seq(
       link(
@@ -64,7 +71,7 @@ private def lessStyle(withStyles: Boolean): Seq[Modifier] =
         )
       ),
       script(src := "https://cdn.jsdelivr.net/npm/less"),
-      script("less.watch();")
+      if stylesRefresh then script("less.watch();") else frag()
     )
   else Seq.empty
 
@@ -130,7 +137,7 @@ private def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean, attemp
       if attemptPreload then scripts else ()
     ),
     body(
-      lessStyle(withStyles),
+      lessStyle(withStyles, true),
       script(src := "main.js", `type` := "module"),
       div(id := "app"),
       // script(src := "main"),
@@ -152,16 +159,24 @@ private def makeInternalPreloads(ref: Ref[IO, Map[String, String]]) =
 
 end makeInternalPreloads
 
-def vanillaTemplate(styles: Boolean): String =
+def vanillaTemplate(
+    styles: Boolean,
+    stylesRefresh: Boolean,
+    injectMain: Option[String] = None,
+    injectStyleSheet: Option[String] = None
+): String =
   val r = Ref.of[IO, Map[String, String]](Map.empty)
-  r.flatMap(rf => vanillaTemplate(styles, rf, false).map(_.render))
+  r.flatMap(rf => vanillaTemplate(styles, rf, false, stylesRefresh, injectMain, injectStyleSheet).map(_.render))
     .unsafeRunSync()(using cats.effect.unsafe.implicits.global)
 end vanillaTemplate
 
 def vanillaTemplate(
     withStyles: Boolean,
     ref: Ref[IO, Map[String, String]],
-    attemptPreload: Boolean
+    attemptPreload: Boolean,
+    stylesRefresh: Boolean,
+    injectMain: Option[String],
+    injectStyleSheet: Option[String]
 ): IO[TypedTag[String]] =
 
   val preloads = makeInternalPreloads(ref)
@@ -175,8 +190,13 @@ def vanillaTemplate(
         if attemptPreload then modules else ()
       ),
       body(
-        lessStyle(withStyles),
-        script(src := "/main.js", `type` := "module"),
+        lessStyle(withStyles, stylesRefresh),
+        injectMain match
+          case Some(main) => script(src := main, `type` := "module")
+          case None       => frag(),
+        injectStyleSheet match
+          case Some(sheet) => link(rel := "stylesheet", href := sheet)
+          case None        => frag(),
         div(id := "app"),
         refreshScript
       )

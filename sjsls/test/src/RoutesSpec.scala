@@ -32,6 +32,8 @@ class RoutesSuite extends CatsEffectSuite:
   val simpleCss = "h1 {color: red;}"
   val testHash = md.digest(testStr.getBytes()).map("%02x".format(_)).mkString
   val testBinary = os.read.bytes(os.resource / "cat.webp")
+  val hashedFileName = s"test.$testHash.js"
+
   given filesInstance: Files[IO] = Files.forAsync[IO]
 
   val files = FunFixture[os.Path](
@@ -44,6 +46,20 @@ class RoutesSuite extends CatsEffectSuite:
       os.write(tempDir / "test2.js", testStr)
       os.write(tempDir / "test3.js", testStr)
       os.write(tempDir / "test.wasm", testBinary)
+      tempDir
+    ,
+    teardown = tempDir =>
+      // Always gets called, even if test failed.
+      os.remove.all(tempDir)
+  )
+
+  val hashedFiles = FunFixture[os.Path](
+    setup = test =>
+      // create a temp folder
+      val tempDir = os.temp.dir()
+      // create a file in the folder
+      val tempFile = tempDir / hashedFileName
+      os.write(tempFile, testStr)
       tempDir
     ,
     teardown = tempDir =>
@@ -97,7 +113,7 @@ class RoutesSuite extends CatsEffectSuite:
       .root
       .clearHandlers()
       .clearModifiers()
-      .withHandler(minimumLevel = Some(Level.get("info").get))
+      .withHandler(minimumLevel = Some(Level.get("debug").get))
       .replace()
 
   files.test("seed map puts files in the map on start") {
@@ -438,6 +454,45 @@ class RoutesSuite extends CatsEffectSuite:
             served(request2).flatMap(_.bodyText.compile.string).flatMap(s => logger.trace(s)) >>
             assertIO(served(request2).map(_.status.code), 200)
 
+      }
+  }
+
+  hashedFiles.test("That hashed files have immutable headers") {
+    tempDir =>
+      val app = for
+        logger <- IO(scribe.cats[IO]).toResource
+        fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+        _ <- updateMapRef(tempDir.toFs2, fileToHashRef)(logger).toResource
+        refreshPub <- Topic[IO, Unit].toResource
+        theseRoutes <- routes(
+          tempDir.toString,
+          refreshPub,
+          None,
+          HttpRoutes.empty[IO],
+          fileToHashRef,
+          None,
+          false,
+          NoBuildTool()
+        )(logger)
+      yield (theseRoutes.orNotFound, logger)
+
+      app.use {
+        case (served, logger) =>
+          val request = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString(s"/$hashedFileName"))
+          val respHeaders = served(request).map(
+            _.headers.get(ci"Cache-Control").get.map(_.value).toList
+          )
+          served(request).flatTap(r => logger.debug("Response headers in test " + r.headers.headers.mkString(","))) >>
+            assertIO(served(request).map(_.status.code), 200) >>
+            assertIOBoolean(
+              respHeaders.map(_.contains("immutable"))
+            ) >>
+            assertIOBoolean(
+              respHeaders.map(_.contains("public"))
+            ) >>
+            assertIOBoolean(
+              respHeaders.map(_.contains("max-age=31536000"))
+            )
       }
   }
 
