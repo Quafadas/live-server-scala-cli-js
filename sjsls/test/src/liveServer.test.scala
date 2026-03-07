@@ -294,7 +294,7 @@ trait PlaywrightTest extends CatsEffectSuite:
         )
         LiveServer.main(lsc).flatMap(_ => client)
     }
-  }.test("with styles".only) {
+  }.test("with styles") {
     client =>
       assertIO(
         client.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$basePort"))),
