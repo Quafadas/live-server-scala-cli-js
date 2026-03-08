@@ -45,6 +45,9 @@ jobs:
       - name: Install Playwright
         run: cs launch com.microsoft.playwright:playwright:1.51.0 -M "com.microsoft.playwright.CLI" -- install --with-deps
 
+      - name: Install binaryen
+        run: sudo apt-get update && sudo apt-get install -y binaryen
+
       # This should resolve a JVM, download dependancies and leave mill ready for use.
       - name: setup mill
         run: ./mill sjsls.compiledClassesAndSemanticDbFiles
