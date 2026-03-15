@@ -13,7 +13,7 @@ import utest.*
 object SiteJsTests extends TestSuite:
   def tests: Tests = Tests {
     test("Hashed JS files have correct cross-module references") {
-      object build extends TestRootModule with mill.scalajslib.ContentHashScalaJSModule:
+      object build extends TestRootModule with mill.scalajslib.FileBasedContentHashScalaJSModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def scalaJSVersion: Simple[String] = "1.20.1"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
@@ -67,6 +67,12 @@ object SiteJsTests extends TestSuite:
                     s"Public module '${m.moduleID}' jsFileName '${m.jsFileName}' not found in output"
                   )
             }
+
+          val Right(mini) = eval(build.minified).runtimeChecked
+          println(mini.value)
+
+          os.list(mini.value.path).foreach(f => println(s"Output file: ${f.last}"))
+
 
       }
     }

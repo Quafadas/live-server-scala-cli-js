@@ -10,6 +10,11 @@ import mill.scalajslib.api.*
 import mill.scalajslib.worker.ScalaJSWorker
 import mill.api.Task.Simple
 
+
+import java.net.InetSocketAddress
+import java.nio.file.Path
+import com.sun.net.httpserver.SimpleFileServer
+
 /** A Mill module trait that adds content hashing to Scala.js linked output.
   *
   * Mix this trait into a `ScalaJSModule` to produce JS files whose names include a SHA-256 content hash, e.g.
@@ -37,6 +42,65 @@ import mill.api.Task.Simple
 trait FileBasedContentHashScalaJSModule extends ScalaJSModule:
 
   override def moduleKind: Simple[ModuleKind] = ModuleKind.ESModule
+
+  def terserConfig = Task{
+    os.write(Task.dest / "terser.config.json",
+      """{
+        |  "compress": {
+        |    "passes": 2,
+        |    "pure_getters": true,
+        |    "unsafe": false,
+        |    "unsafe_arrows": false,
+        |    "unsafe_methods": false,
+        |    "drop_console": false
+        |  },
+        |  "mangle": {
+        |    "toplevel": false
+        |  },
+        |  "format": {
+        |    "comments": false
+        |  },
+        |  "ecma": 2020,
+        |  "module": true,
+        |  "toplevel": false
+        |}
+        |""".stripMargin)
+    PathRef(Task.dest / "terser.config.json")
+  }
+
+  def minified = Task {
+    val full = fullLinkJS()
+    val terserConfigFile = terserConfig()
+
+    val files = os.walk(full.dest.path).filter(p => os.isFile(p) && p.ext == "js")
+    files.foreach { f =>
+        Task.log.info(s"Minifying ${f}...")
+        val subPath = f.subRelativeTo(full.dest.path)
+        val outPath = Task.dest / subPath
+        val fName = f.last
+        val sourceMapConfig = s"""--source-map "content=${f}.map,filename=${outPath}.map""""
+        Task.log.info(s"  → ${outPath}")
+
+        // println(s"""terser ${f.toString.replace("$", "\\$")} -o ${(Task.dest / subPath).toString().replace("$", "\\$")} ${sourceMapConfig.replace("$", "\\$")} --config-file ${terserConfigFile.path}""")
+        os.proc(
+          "terser",
+          f.toString,
+          "-o", (Task.dest / subPath).toString(),
+          // sourceMapConfig,
+          "--config-file", terserConfigFile.path.toString
+        ).call(
+          cwd = Task.dest,
+          mergeErrIntoOut = true,
+          stdin = os.Inherit,
+          stdout = os.Inherit,
+          stderr = os.Inherit
+        )
+        val inSizeMb = os.size(f).toDouble / (1024 * 1024)
+        val outSizeMb = os.size(outPath).toDouble / (1024 * 1024)
+        Task.log.info(f"Minified $fName: $inSizeMb%.4f Mb → $outSizeMb%.4f Mb")
+      }
+    PathRef(Task.dest)
+  }
 
   /** Override [[linkJs]] to capture linker output in a temporary directory, compute SHA-256 content hashes, rewrite
     * intra-bundle references, and write only the hashed files to the task output directory (`ctx.dest`).
