@@ -78,7 +78,7 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSModule:
         val subPath = f.subRelativeTo(full.dest.path)
         val outPath = Task.dest / subPath
         val fName = f.last
-        val sourceMapConfig = s"""--source-map "content=${f}.map,filename=${outPath}.map""""
+        // val sourceMapConfig = s"""--source-map "content=${f}.map,filename=${outPath}.map""""
         Task.log.info(s"  → ${outPath}")
 
         // println(s"""terser ${f.toString.replace("$", "\\$")} -o ${(Task.dest / subPath).toString().replace("$", "\\$")} ${sourceMapConfig.replace("$", "\\$")} --config-file ${terserConfigFile.path}""")
@@ -199,6 +199,7 @@ object FileBasedContentHashScalaJSModule:
         val f = srcDir / name
         val content = os.read(f)
 
+        //TODO: This re-wwrites across the entire file. In scalaJS, we know that these referenecs appers _only_ in the header.
         // Rewrite cross-module import references using the hashes we already know.
         val rewrittenContent = rewriteJsReferences(content, jsHashMapping.toMap)
 
