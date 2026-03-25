@@ -21,6 +21,8 @@ import java.net.InetSocketAddress
 import java.nio.file.Path
 import com.sun.net.httpserver.SimpleFileServer
 
+trait ScalaJsWebAppModule extends ScalaJsRefreshModule with FileBasedContentHashScalaJSModule
+
 trait ScalaJsRefreshModule extends ScalaJSConfigModule:
 
   lazy val updateServer = Topic[IO, Unit].unsafeRunSync()
