@@ -1,6 +1,6 @@
 package io.github.quafadas.sjsls
 
-class HtmlGenTests extends munit.FunSuite {
+class HtmlGenTests extends munit.FunSuite:
 
   test("That we can generate a basic html page") {
     val html = vanillaTemplate(true, true, Some("main.js"), None)
@@ -18,6 +18,4 @@ class HtmlGenTests extends munit.FunSuite {
     val html = vanillaTemplate(true, false, Some("main.js"), None)
     assert(!html.contains("less.watch()"))
   }
-
-
-}
+end HtmlGenTests

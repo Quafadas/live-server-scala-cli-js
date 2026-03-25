@@ -54,17 +54,22 @@ object LiveServer extends IOApp:
     buildToolInvocation,
     injectPreloadsOpt,
     dezombifyOpt,
+    logFileOpt,
     None.pure[Opts]
   ).mapN(LiveServerConfig.apply)
 
   def main(lsc: LiveServerConfig): Resource[IO, Server] =
 
-    scribe
-      .Logger
-      .root
-      .clearHandlers()
-      .clearModifiers()
-      .withHandler(minimumLevel = Some(Level.get(lsc.logLevel).get))
+    val level = Level.get(lsc.logLevel).get
+    val baseLogger = scribe.Logger.root.clearHandlers().clearModifiers()
+    lsc.logFile
+      .fold(baseLogger.withHandler(minimumLevel = Some(level))) {
+        filePath =>
+          baseLogger.withHandler(
+            writer = fileLogWriter(filePath),
+            minimumLevel = Some(level)
+          )
+      }
       .replace()
 
     val server = for
@@ -86,10 +91,19 @@ object LiveServer extends IOApp:
       refreshTopic <- lsc
         .customRefresh
         .fold(Topic[IO, Unit])(
-          scribe.cats[IO].debug("Custom refresh topic supplied") >>
-            IO(_)
+          t =>
+            scribe.cats[IO].debug("Custom refresh topic supplied — wrapping with debug tap") >>
+              IO(t)
         )
         .toResource
+      // Tap the refreshTopic so every publication is visible in the log regardless of source.
+      _ <- refreshTopic
+        .subscribe(Int.MaxValue)
+        .evalTap(_ => scribe.cats[IO].debug("[refreshTopic] event published (source: any publisher)"))
+        .compile
+        .drain
+        .background
+        .void
       linkingTopic <- Topic[IO, Unit].toResource
       client <- EmberClientBuilder.default[IO].build
       baseDirPath <- lsc.baseDir.fold(Files[IO].currentWorkingDirectory.toResource)(toDirectoryPath)
@@ -157,8 +171,12 @@ object LiveServer extends IOApp:
       _ <- updateMapRef(outDirPath, fileToHashRef)(logger).toResource
       // _ <- stylesDir.fold(Resource.unit)(sd => seedMapOnStart(sd, mr))
       _ <- fileWatcher(outDirPath, fileToHashRef, linkingTopic, refreshTopic)(logger)
-      _ <- indexOpts.match
-        case Some(IndexHtmlConfig.IndexHtmlPath(indexHtmlatPath)) =>
+      // Only watch the indexHtmlTemplate dir for changes when the caller has NOT supplied a
+      // customRefresh topic.  When customRefresh is present (e.g. the Mill plugin) the caller
+      // already publishes explicitly at the end of each build step; the staticWatcher watching
+      // the same output directory would fire a second time for the same logical change.
+      _ <- (lsc.customRefresh, indexOpts) match
+        case (None, Some(IndexHtmlConfig.IndexHtmlPath(indexHtmlatPath))) =>
           staticWatcher(refreshTopic, fs2.io.file.Path(indexHtmlatPath.toString))(logger)
         case _ => Resource.unit[IO]
 
@@ -220,3 +238,17 @@ object LiveServer extends IOApp:
   end toDirectoryPath
 
 end LiveServer
+
+/** A scribe [[scribe.writer.Writer]] that appends to a plain file using Java IO.
+  * This deliberately avoids the `scribe-file` module to sidestep the
+  * `path""` string-context conflict with http4s.
+  */
+private[sjsls] def fileLogWriter(filePath: String): scribe.writer.Writer =
+  import java.io.{FileOutputStream, PrintStream}
+  val ps = new PrintStream(new FileOutputStream(filePath, /*append=*/ true), /*autoFlush=*/ true)
+  new scribe.writer.Writer:
+    override def write(
+        record: scribe.LogRecord,
+        output: scribe.output.LogOutput,
+        outputFormat: scribe.output.format.OutputFormat
+    ): Unit = ps.println(output.plainText)

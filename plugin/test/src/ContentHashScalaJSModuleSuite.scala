@@ -6,7 +6,7 @@ import scala.collection.mutable
 
 import mill.PathRef
 import mill.scalajslib.ContentHashScalaJSModule
-import mill.scalajslib.FileBasedContentHashScalaJSModule
+import io.github.quafadas.FileBasedContentHashScalaJSModule
 import mill.scalajslib.api.ModuleKind
 import mill.scalajslib.api.Report
 import munit.FunSuite
@@ -355,6 +355,7 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
       val bytes = new Array[Byte](buf.remaining())
       buf.get(bytes)
       new String(bytes, "UTF-8")
+    end readStr
 
     assertEquals(readStr(), "hello")
     assertEquals(readStr(), "hello")
@@ -374,12 +375,15 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
       val bytes = new Array[Byte](buf.remaining())
       buf.get(bytes)
       new String(bytes, "UTF-8")
+    end readStr
 
-    val fileDeps: Map[String, Set[String]] = jsFileNames.map {
-      name =>
-        val imported = C.parseJsImports(readStr(name)).filter(jsFileNames.contains)
-        (name, imported.toSet)
-    }.toMap
+    val fileDeps: Map[String, Set[String]] = jsFileNames
+      .map {
+        name =>
+          val imported = C.parseJsImports(readStr(name)).filter(jsFileNames.contains)
+          (name, imported.toSet)
+      }
+      .toMap
 
     val sortedNames = C.topologicalSort(jsFileNames.toList, fileDeps)
     val jsHashMapping = mutable.LinkedHashMap.empty[String, String]
@@ -395,9 +399,12 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
     }
 
     // Both entries should be sanitised (no hyphens in the hashed output names).
-    jsHashMapping.values.foreach { hashed =>
-      assert(!hashed.contains("-"), s"hashed name should not contain hyphen: $hashed")
-    }
+    jsHashMapping
+      .values
+      .foreach {
+        hashed =>
+          assert(!hashed.contains("-"), s"hashed name should not contain hyphen: $hashed")
+      }
     assert(jsHashMapping("my-chunk.js").startsWith("my_chunk."))
     assert(jsHashMapping("my-app.js").startsWith("my_app."))
 

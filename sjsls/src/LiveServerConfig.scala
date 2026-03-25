@@ -24,5 +24,6 @@ case class LiveServerConfig(
     buildToolInvocation: Option[String] = None,
     injectPreloads: Boolean = false,
     dezombify: Boolean = true,
+    logFile: Option[String] = None,
     customRefresh: Option[Topic[IO, Unit]] = None
 )

@@ -21,7 +21,18 @@ import java.net.InetSocketAddress
 import java.nio.file.Path
 import com.sun.net.httpserver.SimpleFileServer
 
-trait ScalaJsWebAppModule extends ScalaJsRefreshModule with FileBasedContentHashScalaJSModule
+trait ScalaJsWebAppModule extends FileBasedContentHashScalaJSModule with ScalaJsRefreshModule:
+
+  def publish = Task {
+    val path = minified().dest.path
+    os.copy.over(indexHtml().path, Task.dest / "index.html")
+    os.copy(path, Task.dest, replaceExisting = true)
+    if os.exists(assetsDir) then os.copy(assets().path, Task.dest, mergeFolders = true)
+    end if
+    (Task.dest.toString(), path.toString())
+  }
+
+
 
 trait ScalaJsRefreshModule extends ScalaJSConfigModule:
 
@@ -34,8 +45,9 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
       meta(charset := "utf-8"),
       meta(name := "viewport", content := "width=device-width, initial-scale=1"),
       title := titleString,
-      externalStylesheets.map { hrefLink =>
-        link(href := hrefLink, rel := "stylesheet")
+      externalStylesheets.map {
+        hrefLink =>
+          link(href := hrefLink, rel := "stylesheet")
       },
       if hasLess then script(src := "https://cdn.jsdelivr.net/npm/less@4.6.3/dist/less.min.js") else frag(),
       if hasLess then link(rel := "stylesheet/less", href := "/index.less", `type` := "text/css") else frag(),
@@ -50,8 +62,15 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
   def titleString: String = "App"
 
   def indexHtmlBody = Task {
+    val report = fastLinkJS()
+    val scriptTags = report
+      .publicModules
+      .map {
+        m =>
+          script(src := s"/${m.jsFileName}", `type` := "module")
+      }
     body(
-      script(src := "/main.js", `type` := "module"),
+      frag(scriptTags.toSeq*),
       div(id := appRoot),
       raw(refreshScript)
     ).render
@@ -116,25 +135,35 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     true
   }
 
+  /** Path to write server logs to. When set, logs go to this file instead of
+    * the console — useful because Mill watch mode captures stdout/stderr
+    * per-task, making background server output invisible between evaluations.
+    * Example override: `def logFile = Task { Some("/tmp/sjsls.log") }`
+    */
+  def logFile: Task[Option[PathRef]] = Task {
+    None
+  }
+
+
   def siteGen = Task {
-    val assets_ = assets()
     val path = fastLinkJS().dest.path
     os.copy.over(indexHtml().path, Task.dest / "index.html")
-    os.copy(assets_.path, Task.dest, mergeFolders = true)
+    if os.exists(assetsDir) then os.copy(assets().path, Task.dest, mergeFolders = true)
+    end if
     updateServer.publish1(Task.log.info("publish update")).unsafeRunSync()
-    (Task.dest.toString(), assets_.path.toString(), path.toString())
+    (Task.dest.toString(), path.toString())
   }
 
   def siteGenFull = Task {
-    val assets_ = assets()
     val path = fullLinkJS().dest.path
     os.copy.over(indexHtml().path, Task.dest / "index.html")
-    os.copy(assets_.path, Task.dest, mergeFolders = true)
-    (Task.dest.toString(), assets_.path.toString(), path.toString())
+    if os.exists(assetsDir) then os.copy(assets().path, Task.dest, mergeFolders = true)
+    end if
+    (Task.dest.toString(), path.toString())
   }
 
   def lcs = Task.Worker {
-    val (site, assets, js) = siteGen()
+    val (site, js) = siteGen()
     Task.log.info("Gen lsc")
     LiveServerConfig(
       baseDir = None,
@@ -147,6 +176,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
       preventBrowserOpen = !openBrowser(),
       dezombify = dezombify(),
       logLevel = logLevel(),
+      logFile = logFile().fold[Option[String]](None)(p => Some(p.path.toString)),
       customRefresh = Some(updateServer)
     )
   }
@@ -155,32 +185,22 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
 
     Task.log.info(lcs().toString)
     BuildCtx.withFilesystemCheckerDisabled {
+
       new RefreshServer(lcs())
     }
   }
 
-  def serveFull = Task.Worker {
-    val (site, assets, js) = siteGenFull()
-    val address = InetSocketAddress(8081)
-    val path = Path.of(site)
-    val server = SimpleFileServer.createFileServer(address, path, SimpleFileServer.OutputLevel.VERBOSE)
-    server.start()
-    new AutoCloseable {
-      override def close(): Unit = {
-      server.stop(0)
-      }
-    }
-  }
-
   class RefreshServer(lcs: LiveServerConfig) extends AutoCloseable:
-    val server = io.github.quafadas.sjsls.LiveServer.main(lcs).allocated
-
-    server.map(_._1).unsafeRunSync()
+    // Allocate exactly once: run the IO and hold on to both the server and its
+    // release action.  The original code stored the IO description and
+    // re-evaluated it on close(), which started a second server instance and
+    // released that one instead of the original.
+    private val (_, release) =
+      io.github.quafadas.sjsls.LiveServer.main(lcs).allocated.unsafeRunSync()
 
     override def close(): Unit =
-      // This is the shutdown hook for http4s
       println("Shutting down server...")
-      server.flatMap(_._2).unsafeRunSync()
+      release.unsafeRunSync()
     end close
   end RefreshServer
 end ScalaJsRefreshModule

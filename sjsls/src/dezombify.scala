@@ -102,15 +102,20 @@ private def killProcessesOnPort(port: Port): IO[Unit] =
     end for
   else
     // macOS/Linux: use lsof if available, fallback to fuser
+    // Exclude the current JVM PID to prevent accidentally killing ourselves.
+    val currentPid = ProcessHandle.current().pid()
     val sh = s"""
+    |current_pid=$currentPid
     |if command -v lsof >/dev/null 2>&1; then
-    |  pids=$$(lsof -ti tcp:$portInt 2>/dev/null)
+    |  pids=$$(lsof -ti tcp:$portInt 2>/dev/null | grep -wv "$$current_pid")
     |  if [ -n "$$pids" ]; then
-    |    echo "Found PIDs: $$pids"
-    |    kill -9 $$pids
+    |    echo "Found PIDs to kill: $$pids"
+    |    kill -TERM $$pids 2>/dev/null || true
+    |    sleep 0.5
+    |    kill -KILL $$pids 2>/dev/null || true
     |    echo "Killed processes on port $portInt"
     |  else
-    |    echo "No processes found using lsof on port $portInt"
+    |    echo "No processes found using lsof on port $portInt (excluding self: $$current_pid)"
     |  fi
     |elif command -v fuser >/dev/null 2>&1; then
     |  echo "Using fuser to kill processes on port $portInt"
@@ -122,17 +127,17 @@ private def killProcessesOnPort(port: Port): IO[Unit] =
     |""".stripMargin
 
     for
-      _ <- scribe.cats[IO].debug(s"Running Unix cleanup command for port $portInt")
+      _ <- scribe.cats[IO].debug(s"Running Unix cleanup command for port $portInt (excluding self PID $currentPid)")
       // Use a timeout to prevent hanging
-      result <- process
+      result <- (process
         .ProcessBuilder("sh", "-c", sh)
         .spawn[IO]
         .use(_.exitValue)
-        .timeout(5.seconds)
+        .timeout(10.seconds)
         .handleErrorWith {
           err =>
             scribe.cats[IO].warn(s"Process cleanup timed out or failed: ${err.getMessage}") *> IO.pure(-1)
-        }
+        })
       _ <- scribe.cats[IO].debug(s"Unix cleanup command completed with exit code $result")
     yield ()
     end for

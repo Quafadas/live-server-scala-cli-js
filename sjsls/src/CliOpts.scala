@@ -135,4 +135,11 @@ private[sjsls] object CliOps:
       "Whether or not to attempt killing any processes that are using the specified port. Default: true"
     )
     .orTrue
+
+  val logFileOpt: Opts[Option[String]] = Opts
+    .option[String](
+      "log-file",
+      "Write server logs to this file path instead of (or in addition to) the console. Useful when running under Mill watch mode where stdout/stderr is managed per-task."
+    )
+    .orNone
 end CliOps

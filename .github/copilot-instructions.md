@@ -21,6 +21,10 @@ CI will fail poorly formatted files. Make sure to run formatting before pushing.
 
 To discover things about symbols in the codebase, use the scalex skill. e.g. `scalex search ContentHashScalaJSModule --kind trait` to find the location of the `ContentHashScalaJSModule` trait.
 
+Or use metals MCP server.
+
+ALWAYS prefer these two options _before_ using grep or manually inspecting JAR files.
+
 ### Mill Fundamentals
 
 - `build.mill` is the root build file (header directives declare Mill version and JVM)

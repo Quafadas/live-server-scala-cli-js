@@ -13,6 +13,7 @@ import cats.effect.IO
 import _root_.io.circe.syntax.EncoderOps
 import cats.effect.kernel.Ref
 import scribe.Scribe
+import scala.concurrent.duration.DurationDouble
 
 def refreshRoutes(
     refreshTopic: Topic[IO, Unit],
@@ -23,7 +24,11 @@ def refreshRoutes(
 ) = HttpRoutes.of[IO] {
 
   val keepAlive = fs2.Stream.fixedRate[IO](10.seconds).as(KeepAlive())
-  val refresh = refreshTopic.subscribe(10)
+  val refresh = refreshTopic
+    .subscribe(10)
+    .evalTap(_ => logger.debug("[refreshRoute] raw event received from refreshTopic (pre-debounce)"))
+    .debounce(0.1.second)
+    .evalTap(_ => logger.debug("[refreshRoute] event passed debounce — will send SSE PageRefresh to client"))
 
   buildTool match
     case _: NoBuildTool =>
@@ -40,7 +45,12 @@ def refreshRoutes(
                 )
                 .as(PageRefresh())
             )
-            .map(msg => ServerSentEvent(Some(msg.asJson.noSpaces)))
+            .evalTap(msg =>
+              logger.debug(s"Publishing refresh event: $msg")
+            )
+            .map(msg =>
+              ServerSentEvent(Some(msg.asJson.noSpaces))
+            )
         )
     case _ =>
       case GET -> Root / "refresh" / "v1" / "sse" =>

@@ -40,7 +40,7 @@ object MemJsTests extends TestSuite:
           assert(!files.contains("main.js"))
 
           // No hashed JS filename should contain a hyphen (all "-" must be replaced with "_").
-          jsFiles.foreach { filename => assert(!filename.contains("-")) }
+          jsFiles.foreach(filename => assert(!filename.contains("-")))
 
           // Every cross-module import must reference a file that actually exists in the output directory.
           jsFiles.foreach {
@@ -59,14 +59,15 @@ object MemJsTests extends TestSuite:
 
           // The public module reported back must have a hashed filename present in output.
           assert(report.publicModules.nonEmpty)
-          report.publicModules.foreach {
-            m =>
-              if !jsFiles.contains(m.jsFileName) then
-                throw new java.lang.AssertionError(
-                  s"Public module '${m.moduleID}' jsFileName '${m.jsFileName}' not found in output"
-                )
-          }
-
+          report
+            .publicModules
+            .foreach {
+              m =>
+                if !jsFiles.contains(m.jsFileName) then
+                  throw new java.lang.AssertionError(
+                    s"Public module '${m.moduleID}' jsFileName '${m.jsFileName}' not found in output"
+                  )
+            }
 
       }
     }
