@@ -55,7 +55,13 @@ object LiveServer extends IOApp:
     injectPreloadsOpt,
     dezombifyOpt,
     logFileOpt,
-    None.pure[Opts]
+    None.pure[Opts],
+    (workspaceRootOpt, workspaceUuidOpt).mapN {
+      case (Some(root), uuidOpt) =>
+        val uuid = uuidOpt.getOrElse(java.util.UUID.randomUUID().toString)
+        Some((root, uuid))
+      case _ => None
+    }
   ).mapN(LiveServerConfig.apply)
 
   def main(lsc: LiveServerConfig): Resource[IO, Server] =
@@ -165,7 +171,8 @@ object LiveServer extends IOApp:
         fileToHashRef,
         lsc.clientRoutingPrefix,
         lsc.injectPreloads,
-        lsc.buildTool
+        lsc.buildTool,
+        lsc.devToolsWorkspace
       )(logger)
 
       _ <- updateMapRef(outDirPath, fileToHashRef)(logger).toResource

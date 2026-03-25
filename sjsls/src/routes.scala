@@ -3,6 +3,10 @@ package io.github.quafadas.sjsls
 import java.time.ZonedDateTime
 
 import org.http4s.HttpRoutes
+import org.http4s.MediaType
+import org.http4s.Response
+import org.http4s.headers.`Content-Type`
+import org.http4s.dsl.io.*
 
 import fs2.*
 import fs2.concurrent.Topic
@@ -19,6 +23,17 @@ import cats.effect.kernel.Resource
 import cats.syntax.all.*
 
 // TODO: Test that the map of hashes is updated, when an external build tool is responsible for refresh pulses
+
+private def devToolsRoute(workspace: Option[(String, String)]): HttpRoutes[IO] =
+  workspace match
+    case None => HttpRoutes.empty[IO]
+    case Some((root, uuid)) =>
+      val json = s"""{"workspace":{"root":"$root","uuid":"$uuid"}}"""
+      HttpRoutes.of[IO] {
+        case GET -> Root / ".well-known" / "appspecific" / "com.chrome.devtools.json" =>
+          Ok(json, `Content-Type`(MediaType.application.json))
+      }
+
 def routes[F[_]: Files: MonadThrow](
     stringPath: String,
     refreshTopic: Topic[IO, Unit],
@@ -27,7 +42,8 @@ def routes[F[_]: Files: MonadThrow](
     ref: Ref[IO, Map[String, String]],
     clientRoutingPrefix: Option[String],
     injectPreloads: Boolean,
-    buildTool: BuildTool
+    buildTool: BuildTool,
+    devToolsWorkspace: Option[(String, String)] = None
 )(logger: Scribe[IO]): Resource[IO, HttpRoutes[IO]] =
 
   val traceLogger = traceLoggerMiddleware(logger)
@@ -46,7 +62,8 @@ def routes[F[_]: Files: MonadThrow](
     )
 
   val refreshableApp = traceLogger(
-    refreshRoutes(refreshTopic, buildTool, fs2.io.file.Path(stringPath), ref, logger)
+    devToolsRoute(devToolsWorkspace)
+      .combineK(refreshRoutes(refreshTopic, buildTool, fs2.io.file.Path(stringPath), ref, logger))
       .combineK(proxyRoutes)
       .combineK(routes)
   )

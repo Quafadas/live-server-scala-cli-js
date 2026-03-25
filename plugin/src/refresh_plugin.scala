@@ -24,12 +24,38 @@ import com.sun.net.httpserver.SimpleFileServer
 trait ScalaJsWebAppModule extends FileBasedContentHashScalaJSModule with ScalaJsRefreshModule:
 
   def publish = Task {
-    val path = minified().dest.path
-    os.copy.over(indexHtml().path, Task.dest / "index.html")
-    os.copy(path, Task.dest, replaceExisting = true)
+    val report = minified()
+    val srcDir = report.dest.path
+
+    val scriptTags = report
+      .publicModules
+      .map { m => script(src := s"/${m.jsFileName}", `type` := "module") }
+
+    val bodyHtml = body(
+      frag(scriptTags.toSeq*),
+      div(id := appRoot)
+    ).render
+
+    val doc =
+      "<!doctype html>\n" +
+        html(
+          raw(indexHtmlHead()),
+          raw(bodyHtml)
+        ).render
+
+    os.write(Task.dest / "index.html", doc)
+    os.list(srcDir).foreach(f => os.copy(f, Task.dest / f.last, replaceExisting = true))
     if os.exists(assetsDir) then os.copy(assets().path, Task.dest, mergeFolders = true)
     end if
-    (Task.dest.toString(), path.toString())
+    PathRef(Task.dest)
+  }
+
+  /**
+   * mill show project.serveCommand will emit a string you can use to spin up a simple Java Server which will test the publishe site.
+   */
+  def serveCommand = Task {
+    val publishDir = publish().path
+    s"jwebserver -d $publishDir -p 8080"
   }
 
 
@@ -49,6 +75,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
         hrefLink =>
           link(href := hrefLink, rel := "stylesheet")
       },
+      link(rel := "icon", href := "data:image/png;base64,iVBORw0KGgo="),//avoid favicon error
       if hasLess then script(src := "https://cdn.jsdelivr.net/npm/less@4.6.3/dist/less.min.js") else frag(),
       if hasLess then link(rel := "stylesheet/less", href := "/index.less", `type` := "text/css") else frag(),
       if stylesAutoRefresh() && hasLess then script("less.watch();") else frag()
@@ -144,6 +171,9 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     None
   }
 
+  def devToolsUuid = Task {
+    java.util.UUID.randomUUID().toString
+  }
 
   def siteGen = Task {
     val path = fastLinkJS().dest.path
@@ -177,7 +207,8 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
       dezombify = dezombify(),
       logLevel = logLevel(),
       logFile = logFile().fold[Option[String]](None)(p => Some(p.path.toString)),
-      customRefresh = Some(updateServer)
+      customRefresh = Some(updateServer),
+      devToolsWorkspace = Some((moduleDir.toString(), devToolsUuid()))
     )
   }
 

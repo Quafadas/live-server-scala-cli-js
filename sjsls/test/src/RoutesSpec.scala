@@ -9,6 +9,7 @@ import scala.concurrent.duration.*
 
 import org.http4s.*
 import org.http4s.client.Client
+import org.http4s.headers.`Content-Type`
 import org.http4s.implicits.*
 import org.http4s.server.middleware.ErrorAction
 import org.typelevel.ci.CIStringSyntax
@@ -651,3 +652,57 @@ class RoutesSuite extends CatsEffectSuite:
   }
 
 end RoutesSuite
+
+class DevToolsRouteSuite extends CatsEffectSuite:
+
+  given filesInstance: Files[IO] = Files.forAsync[IO]
+
+  private def makeApp(workspace: Option[(String, String)]): Resource[IO, Client[IO]] = {
+    for
+      logger <- IO(scribe.cats[IO]).toResource
+      fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+      refreshPub <- Topic[IO, Unit].toResource
+      theseRoutes <- routes(
+        os.temp.dir().toString,
+        refreshPub,
+        None,
+        HttpRoutes.empty[IO],
+        fileToHashRef,
+        None,
+        false,
+        NoBuildTool(),
+        workspace
+      )(logger)
+    yield Client.fromHttpApp(theseRoutes.orNotFound)
+  }
+
+  test("well-known URL returns 200 with correct JSON when workspace is configured") {
+    makeApp(Some(("/test/root", "test-uuid"))).use {
+      client =>
+        client
+          .run(Request[IO](uri = uri"/.well-known/appspecific/com.chrome.devtools.json"))
+          .use {
+            resp =>
+              for
+                body <- resp.bodyText.compile.string
+                _ <- IO(assertEquals(resp.status.code, 200))
+                _ <- IO(assertEquals(resp.headers.get[`Content-Type`].map(_.mediaType), Some(MediaType.application.json)))
+                _ <- IO(assertEquals(body, """{"workspace":{"root":"/test/root","uuid":"test-uuid"}}"""))
+              yield ()
+          }
+    }
+  }
+
+  test("well-known URL returns 404 when no workspace is configured") {
+    makeApp(None).use {
+      client =>
+        client
+          .run(Request[IO](uri = uri"/.well-known/appspecific/com.chrome.devtools.json"))
+          .use {
+            resp =>
+              IO(assertEquals(resp.status.code, 404))
+          }
+    }
+  }
+
+end DevToolsRouteSuite

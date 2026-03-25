@@ -25,5 +25,6 @@ case class LiveServerConfig(
     injectPreloads: Boolean = false,
     dezombify: Boolean = true,
     logFile: Option[String] = None,
-    customRefresh: Option[Topic[IO, Unit]] = None
+    customRefresh: Option[Topic[IO, Unit]] = None,
+    devToolsWorkspace: Option[(String, String)] = None
 )

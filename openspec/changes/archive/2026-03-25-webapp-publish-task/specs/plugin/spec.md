@@ -1,24 +1,4 @@
-# plugin Specification
-
-## Purpose
-
-The mill plugin integrates with the mill build tool to provide a simple development server for scala-js projects.
-
-### Requirement: Refresh on change
-
-The tool should be able to detect changes in the source code and refresh the application accordingly.
-
-#### SCENARIO:
-- GIVEN a build tool has supplied a event stream
-- WHEN that event stream emits a pulse with a refresh event
-- THEN the server should emit a server side event to the client
-- AND the client should refresh the page (in the presence of the right javascript)
-
-#### SCENARIO:
-- GIVEN that sjsls is the entry point to an application (i.e. was run from the command line standalone)
-- WHEN that a build tool (e.g. scala-cli) has finished linking
-- THEN the server should emit a server side event to the client
-- AND the client should refresh the page (in the presence of the right javascript)
+## MODIFIED Requirements
 
 ### Requirement: Content hashing
 
@@ -53,38 +33,8 @@ The `publish` task on `ScalaJsWebAppModule` SHALL generate `index.html` using th
 - **THEN** the generated `index.html` SHALL contain `<script>` tags whose `src` attributes reference the content-hashed filenames from the `minified()` report's `publicModules`
 - **AND** those exact JS files SHALL be present in `Task.dest`
 - **AND** the `index.html` SHALL NOT reference any filenames produced by `fastLinkJS()`
-- **AND** the `index.html` SHALL NOT contain the SSE live-reload script
 
 #### Scenario: ScalaJsRefreshModule without content hashing is unchanged
 - **WHEN** `siteGen` is invoked on a module extending only `ScalaJsRefreshModule` (without content hashing)
 - **THEN** the generated `index.html` SHALL contain `<script src="/main.js">`
 - **AND** behaviour SHALL be identical to the current implementation
-
-### Requirement: Site generation with optional assets
-
-The `siteGen` and `siteGenFull` tasks SHALL copy the assets directory into the task destination only when the assets directory exists on disk. When the assets directory does not exist, the tasks SHALL succeed without copying assets.
-
-#### Scenario: Assets directory exists
-- **WHEN** the `siteGen` or `siteGenFull` task is invoked
-- **AND** the `assetsDir` path exists on disk
-- **THEN** the assets SHALL be copied into the task destination with `mergeFolders = true`
-
-#### Scenario: Assets directory does not exist
-- **WHEN** the `siteGen` or `siteGenFull` task is invoked
-- **AND** the `assetsDir` path does not exist on disk
-- **THEN** the task SHALL succeed without attempting to copy assets
-- **AND** the generated site SHALL still contain `index.html` and linked JS output
-
-### Requirement: plugin.serve exposes Chrome DevTools workspace descriptor
-
-The `ScalaJsRefreshModule.serve` Task.Worker SHALL configure the live-reload server to serve the Chrome DevTools workspace descriptor JSON at `/.well-known/appspecific/com.chrome.devtools.json`, using the module's `moduleDir` as the workspace root and a stable per-project UUID.
-
-#### Scenario: serve passes workspace root to LiveServerConfig
-
-- **WHEN** `plugin.serve` is invoked
-- **THEN** the `LiveServerConfig` passed to `LiveServer.main` SHALL have `devToolsWorkspace` set to `Some((<moduleDir absolute path>, <uuid>))`
-
-#### Scenario: devToolsUuid task is stable without mill clean
-
-- **WHEN** `devToolsUuid` is evaluated more than once without running `mill clean`
-- **THEN** it SHALL return the same UUID string on every evaluation

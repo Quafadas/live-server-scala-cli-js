@@ -136,5 +136,80 @@ object WebAppModuleTests extends TestSuite:
         }
       finally os.remove.all(assetsTempDir)
     }
+
+    test("publish generates correct index.html referencing minified JS and omits SSE script") {
+      object build extends TestRootModule with io.github.quafadas.ScalaJsWebAppModule:
+        override def scalaVersion: Simple[String] = "3.8.2"
+        override def moduleSplitStyle: Simple[ModuleSplitStyle] =
+          ModuleSplitStyle.SmallModulesFor("webapp")
+
+        override def mvnDeps = Seq(
+          mvn"com.raquo::laminar::17.0.0"
+        )
+
+        lazy val millDiscover = Discover[this.type]
+      end build
+
+      val resourceFolder = os.Path(sys.env("MILL_TEST_RESOURCE_DIR"))
+
+      UnitTester(build, resourceFolder / "simple").scoped { eval =>
+        val Right(result) = eval(build.publish).runtimeChecked
+        val siteDir = result.value.path
+
+        // index.html must exist
+        assert(os.exists(siteDir / "index.html"))
+        val html = os.read(siteDir / "index.html")
+
+        // Must NOT contain the SSE live-reload script
+        if html.contains("/refresh/v1/sse") then
+          throw new java.lang.AssertionError("publish index.html must not contain the SSE live-reload script")
+
+        // Extract all <script src="..."> references
+        val scriptSrcPattern = """src="/([^"]+\.js)"""".r
+        val scriptRefs = scriptSrcPattern.findAllMatchIn(html).map(_.group(1)).toList
+        if scriptRefs.isEmpty then
+          throw new java.lang.AssertionError(s"No <script src=...> found in publish index.html:\n$html")
+
+        // Every referenced JS file must exist in Task.dest alongside index.html
+        val outputFiles = os.list(siteDir).map(_.last).toSet
+        scriptRefs.foreach { ref =>
+          if !outputFiles.contains(ref) then
+            throw new java.lang.AssertionError(
+              s"HTML references '$ref' but it is not present in publish dest: ${outputFiles.mkString(", ")}"
+            )
+        }
+
+        // Referenced filenames must be content-hashed (at least two dot-separated segments)
+        scriptRefs.foreach { ref =>
+          val parts = ref.stripSuffix(".js").split('.')
+          if parts.length < 2 then
+            throw new java.lang.AssertionError(
+              s"publish script reference '$ref' does not appear to be a content-hashed filename"
+            )
+        }
+      }
+    }
+
+    test("publish succeeds without assets directory") {
+      object build extends TestRootModule with io.github.quafadas.ScalaJsWebAppModule:
+        override def scalaVersion: Simple[String] = "3.8.2"
+        override def moduleSplitStyle: Simple[ModuleSplitStyle] =
+          ModuleSplitStyle.SmallModulesFor("webapp")
+
+        override def mvnDeps = Seq(
+          mvn"com.raquo::laminar::17.0.0"
+        )
+
+        lazy val millDiscover = Discover[this.type]
+      end build
+
+      val resourceFolder = os.Path(sys.env("MILL_TEST_RESOURCE_DIR"))
+
+      UnitTester(build, resourceFolder / "simple").scoped { eval =>
+        val Right(result) = eval(build.publish).runtimeChecked
+        val siteDir = result.value.path
+        assert(os.exists(siteDir / "index.html"))
+      }
+    }
   }
 end WebAppModuleTests
