@@ -34,10 +34,38 @@ object MemJsTests extends TestSuite:
           val report = result.value
           val outputDir = report.dest.path
           val files = os.list(outputDir).map(_.last).toSet
-          files.foreach(println)
+          val jsFiles = files.filter(f => f.endsWith(".js") && !f.endsWith(".js.map"))
 
+          // No original (unhashed) JS filename should exist.
+          assert(!files.contains("main.js"))
 
+          // No hashed JS filename should contain a hyphen (all "-" must be replaced with "_").
+          jsFiles.foreach { filename => assert(!filename.contains("-")) }
 
+          // Every cross-module import must reference a file that actually exists in the output directory.
+          jsFiles.foreach {
+            filename =>
+              val content = os.read(outputDir / filename)
+              val imports = ContentHashScalaJSModule.parseJsImports(content)
+              imports.foreach {
+                importedName =>
+                  if !jsFiles.contains(importedName) then
+                    throw new java.lang.AssertionError(
+                      s"In $filename: import '$importedName' not found in output. " +
+                        s"Output files: ${jsFiles.mkString(", ")}"
+                    )
+              }
+          }
+
+          // The public module reported back must have a hashed filename present in output.
+          assert(report.publicModules.nonEmpty)
+          report.publicModules.foreach {
+            m =>
+              if !jsFiles.contains(m.jsFileName) then
+                throw new java.lang.AssertionError(
+                  s"Public module '${m.moduleID}' jsFileName '${m.jsFileName}' not found in output"
+                )
+          }
 
 
       }

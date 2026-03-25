@@ -2,6 +2,7 @@ package io.github.quafadas
 
 import java.nio.ByteBuffer
 import java.security.MessageDigest
+import scala.collection.mutable
 
 import mill.*
 import mill.api.Task.Simple
@@ -96,8 +97,77 @@ trait InMemoryHashScalaJSModule extends ScalaJSConfigModule:
     val report = super.fastLinkJS()
     if scalaJSExperimentalUseWebAssembly() then processWasm(report)
     else
-      // In non-WASM mode, just hash the JS files without optimization
-      ???
+      // Hash JS files from the in-memory output directory, then write hashed output to Task.dest.
+      import mill.scalajslib.ContentHashScalaJSModule as C
+
+      val allFiles = inMemoryOutputDirectory.fileNames()
+      val jsFileNames = allFiles.filter(_.endsWith(".js")).toSet
+
+      def readStr(name: String): String =
+        val buf = inMemoryOutputDirectory.content(name).get
+        val bytes = new Array[Byte](buf.remaining())
+        buf.get(bytes)
+        new String(bytes, "UTF-8")
+
+      def readBytes(name: String): Array[Byte] =
+        val buf = inMemoryOutputDirectory.content(name).get
+        val bytes = new Array[Byte](buf.remaining())
+        buf.get(bytes)
+        bytes
+
+      // Build dependency graph.
+      val fileDeps: Map[String, Set[String]] = jsFileNames.map {
+        name =>
+          val imported = C.parseJsImports(readStr(name)).filter(jsFileNames.contains)
+          (name, imported.toSet)
+      }.toMap
+
+      // Process in topological order (dependency-first).
+      val sortedNames = C.topologicalSort(jsFileNames.toList, fileDeps)
+      val jsHashMapping = mutable.LinkedHashMap.empty[String, String]
+
+      os.makeDir.all(Task.dest)
+
+      sortedNames.foreach {
+        name =>
+          val content = readStr(name)
+          val rewrittenContent = C.rewriteJsReferences(content, jsHashMapping.toMap)
+          val hash = C.computeContentHash(rewrittenContent.getBytes("UTF-8"))
+          // Replace "-" with "_" to avoid issues with terser external source maps.
+          val baseName = name.stripSuffix(".js").replace("-", "_")
+          val hashedName = s"$baseName.$hash.js"
+          jsHashMapping(name) = hashedName
+
+          val finalContent = rewrittenContent.replace(
+            "sourceMappingURL=" + name + ".map",
+            "sourceMappingURL=" + hashedName + ".map"
+          )
+          os.write(Task.dest / hashedName, finalContent.getBytes("UTF-8"))
+      }
+
+      // Build full mapping including source-map renames.
+      val fullMapping: Map[String, String] = jsHashMapping.flatMap {
+        case (orig, hashed) => Seq(orig -> hashed, orig + ".map" -> (hashed + ".map"))
+      }.toMap
+
+      // Write remaining files (source maps, etc.) to Task.dest.
+      allFiles.filterNot(jsFileNames.contains).foreach {
+        name =>
+          val targetName = fullMapping.getOrElse(name, name)
+          os.write(Task.dest / targetName, readBytes(name))
+      }
+
+      // Build updated Report.
+      val updatedModules = report.publicModules.map {
+        m =>
+          Report.Module(
+            moduleID = m.moduleID,
+            jsFileName = jsHashMapping.getOrElse(m.jsFileName, m.jsFileName),
+            sourceMapName = m.sourceMapName.map(sm => fullMapping.getOrElse(sm, sm)),
+            moduleKind = m.moduleKind
+          )
+      }
+      api.Report(updatedModules, PathRef(Task.dest))
     end if
   }
 

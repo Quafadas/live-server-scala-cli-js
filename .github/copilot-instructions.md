@@ -17,6 +17,10 @@ This project uses **Mill** (version 1.0.5) as its build tool. The Mill wrapper s
 
 CI will fail poorly formatted files. Make sure to run formatting before pushing.
 
+## Discovery
+
+To discover things about symbols in the codebase, use the scalex skill. e.g. `scalex search ContentHashScalaJSModule --kind trait` to find the location of the `ContentHashScalaJSModule` trait.
+
 ### Mill Fundamentals
 
 - `build.mill` is the root build file (header directives declare Mill version and JVM)
@@ -78,7 +82,7 @@ live-server-scala-cli-js/
 
 ## Technology Stack
 
-The typelevel stack - 
+The typelevel stack -
 
 ## Testing
 

@@ -40,8 +40,14 @@ object SiteJsTests extends TestSuite:
           // No original (unhashed) JS filename should exist.
           assert(!files.contains("main.js"))
 
+          // No hashed JS filename should contain a hyphen (all "-" must be replaced with "_").
+          jsFiles.foreach { filename => assert(!filename.contains("-")) }
+
           // Every cross-module import inside each JS file must reference a file
           // that actually exists in the output directory (i.e. imports use hashed names).
+          // This also verifies hash cascading: if a dependency's hash changed but the
+          // importer's import reference was NOT rewritten, the imported name would not
+          // exist in the output and this assertion would fail.
           jsFiles.foreach {
             filename =>
               val content = os.read(outputDir / filename)
@@ -69,9 +75,46 @@ object SiteJsTests extends TestSuite:
             }
 
           val Right(mini) = eval(build.minified).runtimeChecked
-          println(mini.value)
+          val miniDir = mini.value.path
+          val miniFiles = os.list(miniDir).map(_.last).toSet
+          val miniJsFiles = miniFiles.filter(f => f.endsWith(".js") && !f.endsWith(".js.map"))
+          val miniMapFiles = miniFiles.filter(_.endsWith(".js.map"))
 
-          os.list(mini.value.path).foreach(f => println(s"Output file: ${f.last}"))
+          // 3.1: Every minified .js file has a corresponding .js.map
+          miniJsFiles.foreach { jsFile =>
+            val expectedMap = jsFile + ".map"
+            if !miniMapFiles.contains(expectedMap) then
+              throw new java.lang.AssertionError(
+                s"Minified $jsFile has no corresponding source map. Maps: ${miniMapFiles.mkString(", ")}"
+              )
+          }
+
+          // 3.2: Minified hashes differ from fullLinkJS hashes
+          // (post-minification content is different, so hashes must differ)
+          miniJsFiles.foreach { miniName =>
+            if jsFiles.contains(miniName) then
+              throw new java.lang.AssertionError(
+                s"Minified filename '$miniName' is identical to fullLinkJS output — hash should differ"
+              )
+          }
+
+          // 3.3: sourceMappingURL in each minified JS points to a .map file that exists in output
+          miniJsFiles.foreach { jsFile =>
+            val content = os.read(miniDir / jsFile)
+            val urlPattern = """//# sourceMappingURL=(.+)""".r
+            urlPattern.findFirstMatchIn(content) match {
+              case Some(m) =>
+                val mapRef = m.group(1).trim
+                if !miniMapFiles.contains(mapRef) then
+                  throw new java.lang.AssertionError(
+                    s"In $jsFile: sourceMappingURL=$mapRef but file not found. Maps: ${miniMapFiles.mkString(", ")}"
+                  )
+              case None =>
+                throw new java.lang.AssertionError(
+                  s"Minified $jsFile has no sourceMappingURL comment"
+                )
+            }
+          }
 
 
       }

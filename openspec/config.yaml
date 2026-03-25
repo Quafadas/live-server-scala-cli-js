@@ -7,7 +7,9 @@ schema: spec-driven
 context: |
   Tech stack: scala
   build tool: mill
-  Testing: munit
+  Testing:
+    munit for sjsls
+    utest for mill plugin
   Style guide:
     Prefer braces over end markers.
     Use braces around a long scope that is not terminated by some keyword. A long scope is a scope that contains blank lines which are not already embedded in a nested construct. However, braces are not necessary if the scope is already terminated by a closing keyword such as else, do, yield, case, or catch since that keyword effectively serves as the end marker for the scope.

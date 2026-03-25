@@ -71,35 +71,56 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSModule:
   def minified = Task {
     val full = fullLinkJS()
     val terserConfigFile = terserConfig()
+    val tempDir = os.temp.dir()
 
-    val files = os.walk(full.dest.path).filter(p => os.isFile(p) && p.ext == "js")
-    files.foreach { f =>
+    try {
+      val files = os.walk(full.dest.path).filter(p => os.isFile(p) && p.ext == "js")
+      files.foreach { f =>
         Task.log.info(s"Minifying ${f}...")
-        val subPath = f.subRelativeTo(full.dest.path)
-        val outPath = Task.dest / subPath
         val fName = f.last
-        // val sourceMapConfig = s"""--source-map "content=${f}.map,filename=${outPath}.map""""
+        // Strip the pre-minification content hash so applyContentHash applies a single post-min hash.
+        val strippedName = FileBasedContentHashScalaJSModule.stripContentHash(fName)
+        val outPath = tempDir / strippedName
+        val outMapPath = tempDir / (strippedName + ".map")
         Task.log.info(s"  → ${outPath}")
 
-        // println(s"""terser ${f.toString.replace("$", "\\$")} -o ${(Task.dest / subPath).toString().replace("$", "\\$")} ${sourceMapConfig.replace("$", "\\$")} --config-file ${terserConfigFile.path}""")
         os.proc(
           "terser",
           f.toString,
-          "-o", (Task.dest / subPath).toString(),
-          // sourceMapConfig,
+          "-o", outPath.toString,
+          "--source-map", s"content='${f}.map',url='${strippedName}.map'",
           "--config-file", terserConfigFile.path.toString
         ).call(
-          cwd = Task.dest,
+          cwd = tempDir,
           mergeErrIntoOut = true,
           stdin = os.Inherit,
           stdout = os.Inherit,
           stderr = os.Inherit
         )
+        // Copy the input source map's corresponding .map if terser didn't produce one
+        // (shouldn't happen, but defensive)
         val inSizeMb = os.size(f).toDouble / (1024 * 1024)
         val outSizeMb = os.size(outPath).toDouble / (1024 * 1024)
         Task.log.info(f"Minified $fName: $inSizeMb%.4f Mb → $outSizeMb%.4f Mb")
       }
-    PathRef(Task.dest)
+
+      // Build a synthetic Report pointing at the temp directory so applyContentHash can process it.
+      val syntheticReport = Report(
+        publicModules = full.publicModules.map { m =>
+          Report.Module(
+            moduleID = m.moduleID,
+            jsFileName = FileBasedContentHashScalaJSModule.stripContentHash(m.jsFileName),
+            sourceMapName = m.sourceMapName.map(FileBasedContentHashScalaJSModule.stripContentHash),
+            moduleKind = m.moduleKind
+          )
+        },
+        dest = PathRef(tempDir)
+      )
+      FileBasedContentHashScalaJSModule.applyContentHash(syntheticReport, Task.dest)
+      PathRef(Task.dest)
+    } finally {
+      os.remove.all(tempDir)
+    }
   }
 
   /** Override [[linkJs]] to capture linker output in a temporary directory, compute SHA-256 content hashes, rewrite
@@ -205,7 +226,8 @@ object FileBasedContentHashScalaJSModule:
 
         // Hash the rewritten content (so the filename hash reflects the final content).
         val hash = computeContentHash(rewrittenContent.getBytes("UTF-8"))
-        val hashedName = s"${f.baseName}.$hash.${f.ext}"
+        // Replace "-" with "_" in base name: terser struggles with hyphens in external source maps.
+        val hashedName = s"${f.baseName.replace("-", "_")}.$hash.${f.ext}"
         jsHashMapping(name) = hashedName
 
         // Also update the sourceMappingURL comment that points to this file's own map.
@@ -307,6 +329,33 @@ object FileBasedContentHashScalaJSModule:
     val digest = MessageDigest.getInstance("SHA-256")
     digest.digest(bytes).take(8).map("%02x".format(_)).mkString
   end computeContentHash
+
+  /** Remove the content hash segment from a hashed filename.
+    *
+    * A content-hashed filename has the form `<base>.<16hexchars>.<ext>`, e.g. `main.a1b2c3d4e5f6g7h8.js`. This method
+    * strips the hash segment and returns `<base>.<ext>`, e.g. `main.js`.
+    *
+    * For source map files (`*.js.map`), the form is `<base>.<16hexchars>.js.map` and the hash is the third-to-last
+    * segment.
+    *
+    * If the filename does not match the expected pattern, it is returned unchanged.
+    */
+  def stripContentHash(name: String): String =
+    val hexPattern = "^[0-9a-f]{16}$".r
+    val parts = name.split('.')
+    // For .js.map files: parts = [base..., hash, js, map] — hash is at length-3
+    // For .js files:     parts = [base..., hash, js]       — hash is at length-2
+    val hashIdx =
+      if parts.length >= 4 && parts(parts.length - 1) == "map" && parts(parts.length - 2) == "js" then
+        parts.length - 3
+      else if parts.length >= 3 then
+        parts.length - 2
+      else -1
+
+    if hashIdx > 0 && hexPattern.matches(parts(hashIdx)) then
+      (parts.take(hashIdx) ++ parts.drop(hashIdx + 1)).mkString(".")
+    else name
+  end stripContentHash
 
   /** Replace quoted module names and sourceMappingURL references throughout `content`.
     *
