@@ -3,12 +3,13 @@ package io.github.quafadas
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.util.concurrent.ConcurrentHashMap
-import scala.concurrent.{ExecutionContext, Future}
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.jdk.CollectionConverters.*
 
 import org.scalajs.linker.interface.OutputDirectory
 import org.scalajs.linker.interface.unstable.OutputDirectoryImpl
-import net.jpountz.xxhash.XXHashFactory
 
 sealed trait MemOutputDirectory extends OutputDirectory:
   def content(name: String): Option[ByteBuffer]

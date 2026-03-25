@@ -1,25 +1,22 @@
 package io.github.quafadas
+import scalatags.Text.all.*
+
 import fs2.concurrent.Topic
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 
-import scalatags.Text.all.*
-
 import io.github.quafadas.sjsls.LiveServerConfig
-import mill.Task
 import mill.PathRef
+import mill.Task
 import mill.api.BuildCtx
 import mill.api.Task.Simple
 import mill.scalajslib.*
-import mill.scalajslib.config.ScalaJSConfigModule
-import mill.scalajslib.api.Report
 import mill.scalajslib.api.ModuleKind
+import mill.scalajslib.api.Report
+import mill.scalajslib.config.ScalaJSConfigModule
 implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
-import java.net.InetSocketAddress
-import java.nio.file.Path
-import com.sun.net.httpserver.SimpleFileServer
 
 trait ScalaJsWebAppModule extends FileBasedContentHashScalaJSModule with ScalaJsRefreshModule:
 

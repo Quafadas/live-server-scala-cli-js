@@ -2,16 +2,18 @@ package io.github.quafadas
 
 import java.nio.ByteBuffer
 import java.security.MessageDigest
+
 import scala.collection.mutable
+
+import org.scalajs.linker.interface.OutputDirectory
 
 import mill.*
 import mill.api.Task.Simple
+import mill.api.TaskCtx.Log
 import mill.scalajslib.api
 import mill.scalajslib.api.ModuleKind
 import mill.scalajslib.api.Report
 import mill.scalajslib.config.ScalaJSConfigModule
-import mill.api.TaskCtx.Log
-import org.scalajs.linker.interface.OutputDirectory
 
 /** A Mill module trait that adds content hashing to Scala.js linked output, using an in-memory linker output directory.
   *
@@ -45,7 +47,7 @@ trait InMemoryHashScalaJSModule extends ScalaJSConfigModule:
   val inMemoryOutputDirectory: MemOutputDirectory = MemOutputDirectory()
 
   override def customLinkerOutputDir: Option[OutputDirectory] =
-    println(s"Using in-memory output directory") // debug log
+    println("Using in-memory output directory") // debug log
     Some(inMemoryOutputDirectory)
   end customLinkerOutputDir
 

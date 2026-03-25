@@ -1,14 +1,15 @@
 package mill.scalajslib
 
 import java.security.MessageDigest
+
 import scala.collection.mutable
 
 import mill.*
 import mill.api.Result
+import mill.api.Task.Simple
 import mill.api.TaskCtx
 import mill.scalajslib.api.*
 import mill.scalajslib.worker.ScalaJSWorker
-import mill.api.Task.Simple
 
 /** A Mill module trait that adds content hashing to Scala.js linked output.
   *

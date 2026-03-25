@@ -5,8 +5,8 @@ import java.time.ZonedDateTime
 import org.http4s.HttpRoutes
 import org.http4s.MediaType
 import org.http4s.Response
-import org.http4s.headers.`Content-Type`
 import org.http4s.dsl.io.*
+import org.http4s.headers.`Content-Type`
 
 import fs2.*
 import fs2.concurrent.Topic

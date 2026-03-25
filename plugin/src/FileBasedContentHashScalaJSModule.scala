@@ -1,18 +1,14 @@
 package io.github.quafadas
 
 import java.security.MessageDigest
+
 import scala.collection.mutable
 
 import mill.*
 import mill.api.Result
+import mill.api.Task.Simple
 import mill.api.TaskCtx
 import mill.scalajslib.api.*
-import mill.scalajslib.worker.ScalaJSWorker
-import mill.api.Task.Simple
-
-import java.net.InetSocketAddress
-import java.nio.file.Path
-import com.sun.net.httpserver.SimpleFileServer
 import mill.scalajslib.config.ScalaJSConfigModule
 
 /** A Mill module trait that adds content hashing to Scala.js linked output.
@@ -146,7 +142,7 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
           // Strip the pre-minification content hash so applyContentHash applies a single post-min hash.
           val strippedName = FileBasedContentHashScalaJSModule.stripContentHash(fName)
           val outPath = tempDir / strippedName
-          val outMapPath = tempDir / (strippedName + ".map")
+          tempDir / (strippedName + ".map")
           Task.log.info(s"  → ${outPath}")
 
           os.proc(

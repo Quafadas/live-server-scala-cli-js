@@ -113,9 +113,9 @@ private def fileWatcher(
     .subscribe(10)
     .evalTap {
       _ =>
-        logger.debug(s"[fileWatcher] linkingTopic fired — updating hash map then publishing to refreshTopic") >>
+        logger.debug("[fileWatcher] linkingTopic fired — updating hash map then publishing to refreshTopic") >>
           updateMapRef(stringPath, mr)(logger) >>
-          logger.debug(s"[fileWatcher] hash map updated — publishing to refreshTopic") >>
+          logger.debug("[fileWatcher] hash map updated — publishing to refreshTopic") >>
           refreshTopic.publish1(())
     }
     .compile
