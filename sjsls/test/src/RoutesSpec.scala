@@ -625,12 +625,7 @@ class RoutesSuite extends CatsEffectSuite:
         // Collect events published on customTopic.
         // We subscribe before wiring liveServer so we don't miss early events.
         eventCount <- Ref[IO].of(0).toResource
-        _ <- customTopic
-          .subscribe(Int.MaxValue)
-          .evalTap(_ => eventCount.update(_ + 1))
-          .compile
-          .drain
-          .background
+        _ <- customTopic.subscribe(Int.MaxValue).evalTap(_ => eventCount.update(_ + 1)).compile.drain.background
 
         // Simulate liveServer.main wiring: only start staticWatcher when customRefresh is None.
         // Here customRefresh = Some(customTopic), so we do NOT start a staticWatcher.
@@ -642,9 +637,7 @@ class RoutesSuite extends CatsEffectSuite:
         _ <- IO.sleep(200.millis).toResource // let events propagate
 
         // Also write to the watched dir to prove a staticWatcher would have fired
-        _ <- IO
-          .blocking(os.write.over(staticDir / "index.html", """<head><title>Updated</title></head>"""))
-          .toResource
+        _ <- IO.blocking(os.write.over(staticDir / "index.html", """<head><title>Updated</title></head>""")).toResource
         _ <- IO.sleep(200.millis).toResource
 
         count <- eventCount.get.toResource
@@ -657,7 +650,7 @@ class DevToolsRouteSuite extends CatsEffectSuite:
 
   given filesInstance: Files[IO] = Files.forAsync[IO]
 
-  private def makeApp(workspace: Option[(String, String)]): Resource[IO, Client[IO]] = {
+  private def makeApp(workspace: Option[(String, String)]): Resource[IO, Client[IO]] =
     for
       logger <- IO(scribe.cats[IO]).toResource
       fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
@@ -674,7 +667,6 @@ class DevToolsRouteSuite extends CatsEffectSuite:
         workspace
       )(logger)
     yield Client.fromHttpApp(theseRoutes.orNotFound)
-  }
 
   test("well-known URL returns 200 with correct JSON when workspace is configured") {
     makeApp(Some(("/test/root", "test-uuid"))).use {
@@ -686,7 +678,9 @@ class DevToolsRouteSuite extends CatsEffectSuite:
               for
                 body <- resp.bodyText.compile.string
                 _ <- IO(assertEquals(resp.status.code, 200))
-                _ <- IO(assertEquals(resp.headers.get[`Content-Type`].map(_.mediaType), Some(MediaType.application.json)))
+                _ <- IO(
+                  assertEquals(resp.headers.get[`Content-Type`].map(_.mediaType), Some(MediaType.application.json))
+                )
                 _ <- IO(assertEquals(body, """{"workspace":{"root":"/test/root","uuid":"test-uuid"}}"""))
               yield ()
           }

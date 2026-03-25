@@ -26,7 +26,7 @@ import cats.syntax.all.*
 
 private def devToolsRoute(workspace: Option[(String, String)]): HttpRoutes[IO] =
   workspace match
-    case None => HttpRoutes.empty[IO]
+    case None               => HttpRoutes.empty[IO]
     case Some((root, uuid)) =>
       val json = s"""{"workspace":{"root":"$root","uuid":"$uuid"}}"""
       HttpRoutes.of[IO] {

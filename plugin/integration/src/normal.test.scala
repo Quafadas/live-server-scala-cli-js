@@ -26,50 +26,57 @@ object WebAppModuleTests extends TestSuite:
 
       val resourceFolder = os.Path(sys.env("MILL_TEST_RESOURCE_DIR"))
 
-      UnitTester(build, resourceFolder / "simple").scoped { eval =>
-        val Right(result) = eval(build.siteGen).runtimeChecked
-        val (siteDirStr, jsDirStr) = result.value
-        val siteDir = os.Path(siteDirStr)
-        val jsDir = os.Path(jsDirStr)
+      UnitTester(build, resourceFolder / "simple").scoped {
+        eval =>
+          val Right(result) = eval(build.siteGen).runtimeChecked
+          val (siteDirStr, jsDirStr) = result.value
+          val siteDir = os.Path(siteDirStr)
+          val jsDir = os.Path(jsDirStr)
 
-        // index.html must be present in the siteGen output directory
-        assert(os.exists(siteDir / "index.html"))
-        val html = os.read(siteDir / "index.html")
+          // index.html must be present in the siteGen output directory
+          assert(os.exists(siteDir / "index.html"))
+          val html = os.read(siteDir / "index.html")
 
-        // 1. Must NOT reference the static unhashed name
-        assert(!html.contains("src=\"/main.js\""))
+          // 1. Must NOT reference the static unhashed name
+          assert(!html.contains("src=\"/main.js\""))
 
-        // 2. Extract all <script src="..."> references from the HTML
-        val scriptSrcPattern = """src="/([^"]+\.js)"""".r
-        val scriptRefs = scriptSrcPattern.findAllMatchIn(html).map(_.group(1)).toList
-        if scriptRefs.isEmpty then
-          throw new java.lang.AssertionError(s"No <script src=...> found in index.html:\n$html")
+          // 2. Extract all <script src="..."> references from the HTML
+          val scriptSrcPattern = """src="/([^"]+\.js)"""".r
+          val scriptRefs = scriptSrcPattern.findAllMatchIn(html).map(_.group(1)).toList
+          if scriptRefs.isEmpty then
+            throw new java.lang.AssertionError(s"No <script src=...> found in index.html:\n$html")
+          end if
 
-        // 3. Every referenced JS file must exist in the fastLinkJS output directory
-        val jsOutputFiles = os.list(jsDir).map(_.last).toSet
-        scriptRefs.foreach { ref =>
-          if !jsOutputFiles.contains(ref) then
-            throw new java.lang.AssertionError(
-              s"HTML references '$ref' but it is not present in JS output: ${jsOutputFiles.mkString(", ")}"
-            )
-        }
+          // 3. Every referenced JS file must exist in the fastLinkJS output directory
+          val jsOutputFiles = os.list(jsDir).map(_.last).toSet
+          scriptRefs.foreach {
+            ref =>
+              if !jsOutputFiles.contains(ref) then
+                throw new java.lang.AssertionError(
+                  s"HTML references '$ref' but it is not present in JS output: ${jsOutputFiles.mkString(", ")}"
+                )
+          }
 
-        // 4. Referenced filenames must be content-hashed (e.g. "main.abc12345.js", not "main.js")
-        scriptRefs.foreach { ref =>
-          val parts = ref.stripSuffix(".js").split('.')
-          if parts.length < 2 then
-            throw new java.lang.AssertionError(
-              s"Script reference '$ref' does not appear to be a content-hashed filename"
-            )
-        }
+          // 4. Referenced filenames must be content-hashed (e.g. "main.abc12345.js", not "main.js")
+          scriptRefs.foreach {
+            ref =>
+              val parts = ref.stripSuffix(".js").split('.')
+              if parts.length < 2 then
+                throw new java.lang.AssertionError(
+                  s"Script reference '$ref' does not appear to be a content-hashed filename"
+                )
+              end if
+          }
 
-        // 5. The SSE live-reload script must be present
-        if !html.contains("/refresh/v1/sse") then
-          throw new java.lang.AssertionError("index.html is missing the SSE live-reload script")
+          // 5. The SSE live-reload script must be present
+          if !html.contains("/refresh/v1/sse") then
+            throw new java.lang.AssertionError("index.html is missing the SSE live-reload script")
+          end if
 
-        // 6. The app root div must be present
-        if !html.contains("id=\"app\"") then
-          throw new java.lang.AssertionError("index.html is missing the app root div")
+          // 6. The app root div must be present
+          if !html.contains("id=\"app\"") then
+            throw new java.lang.AssertionError("index.html is missing the app root div")
+          end if
       }
     }
 
@@ -90,14 +97,16 @@ object WebAppModuleTests extends TestSuite:
 
       val resourceFolder = os.Path(sys.env("MILL_TEST_RESOURCE_DIR"))
 
-      UnitTester(build, resourceFolder / "simple").scoped { eval =>
-        val Right(result) = eval(build.siteGen).runtimeChecked
-        val (siteDirStr, _) = result.value
-        val siteDir = os.Path(siteDirStr)
-        assert(os.exists(siteDir / "index.html"))
-        val outputFiles = os.list(siteDir).map(_.last).toSet
-        if outputFiles != Set("index.html") then
-          throw new java.lang.AssertionError(s"only index.html expected, got: $outputFiles")
+      UnitTester(build, resourceFolder / "simple").scoped {
+        eval =>
+          val Right(result) = eval(build.siteGen).runtimeChecked
+          val (siteDirStr, _) = result.value
+          val siteDir = os.Path(siteDirStr)
+          assert(os.exists(siteDir / "index.html"))
+          val outputFiles = os.list(siteDir).map(_.last).toSet
+          if outputFiles != Set("index.html") then
+            throw new java.lang.AssertionError(s"only index.html expected, got: $outputFiles")
+          end if
       }
     }
 
@@ -124,17 +133,21 @@ object WebAppModuleTests extends TestSuite:
       val resourceFolder = os.Path(sys.env("MILL_TEST_RESOURCE_DIR"))
 
       try
-        UnitTester(build, resourceFolder / "simple").scoped { eval =>
-          val Right(result) = eval(build.siteGen).runtimeChecked
-          val (siteDirStr, _) = result.value
-          val siteDir = os.Path(siteDirStr)
-          assert(os.exists(siteDir / "index.html"))
-          if !os.exists(siteDir / "logo.svg") then
-            throw new java.lang.AssertionError("logo.svg must be copied from assets")
-          if !os.exists(siteDir / "fonts" / "font.woff2") then
-            throw new java.lang.AssertionError("nested font.woff2 must be copied from assets")
+        UnitTester(build, resourceFolder / "simple").scoped {
+          eval =>
+            val Right(result) = eval(build.siteGen).runtimeChecked
+            val (siteDirStr, _) = result.value
+            val siteDir = os.Path(siteDirStr)
+            assert(os.exists(siteDir / "index.html"))
+            if !os.exists(siteDir / "logo.svg") then
+              throw new java.lang.AssertionError("logo.svg must be copied from assets")
+            end if
+            if !os.exists(siteDir / "fonts" / "font.woff2") then
+              throw new java.lang.AssertionError("nested font.woff2 must be copied from assets")
+            end if
         }
       finally os.remove.all(assetsTempDir)
+      end try
     }
 
     test("publish generates correct index.html referencing minified JS and omits SSE script") {
@@ -152,41 +165,47 @@ object WebAppModuleTests extends TestSuite:
 
       val resourceFolder = os.Path(sys.env("MILL_TEST_RESOURCE_DIR"))
 
-      UnitTester(build, resourceFolder / "simple").scoped { eval =>
-        val Right(result) = eval(build.publish).runtimeChecked
-        val siteDir = result.value.path
+      UnitTester(build, resourceFolder / "simple").scoped {
+        eval =>
+          val Right(result) = eval(build.publish).runtimeChecked
+          val siteDir = result.value.path
 
-        // index.html must exist
-        assert(os.exists(siteDir / "index.html"))
-        val html = os.read(siteDir / "index.html")
+          // index.html must exist
+          assert(os.exists(siteDir / "index.html"))
+          val html = os.read(siteDir / "index.html")
 
-        // Must NOT contain the SSE live-reload script
-        if html.contains("/refresh/v1/sse") then
-          throw new java.lang.AssertionError("publish index.html must not contain the SSE live-reload script")
+          // Must NOT contain the SSE live-reload script
+          if html.contains("/refresh/v1/sse") then
+            throw new java.lang.AssertionError("publish index.html must not contain the SSE live-reload script")
+          end if
 
-        // Extract all <script src="..."> references
-        val scriptSrcPattern = """src="/([^"]+\.js)"""".r
-        val scriptRefs = scriptSrcPattern.findAllMatchIn(html).map(_.group(1)).toList
-        if scriptRefs.isEmpty then
-          throw new java.lang.AssertionError(s"No <script src=...> found in publish index.html:\n$html")
+          // Extract all <script src="..."> references
+          val scriptSrcPattern = """src="/([^"]+\.js)"""".r
+          val scriptRefs = scriptSrcPattern.findAllMatchIn(html).map(_.group(1)).toList
+          if scriptRefs.isEmpty then
+            throw new java.lang.AssertionError(s"No <script src=...> found in publish index.html:\n$html")
+          end if
 
-        // Every referenced JS file must exist in Task.dest alongside index.html
-        val outputFiles = os.list(siteDir).map(_.last).toSet
-        scriptRefs.foreach { ref =>
-          if !outputFiles.contains(ref) then
-            throw new java.lang.AssertionError(
-              s"HTML references '$ref' but it is not present in publish dest: ${outputFiles.mkString(", ")}"
-            )
-        }
+          // Every referenced JS file must exist in Task.dest alongside index.html
+          val outputFiles = os.list(siteDir).map(_.last).toSet
+          scriptRefs.foreach {
+            ref =>
+              if !outputFiles.contains(ref) then
+                throw new java.lang.AssertionError(
+                  s"HTML references '$ref' but it is not present in publish dest: ${outputFiles.mkString(", ")}"
+                )
+          }
 
-        // Referenced filenames must be content-hashed (at least two dot-separated segments)
-        scriptRefs.foreach { ref =>
-          val parts = ref.stripSuffix(".js").split('.')
-          if parts.length < 2 then
-            throw new java.lang.AssertionError(
-              s"publish script reference '$ref' does not appear to be a content-hashed filename"
-            )
-        }
+          // Referenced filenames must be content-hashed (at least two dot-separated segments)
+          scriptRefs.foreach {
+            ref =>
+              val parts = ref.stripSuffix(".js").split('.')
+              if parts.length < 2 then
+                throw new java.lang.AssertionError(
+                  s"publish script reference '$ref' does not appear to be a content-hashed filename"
+                )
+              end if
+          }
       }
     }
 
@@ -205,10 +224,11 @@ object WebAppModuleTests extends TestSuite:
 
       val resourceFolder = os.Path(sys.env("MILL_TEST_RESOURCE_DIR"))
 
-      UnitTester(build, resourceFolder / "simple").scoped { eval =>
-        val Right(result) = eval(build.publish).runtimeChecked
-        val siteDir = result.value.path
-        assert(os.exists(siteDir / "index.html"))
+      UnitTester(build, resourceFolder / "simple").scoped {
+        eval =>
+          val Right(result) = eval(build.publish).runtimeChecked
+          val siteDir = result.value.path
+          assert(os.exists(siteDir / "index.html"))
       }
     }
   }

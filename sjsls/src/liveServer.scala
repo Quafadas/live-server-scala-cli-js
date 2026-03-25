@@ -68,7 +68,8 @@ object LiveServer extends IOApp:
 
     val level = Level.get(lsc.logLevel).get
     val baseLogger = scribe.Logger.root.clearHandlers().clearModifiers()
-    lsc.logFile
+    lsc
+      .logFile
       .fold(baseLogger.withHandler(minimumLevel = Some(level))) {
         filePath =>
           baseLogger.withHandler(
@@ -246,9 +247,8 @@ object LiveServer extends IOApp:
 
 end LiveServer
 
-/** A scribe [[scribe.writer.Writer]] that appends to a plain file using Java IO.
-  * This deliberately avoids the `scribe-file` module to sidestep the
-  * `path""` string-context conflict with http4s.
+/** A scribe [[scribe.writer.Writer]] that appends to a plain file using Java IO. This deliberately avoids the
+  * `scribe-file` module to sidestep the `path""` string-context conflict with http4s.
   */
 private[sjsls] def fileLogWriter(filePath: String): scribe.writer.Writer =
   import java.io.{FileOutputStream, PrintStream}
@@ -259,3 +259,5 @@ private[sjsls] def fileLogWriter(filePath: String): scribe.writer.Writer =
         output: scribe.output.LogOutput,
         outputFormat: scribe.output.format.OutputFormat
     ): Unit = ps.println(output.plainText)
+  end new
+end fileLogWriter

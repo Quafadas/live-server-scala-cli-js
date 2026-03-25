@@ -13,11 +13,10 @@ import mill.scalajslib.config.ScalaJSConfigModule
 import mill.api.TaskCtx.Log
 import org.scalajs.linker.interface.OutputDirectory
 
-/** A Mill module trait that adds content hashing to Scala.js linked output, using an in-memory linker output
-  * directory.
+/** A Mill module trait that adds content hashing to Scala.js linked output, using an in-memory linker output directory.
   *
-  * Mix this trait into a `ScalaJSModule` to produce JS (or WASM) files whose names include a SHA-256 content hash,
-  * e.g. `main.a1b2c3d4.js`. Internal references between modules are automatically rewritten to use the hashed names,
+  * Mix this trait into a `ScalaJSModule` to produce JS (or WASM) files whose names include a SHA-256 content hash, e.g.
+  * `main.a1b2c3d4.js`. Internal references between modules are automatically rewritten to use the hashed names,
   * enabling long-lived HTTP caching with automatic cache busting on content changes.
   *
   * When `scalaJSExperimentalUseWebAssembly` is enabled, `fullLinkJS` additionally runs `wasm-opt` on the emitted
@@ -107,29 +106,30 @@ trait InMemoryHashScalaJSModule extends ScalaJSConfigModule:
     * `wasm-opt` must be available on `$PATH`. The flags (including `-all`, which is mandatory for Scala.js WASM output)
     * are taken from [[wasmOptFlags]].
     */
-  private def runWasmOpt(flags: Seq[String])(using logCtx: Log): Unit = {
+  private def runWasmOpt(flags: Seq[String])(using logCtx: Log): Unit =
     val wasmFileNames = inMemoryOutputDirectory.fileNames().filter(_.endsWith(".wasm"))
-    if wasmFileNames.nonEmpty then {
+    if wasmFileNames.nonEmpty then
       val tempDir = os.temp.dir()
       try
-        wasmFileNames.foreach { name =>
-          val buf = inMemoryOutputDirectory.content(name).get
-          val bytes = new Array[Byte](buf.remaining())
-          buf.get(bytes)
-          val inputPath = tempDir / "input.wasm"
-          val outputPath = tempDir / "output.wasm"
-          os.write.over(inputPath, bytes)
-          os.proc(List("wasm-opt", inputPath.toString) ++ flags.toList ++ List("-o", outputPath.toString))
-            .call(stdout = os.Inherit, stderr = os.Inherit)
-          val optimisedBytes = os.read.bytes(outputPath)
-          inMemoryOutputDirectory.remove(name)
-          inMemoryOutputDirectory.put(name, ByteBuffer.wrap(optimisedBytes))
-          Task.log.info(s"wasm-opt $name: ${bytes.length} → ${optimisedBytes.length} bytes")
+        wasmFileNames.foreach {
+          name =>
+            val buf = inMemoryOutputDirectory.content(name).get
+            val bytes = new Array[Byte](buf.remaining())
+            buf.get(bytes)
+            val inputPath = tempDir / "input.wasm"
+            val outputPath = tempDir / "output.wasm"
+            os.write.over(inputPath, bytes)
+            os.proc(List("wasm-opt", inputPath.toString) ++ flags.toList ++ List("-o", outputPath.toString))
+              .call(stdout = os.Inherit, stderr = os.Inherit)
+            val optimisedBytes = os.read.bytes(outputPath)
+            inMemoryOutputDirectory.remove(name)
+            inMemoryOutputDirectory.put(name, ByteBuffer.wrap(optimisedBytes))
+            Task.log.info(s"wasm-opt $name: ${bytes.length} → ${optimisedBytes.length} bytes")
         }
       finally os.remove.all(tempDir)
       end try
-    }
-  }
+    end if
+  end runWasmOpt
 
   override def fastLinkJS = Task {
     val report = super.fastLinkJS()

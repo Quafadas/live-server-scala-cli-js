@@ -27,9 +27,7 @@ trait ScalaJsWebAppModule extends FileBasedContentHashScalaJSModule with ScalaJs
     val report = minified()
     val srcDir = report.dest.path
 
-    val scriptTags = report
-      .publicModules
-      .map { m => script(src := s"/${m.jsFileName}", `type` := "module") }
+    val scriptTags = report.publicModules.map(m => script(src := s"/${m.jsFileName}", `type` := "module"))
 
     val bodyHtml = body(
       frag(scriptTags.toSeq*),
@@ -50,15 +48,14 @@ trait ScalaJsWebAppModule extends FileBasedContentHashScalaJSModule with ScalaJs
     PathRef(Task.dest)
   }
 
-  /**
-   * mill show project.serveCommand will emit a string you can use to spin up a simple Java Server which will test the publishe site.
-   */
+  /** mill show project.serveCommand will emit a string you can use to spin up a simple Java Server which will test the
+    * publishe site.
+    */
   def serveCommand = Task {
     val publishDir = publish().path
     s"jwebserver -d $publishDir -p 8080"
   }
-
-
+end ScalaJsWebAppModule
 
 trait ScalaJsRefreshModule extends ScalaJSConfigModule:
 
@@ -75,7 +72,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
         hrefLink =>
           link(href := hrefLink, rel := "stylesheet")
       },
-      link(rel := "icon", href := "data:image/png;base64,iVBORw0KGgo="),//avoid favicon error
+      link(rel := "icon", href := "data:image/png;base64,iVBORw0KGgo="), // avoid favicon error
       if hasLess then script(src := "https://cdn.jsdelivr.net/npm/less@4.6.3/dist/less.min.js") else frag(),
       if hasLess then link(rel := "stylesheet/less", href := "/index.less", `type` := "text/css") else frag(),
       if stylesAutoRefresh() && hasLess then script("less.watch();") else frag()
@@ -162,10 +159,9 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     true
   }
 
-  /** Path to write server logs to. When set, logs go to this file instead of
-    * the console — useful because Mill watch mode captures stdout/stderr
-    * per-task, making background server output invisible between evaluations.
-    * Example override: `def logFile = Task { Some("/tmp/sjsls.log") }`
+  /** Path to write server logs to. When set, logs go to this file instead of the console — useful because Mill watch
+    * mode captures stdout/stderr per-task, making background server output invisible between evaluations. Example
+    * override: `def logFile = Task { Some("/tmp/sjsls.log") }`
     */
   def logFile: Task[Option[PathRef]] = Task {
     None

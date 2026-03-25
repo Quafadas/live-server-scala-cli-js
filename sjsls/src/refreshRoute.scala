@@ -45,12 +45,8 @@ def refreshRoutes(
                 )
                 .as(PageRefresh())
             )
-            .evalTap(msg =>
-              logger.debug(s"Publishing refresh event: $msg")
-            )
-            .map(msg =>
-              ServerSentEvent(Some(msg.asJson.noSpaces))
-            )
+            .evalTap(msg => logger.debug(s"Publishing refresh event: $msg"))
+            .map(msg => ServerSentEvent(Some(msg.asJson.noSpaces)))
         )
     case _ =>
       case GET -> Root / "refresh" / "v1" / "sse" =>

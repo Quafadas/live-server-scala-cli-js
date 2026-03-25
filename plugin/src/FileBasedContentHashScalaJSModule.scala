@@ -17,8 +17,8 @@ import mill.scalajslib.config.ScalaJSConfigModule
 
 /** A Mill module trait that adds content hashing to Scala.js linked output.
   *
-  * Mix this trait into a `ScalaJSModule` to produce JS (or WASM) files whose names include a SHA-256 content hash,
-  * e.g. `main.a1b2c3d4.js`. Internal references between modules are automatically rewritten to use the hashed names,
+  * Mix this trait into a `ScalaJSModule` to produce JS (or WASM) files whose names include a SHA-256 content hash, e.g.
+  * `main.a1b2c3d4.js`. Internal references between modules are automatically rewritten to use the hashed names,
   * enabling long-lived HTTP caching with automatic cache busting on content changes.
   *
   * When `scalaJSExperimentalUseWebAssembly` is enabled, `fullLinkJS` additionally runs `wasm-opt` on the emitted
@@ -89,8 +89,9 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
   /** Full link with wasm-opt minification (WASM path) or standard content-hashed output.
     *
     * When the linker produces `.wasm` files, each is optimised with `wasm-opt` using [[wasmOptFlags]] and given a
-    * content-hashed filename before the rest of the output is processed by [[FileBasedContentHashScalaJSModule.applyContentHash]].
-    * The `-all` flag is mandatory for Scala.js WASM output — `wasm-opt` must be available on `$$PATH`.
+    * content-hashed filename before the rest of the output is processed by
+    * [[FileBasedContentHashScalaJSModule.applyContentHash]]. The `-all` flag is mandatory for Scala.js WASM output —
+    * `wasm-opt` must be available on `$$PATH`.
     *
     * For non-WASM output the report is returned unchanged (same behaviour as the default `fullLinkJS`).
     */
@@ -99,35 +100,35 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
     val srcDir = report.dest.path
     val wasmFiles = os.list(srcDir).filter(p => os.isFile(p) && p.ext == "wasm")
 
-    if wasmFiles.nonEmpty then {
+    if wasmFiles.nonEmpty then
       val flags = wasmOptFlags()
       val digest = MessageDigest.getInstance("SHA-256")
       // Copy everything to a temp dir so we can modify files without touching super's dest.
       val tempDir = os.temp.dir()
-      try {
+      try
         os.list(srcDir).foreach(f => os.copy(f, tempDir / f.last))
 
-        wasmFiles.foreach { f =>
-          val tempWasm = tempDir / f.last
-          val tempOut = tempDir / "output.wasm"
-          os.proc(List("wasm-opt", tempWasm.toString) ++ flags.toList ++ List("-o", tempOut.toString))
-            .call(stdout = os.Inherit, stderr = os.Inherit)
-          val originalSize = os.size(tempWasm)
-          val optimisedBytes = os.read.bytes(tempOut)
-          val hash = digest.digest(optimisedBytes).take(8).map("%02x".format(_)).mkString
-          val hashedName = s"${f.baseName}.$hash.wasm"
-          os.remove(tempWasm)
-          os.remove(tempOut)
-          os.write(tempDir / hashedName, optimisedBytes)
-          Task.log.info(f"wasm-opt ${f.last}: $originalSize → ${optimisedBytes.length} bytes → $hashedName")
+        wasmFiles.foreach {
+          f =>
+            val tempWasm = tempDir / f.last
+            val tempOut = tempDir / "output.wasm"
+            os.proc(List("wasm-opt", tempWasm.toString) ++ flags.toList ++ List("-o", tempOut.toString))
+              .call(stdout = os.Inherit, stderr = os.Inherit)
+            val originalSize = os.size(tempWasm)
+            val optimisedBytes = os.read.bytes(tempOut)
+            val hash = digest.digest(optimisedBytes).take(8).map("%02x".format(_)).mkString
+            val hashedName = s"${f.baseName}.$hash.wasm"
+            os.remove(tempWasm)
+            os.remove(tempOut)
+            os.write(tempDir / hashedName, optimisedBytes)
+            Task.log.info(f"wasm-opt ${f.last}: $originalSize → ${optimisedBytes.length} bytes → $hashedName")
         }
 
         val updatedReport = Report(report.publicModules, PathRef(tempDir))
         FileBasedContentHashScalaJSModule.applyContentHash(updatedReport, Task.dest)
-      } finally os.remove.all(tempDir)
+      finally os.remove.all(tempDir)
       end try
-    } else
-      report
+    else report
     end if
   }
 
@@ -191,8 +192,6 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
     finally os.remove.all(tempDir)
     end try
   }
-
-
 
 end FileBasedContentHashScalaJSModule
 
