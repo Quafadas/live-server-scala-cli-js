@@ -17,7 +17,6 @@ import mill.scalajslib.api.Report
 import mill.scalajslib.config.ScalaJSConfigModule
 implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
-
 trait ScalaJsWebAppModule extends FileBasedContentHashScalaJSModule with ScalaJsRefreshModule:
 
   def publish = Task {
