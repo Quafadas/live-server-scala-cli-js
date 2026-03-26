@@ -106,13 +106,16 @@ object MemJsTests extends TestSuite:
 
           // All public modules must reference files that exist in Task.dest.
           assert(fullResult.value.publicModules.nonEmpty)
-          fullResult.value.publicModules.foreach {
-            m =>
-              if !os.exists(fullDir / m.jsFileName) then
-                throw new java.lang.AssertionError(
-                  s"Public module '${m.moduleID}' jsFileName '${m.jsFileName}' not found in fullLinkJS output"
-                )
-          }
+          fullResult
+            .value
+            .publicModules
+            .foreach {
+              m =>
+                if !os.exists(fullDir / m.jsFileName) then
+                  throw new java.lang.AssertionError(
+                    s"Public module '${m.moduleID}' jsFileName '${m.jsFileName}' not found in fullLinkJS output"
+                  )
+            }
       }
     }
 
@@ -152,6 +155,7 @@ object MemJsTests extends TestSuite:
                 throw new java.lang.AssertionError(
                   s"Expected hashed filename like 'main.<hash>.js', got: $name"
                 )
+              end if
           }
 
           // No hyphens in filenames.
@@ -164,13 +168,16 @@ object MemJsTests extends TestSuite:
 
           // Public modules reference files that exist.
           assert(result.value.publicModules.nonEmpty)
-          result.value.publicModules.foreach {
-            m =>
-              if !jsFiles.contains(m.jsFileName) then
-                throw new java.lang.AssertionError(
-                  s"Public module '${m.moduleID}' jsFileName '${m.jsFileName}' not found in output"
-                )
-          }
+          result
+            .value
+            .publicModules
+            .foreach {
+              m =>
+                if !jsFiles.contains(m.jsFileName) then
+                  throw new java.lang.AssertionError(
+                    s"Public module '${m.moduleID}' jsFileName '${m.jsFileName}' not found in output"
+                  )
+            }
       }
     }
   }

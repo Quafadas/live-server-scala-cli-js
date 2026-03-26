@@ -130,9 +130,9 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
 
   /** Produces a terser-minified and content-hashed copy of the [[fullLinkJS]] output.
     *
-    * For non-WASM builds, each `.js` file is passed through `terser` for further size reduction before content
-    * hashing. Note that `scalaJSMinify` separately controls Scala.js linker-level reduction; this task additionally
-    * runs terser on top.
+    * For non-WASM builds, each `.js` file is passed through `terser` for further size reduction before content hashing.
+    * Note that `scalaJSMinify` separately controls Scala.js linker-level reduction; this task additionally runs terser
+    * on top.
     *
     * For WASM builds (`scalaJSExperimentalUseWebAssembly = true`), terser is skipped entirely. The `.wasm` binary is
     * already optimised by `wasm-opt` inside [[fullLinkJS]], and the JS loader files use WebAssembly-specific bootstrap

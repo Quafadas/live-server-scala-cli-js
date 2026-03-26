@@ -202,15 +202,18 @@ object SiteWasmTests extends TestSuite:
 
           // The public module must reference a file that exists in the output.
           assert(minResult.value.publicModules.nonEmpty)
-          minResult.value.publicModules.foreach {
-            m =>
-              val jsFile = minDir / m.jsFileName
-              if !os.exists(jsFile) then
-                throw new java.lang.AssertionError(
-                  s"Public module '${m.moduleID}' jsFileName '${m.jsFileName}' not found in minified output"
-                )
-              end if
-          }
+          minResult
+            .value
+            .publicModules
+            .foreach {
+              m =>
+                val jsFile = minDir / m.jsFileName
+                if !os.exists(jsFile) then
+                  throw new java.lang.AssertionError(
+                    s"Public module '${m.moduleID}' jsFileName '${m.jsFileName}' not found in minified output"
+                  )
+                end if
+            }
 
           // JS files must be byte-for-byte identical to the fullLinkJS output (terser did not run).
           val Right(fullResult) = eval(build.fullLinkJS).runtimeChecked
