@@ -231,5 +231,44 @@ object WebAppModuleTests extends TestSuite:
           assert(os.exists(siteDir / "index.html"))
       }
     }
+
+    test("publish copies assets into publish directory when assets directory exists") {
+      val assetsTempDir = os.temp.dir()
+      os.write(assetsTempDir / "logo.svg", "<svg/>")
+      os.makeDir(assetsTempDir / "fonts")
+      os.write(assetsTempDir / "fonts" / "font.woff2", "fake-font")
+
+      object build extends TestRootModule with io.github.quafadas.ScalaJsWebAppModule:
+        override def scalaVersion: Simple[String] = "3.8.2"
+        override def moduleSplitStyle: Simple[ModuleSplitStyle] =
+          ModuleSplitStyle.SmallModulesFor("webapp")
+
+        override def mvnDeps = Seq(
+          mvn"com.raquo::laminar::17.0.0"
+        )
+
+        override def assetsDir = assetsTempDir
+
+        lazy val millDiscover = Discover[this.type]
+      end build
+
+      val resourceFolder = os.Path(sys.env("MILL_TEST_RESOURCE_DIR"))
+
+      try
+        UnitTester(build, resourceFolder / "simple").scoped {
+          eval =>
+            val Right(result) = eval(build.publish).runtimeChecked
+            val siteDir = result.value.path
+            assert(os.exists(siteDir / "index.html"))
+            if !os.exists(siteDir / "logo.svg") then
+              throw new java.lang.AssertionError("logo.svg must be copied from assets into publish dest")
+            end if
+            if !os.exists(siteDir / "fonts" / "font.woff2") then
+              throw new java.lang.AssertionError("nested font.woff2 must be copied from assets into publish dest")
+            end if
+        }
+      finally os.remove.all(assetsTempDir)
+      end try
+    }
   }
 end WebAppModuleTests

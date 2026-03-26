@@ -8,3 +8,5 @@ out
 .bloop
 .DS_Store
 .vscode/mcp.json
+.scalex
+.scalex/index.bin

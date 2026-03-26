@@ -124,69 +124,85 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
         FileBasedContentHashScalaJSModule.applyContentHash(updatedReport, Task.dest)
       finally os.remove.all(tempDir)
       end try
-    else report
+    else FileBasedContentHashScalaJSModule.applyContentHash(report, Task.dest)
     end if
   }
 
+  /** Produces a terser-minified and content-hashed copy of the [[fullLinkJS]] output.
+    *
+    * For non-WASM builds, each `.js` file is passed through `terser` for further size reduction before content hashing.
+    * Note that `scalaJSMinify` separately controls Scala.js linker-level reduction; this task additionally runs terser
+    * on top.
+    *
+    * For WASM builds (`scalaJSExperimentalUseWebAssembly = true`), terser is skipped entirely. The `.wasm` binary is
+    * already optimised by `wasm-opt` inside [[fullLinkJS]], and the JS loader files use WebAssembly-specific bootstrap
+    * patterns that terser can break. The already-hashed output of [[fullLinkJS]] is copied unchanged to `Task.dest`.
+    */
   def minified = Task {
     val full = fullLinkJS()
-    val terserConfigFile = terserConfig()
-    val tempDir = os.temp.dir()
+    if scalaJSExperimentalUseWebAssembly() then
+      // WASM mode: wasm-opt already ran inside fullLinkJS; terser must not touch the JS loader.
+      // Simply copy the fully-optimised, content-hashed output to Task.dest unchanged.
+      os.makeDir.all(Task.dest)
+      os.list(full.dest.path).foreach(f => os.copy(f, Task.dest / f.last))
+      Report(full.publicModules, PathRef(Task.dest))
+    else
+      val terserConfigFile = terserConfig()
+      val tempDir = os.temp.dir()
 
-    try
-      val files = os.walk(full.dest.path).filter(p => os.isFile(p) && p.ext == "js")
-      files.foreach {
-        f =>
-          Task.log.info(s"Minifying ${f}...")
-          val fName = f.last
-          // Strip the pre-minification content hash so applyContentHash applies a single post-min hash.
-          val strippedName = FileBasedContentHashScalaJSModule.stripContentHash(fName)
-          val outPath = tempDir / strippedName
-          tempDir / (strippedName + ".map")
-          Task.log.info(s"  → ${outPath}")
+      try
+        val files = os.walk(full.dest.path).filter(p => os.isFile(p) && p.ext == "js")
+        files.foreach {
+          f =>
+            Task.log.info(s"Minifying ${f}...")
+            val fName = f.last
+            // Strip the pre-minification content hash so applyContentHash applies a single post-min hash.
+            val strippedName = FileBasedContentHashScalaJSModule.stripContentHash(fName)
+            val outPath = tempDir / strippedName
+            tempDir / (strippedName + ".map")
+            Task.log.info(s"  → ${outPath}")
 
-          os.proc(
-              "terser",
-              f.toString,
-              "-o",
-              outPath.toString,
-              "--source-map",
-              s"content='${f}.map',url='${strippedName}.map'",
-              "--config-file",
-              terserConfigFile.path.toString
-            )
-            .call(
-              cwd = tempDir,
-              mergeErrIntoOut = true,
-              stdin = os.Inherit,
-              stdout = os.Inherit,
-              stderr = os.Inherit
-            )
-          // Copy the input source map's corresponding .map if terser didn't produce one
-          // (shouldn't happen, but defensive)
-          val inSizeMb = os.size(f).toDouble / (1024 * 1024)
-          val outSizeMb = os.size(outPath).toDouble / (1024 * 1024)
-          Task.log.info(f"Minified $fName: $inSizeMb%.4f Mb → $outSizeMb%.4f Mb")
-      }
-
-      // Build a synthetic Report pointing at the temp directory so applyContentHash can process it.
-      val syntheticReport = Report(
-        publicModules = full
-          .publicModules
-          .map {
-            m =>
-              Report.Module(
-                moduleID = m.moduleID,
-                jsFileName = FileBasedContentHashScalaJSModule.stripContentHash(m.jsFileName),
-                sourceMapName = m.sourceMapName.map(FileBasedContentHashScalaJSModule.stripContentHash),
-                moduleKind = m.moduleKind
+            os.proc(
+                "terser",
+                f.toString,
+                "-o",
+                outPath.toString,
+                "--source-map",
+                s"content='${f}.map',url='${strippedName}.map'",
+                "--config-file",
+                terserConfigFile.path.toString
               )
-          },
-        dest = PathRef(tempDir)
-      )
-      FileBasedContentHashScalaJSModule.applyContentHash(syntheticReport, Task.dest)
-    finally os.remove.all(tempDir)
-    end try
+              .call(
+                cwd = tempDir,
+                mergeErrIntoOut = true,
+                stdin = os.Inherit,
+                stdout = os.Inherit,
+                stderr = os.Inherit
+              )
+            val inSizeMb = os.size(f).toDouble / (1024 * 1024)
+            val outSizeMb = os.size(outPath).toDouble / (1024 * 1024)
+            Task.log.info(f"Minified $fName: $inSizeMb%.4f Mb → $outSizeMb%.4f Mb")
+        }
+
+        // Build a synthetic Report pointing at the temp directory so applyContentHash can process it.
+        val syntheticReport = Report(
+          publicModules = full
+            .publicModules
+            .map {
+              m =>
+                Report.Module(
+                  moduleID = m.moduleID,
+                  jsFileName = FileBasedContentHashScalaJSModule.stripContentHash(m.jsFileName),
+                  sourceMapName = m.sourceMapName.map(FileBasedContentHashScalaJSModule.stripContentHash),
+                  moduleKind = m.moduleKind
+                )
+            },
+          dest = PathRef(tempDir)
+        )
+        FileBasedContentHashScalaJSModule.applyContentHash(syntheticReport, Task.dest)
+      finally os.remove.all(tempDir)
+      end try
+    end if
   }
 
 end FileBasedContentHashScalaJSModule

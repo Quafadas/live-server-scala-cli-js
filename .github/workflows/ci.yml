@@ -38,7 +38,17 @@ jobs:
           fetch-depth: 0
 
       - name: Install required libraries
-        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libgraphene-1.0-dev libavif-dev binaryen
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libgraphene-1.0-dev libavif-dev
+
+      - name: Install binaryen (wasm-opt)
+        run: |
+          BINARYEN_VERSION=$(curl -s https://api.github.com/repos/WebAssembly/binaryen/releases/latest | jq -r .tag_name)
+          curl -L "https://github.com/WebAssembly/binaryen/releases/download/${BINARYEN_VERSION}/binaryen-${BINARYEN_VERSION}-x86_64-linux.tar.gz" | tar xz
+          sudo cp binaryen-${BINARYEN_VERSION}/bin/wasm-opt /usr/local/bin/
+          wasm-opt --version
+
+      - name: Install terser
+        run: npm install -g terser
 
       - name: Cache Playwright dependencies
         id: cache-pw
@@ -63,6 +73,20 @@ jobs:
 
       - name: Test
         run: ./mill __.test
+
+      - name: Test
+        run: ./mill plugin.integration.testForked
+
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v5
+        if: always()
+        with:
+          fail_on_failure: false
+          include_passed: false
+          detailed_summary: true
+          annotate_only: true
+          require_tests: false
+          report_paths: 'out/**/test-report.xml'
 
   publish:
     if: github.repository == 'Quafadas/live-server-scala-cli-js' && contains(github.ref, 'refs/tags/')
