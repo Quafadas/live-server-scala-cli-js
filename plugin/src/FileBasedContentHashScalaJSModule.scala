@@ -124,7 +124,7 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
         FileBasedContentHashScalaJSModule.applyContentHash(updatedReport, Task.dest)
       finally os.remove.all(tempDir)
       end try
-    else report
+    else FileBasedContentHashScalaJSModule.applyContentHash(report, Task.dest)
     end if
   }
 
