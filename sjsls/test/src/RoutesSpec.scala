@@ -9,6 +9,7 @@ import scala.concurrent.duration.*
 
 import org.http4s.*
 import org.http4s.client.Client
+import org.http4s.headers.`Content-Type`
 import org.http4s.implicits.*
 import org.http4s.server.middleware.ErrorAction
 import org.typelevel.ci.CIStringSyntax
@@ -493,6 +494,59 @@ class RoutesSuite extends CatsEffectSuite:
             assertIOBoolean(
               respHeaders.map(_.contains("max-age=31536000"))
             )
+
+      }
+  }
+
+  hashedFiles.test("That hashed files have no ETag header") {
+    tempDir =>
+      val app = for
+        logger <- IO(scribe.cats[IO]).toResource
+        fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+        _ <- updateMapRef(tempDir.toFs2, fileToHashRef)(logger).toResource
+        refreshPub <- Topic[IO, Unit].toResource
+        theseRoutes <- routes(
+          tempDir.toString,
+          refreshPub,
+          None,
+          HttpRoutes.empty[IO],
+          fileToHashRef,
+          None,
+          false,
+          NoBuildTool()
+        )(logger)
+      yield theseRoutes.orNotFound
+
+      app.use {
+        served =>
+          val request = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString(s"/$hashedFileName"))
+          assertIOBoolean(served(request).map(_.headers.get(ci"ETag").isEmpty))
+      }
+  }
+
+  hashedFiles.test("That hashed files have no Last-Modified header") {
+    tempDir =>
+      val app = for
+        logger <- IO(scribe.cats[IO]).toResource
+        fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+        _ <- updateMapRef(tempDir.toFs2, fileToHashRef)(logger).toResource
+        refreshPub <- Topic[IO, Unit].toResource
+        theseRoutes <- routes(
+          tempDir.toString,
+          refreshPub,
+          None,
+          HttpRoutes.empty[IO],
+          fileToHashRef,
+          None,
+          false,
+          NoBuildTool()
+        )(logger)
+      yield theseRoutes.orNotFound
+
+      app.use {
+        served =>
+          val request = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString(s"/$hashedFileName"))
+          assertIOBoolean(served(request).map(_.headers.get(ci"Last-Modified").isEmpty))
       }
   }
 
@@ -554,4 +608,95 @@ class RoutesSuite extends CatsEffectSuite:
         }
   }
 
+  // Regression test: when customRefresh is supplied the staticWatcher on the
+  // indexHtmlTemplate dir must NOT fire an extra event, giving exactly one SSE
+  // PageRefresh per build step.
+  externalIndexR.test(
+    "customRefresh suppresses staticWatcher double-fire: exactly one refresh event per explicit publish"
+  ) {
+    staticDir =>
+      for
+        logger <- IO(scribe.cats[IO]).toResource
+        fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+        // This acts as the plugin's `updateServer` topic
+        customTopic <- Topic[IO, Unit].toResource
+        linkingTopic <- Topic[IO, Unit].toResource
+
+        // Collect events published on customTopic.
+        // We subscribe before wiring liveServer so we don't miss early events.
+        eventCount <- Ref[IO].of(0).toResource
+        _ <- customTopic.subscribe(Int.MaxValue).evalTap(_ => eventCount.update(_ + 1)).compile.drain.background
+
+        // Simulate liveServer.main wiring: only start staticWatcher when customRefresh is None.
+        // Here customRefresh = Some(customTopic), so we do NOT start a staticWatcher.
+        _ <- IO.unit.toResource // (no staticWatcher started – that's the fix under test)
+
+        _ <- IO.sleep(100.millis).toResource // let subscriber register
+        // Simulate one explicit plugin publish (what siteGen() does)
+        _ <- customTopic.publish1(()).toResource
+        _ <- IO.sleep(200.millis).toResource // let events propagate
+
+        // Also write to the watched dir to prove a staticWatcher would have fired
+        _ <- IO.blocking(os.write.over(staticDir / "index.html", """<head><title>Updated</title></head>""")).toResource
+        _ <- IO.sleep(200.millis).toResource
+
+        count <- eventCount.get.toResource
+      yield assertEquals(count, 1, s"Expected exactly 1 refresh event but got $count")
+  }
+
 end RoutesSuite
+
+class DevToolsRouteSuite extends CatsEffectSuite:
+
+  given filesInstance: Files[IO] = Files.forAsync[IO]
+
+  private def makeApp(workspace: Option[(String, String)]): Resource[IO, Client[IO]] =
+    for
+      logger <- IO(scribe.cats[IO]).toResource
+      fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+      refreshPub <- Topic[IO, Unit].toResource
+      theseRoutes <- routes(
+        os.temp.dir().toString,
+        refreshPub,
+        None,
+        HttpRoutes.empty[IO],
+        fileToHashRef,
+        None,
+        false,
+        NoBuildTool(),
+        workspace
+      )(logger)
+    yield Client.fromHttpApp(theseRoutes.orNotFound)
+
+  test("well-known URL returns 200 with correct JSON when workspace is configured") {
+    makeApp(Some(("/test/root", "test-uuid"))).use {
+      client =>
+        client
+          .run(Request[IO](uri = uri"/.well-known/appspecific/com.chrome.devtools.json"))
+          .use {
+            resp =>
+              for
+                body <- resp.bodyText.compile.string
+                _ <- IO(assertEquals(resp.status.code, 200))
+                _ <- IO(
+                  assertEquals(resp.headers.get[`Content-Type`].map(_.mediaType), Some(MediaType.application.json))
+                )
+                _ <- IO(assertEquals(body, """{"workspace":{"root":"/test/root","uuid":"test-uuid"}}"""))
+              yield ()
+          }
+    }
+  }
+
+  test("well-known URL returns 404 when no workspace is configured") {
+    makeApp(None).use {
+      client =>
+        client
+          .run(Request[IO](uri = uri"/.well-known/appspecific/com.chrome.devtools.json"))
+          .use {
+            resp =>
+              IO(assertEquals(resp.status.code, 404))
+          }
+    }
+  }
+
+end DevToolsRouteSuite

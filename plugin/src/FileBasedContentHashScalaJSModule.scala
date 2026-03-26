@@ -1,21 +1,26 @@
-package mill.scalajslib
+package io.github.quafadas
 
 import java.security.MessageDigest
+
 import scala.collection.mutable
 
 import mill.*
 import mill.api.Result
+import mill.api.Task.Simple
 import mill.api.TaskCtx
 import mill.scalajslib.api.*
-import mill.scalajslib.worker.ScalaJSWorker
-import mill.api.Task.Simple
+import mill.scalajslib.config.ScalaJSConfigModule
 
 /** A Mill module trait that adds content hashing to Scala.js linked output.
   *
-  * Mix this trait into a `ScalaJSModule` to produce JS files whose names include a SHA-256 content hash, e.g.
-  * `main.a1b2c3d4.js`. Internal references between modules (import/require statements and `sourceMappingURL` comments)
-  * are automatically rewritten to point at the new hashed filenames. This allows long-lived HTTP caching while
-  * guaranteeing cache busting whenever file content changes.
+  * Mix this trait into a `ScalaJSModule` to produce JS (or WASM) files whose names include a SHA-256 content hash, e.g.
+  * `main.a1b2c3d4.js`. Internal references between modules are automatically rewritten to use the hashed names,
+  * enabling long-lived HTTP caching with automatic cache busting on content changes.
+  *
+  * When `scalaJSExperimentalUseWebAssembly` is enabled, `fullLinkJS` additionally runs `wasm-opt` on the emitted
+  * `.wasm` binary before computing the content hash, so the stored hash always reflects the production-optimised
+  * artifact. Override [[wasmOptFlags]] to customise the optimisation level. The `-all` flag is mandatory for Scala.js
+  * WASM output — `wasm-opt` must be present on `$$PATH`.
   *
   * @note
   *   This trait is placed in the `mill.scalajslib` package (vendored alongside Mill) so that it can access the
@@ -25,7 +30,7 @@ import mill.api.Task.Simple
   *
   * @example
   *   {{{
-  * object app extends ScalaJSModule with ContentHashScalaJSModule {
+  * object app extends ScalaJSModule with FileBasedContentHashScalaJSModule {
   *   def scalaVersion   = "3.3.6"
   *   def scalaJSVersion = "1.19.0"
   * }
@@ -34,66 +39,155 @@ import mill.api.Task.Simple
   * Running `mill app.fastLinkJS` (or `fullLinkJS`) will produce hashed files in the task output directory, e.g.
   * `out/app/fastLinkJS.dest/main.a1b2c3d4.js`.
   */
-trait FileBasedContentHashScalaJSModule extends ScalaJSModule:
-
+trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
   override def moduleKind: Simple[ModuleKind] = ModuleKind.ESModule
 
-  /** Override [[linkJs]] to capture linker output in a temporary directory, compute SHA-256 content hashes, rewrite
-    * intra-bundle references, and write only the hashed files to the task output directory (`ctx.dest`).
+  /** Flags passed to `wasm-opt` when minifying WASM output during `fullLinkJS`.
     *
-    * This is the linker-wrapper approach: instead of post-processing files that a prior task has already written to
-    * disk, we intercept at the linking step itself — redirecting [[ScalaJSWorker.link]] output to a temporary directory
-    * — so only the final hashed artefacts ever land in Mill's task output directory.
-    *
-    * The trait must reside in `mill.scalajslib` because both [[ScalaJSWorker]] and [[linkJs]] are declared
-    * `private[scalajslib]`.
+    * The `-all` flag is mandatory — Scala.js emits WASM features that `wasm-opt` rejects unless all features are
+    * enabled. Override to reduce the optimisation level (e.g. `Seq("-O2", "-all")`).
     */
-  private[scalajslib] override def linkJs(
-      worker: ScalaJSWorker,
-      toolsClasspath: Seq[PathRef],
-      runClasspath: Seq[PathRef],
-      mainClass: Result[String],
-      forceOutJs: Boolean,
-      testBridgeInit: Boolean,
-      isFullLinkJS: Boolean,
-      optimizer: Boolean,
-      sourceMap: Boolean,
-      moduleKind: ModuleKind,
-      esFeatures: ESFeatures,
-      moduleSplitStyle: ModuleSplitStyle,
-      outputPatterns: OutputPatterns,
-      minify: Boolean,
-      importMap: Seq[ESModuleImportMapping],
-      experimentalUseWebAssembly: Boolean
-  )(implicit ctx: TaskCtx): Result[Report] =
-    val tempDir = os.temp.dir()
-    try
-      worker
-        .link(
-          toolsClasspath = toolsClasspath,
-          runClasspath = runClasspath,
-          dest = tempDir.toIO,
-          main = mainClass,
-          forceOutJs = forceOutJs,
-          testBridgeInit = testBridgeInit,
-          isFullLinkJS = isFullLinkJS,
-          optimizer = optimizer,
-          sourceMap = sourceMap,
-          moduleKind = moduleKind,
-          esFeatures = esFeatures,
-          moduleSplitStyle = moduleSplitStyle,
-          outputPatterns = outputPatterns,
-          minify = minify,
-          importMap = importMap,
-          experimentalUseWebAssembly = experimentalUseWebAssembly
-        )
-        .map {
-          report =>
-            FileBasedContentHashScalaJSModule.applyContentHash(report, ctx.dest)
+  def wasmOptFlags: Task[Seq[String]] = Task(Seq("-O2", "-all"))
+
+  def terserConfig = Task {
+    os.write(
+      Task.dest / "terser.config.json",
+      """{
+        |  "compress": {
+        |    "passes": 2,
+        |    "pure_getters": true,
+        |    "unsafe": false,
+        |    "unsafe_arrows": false,
+        |    "unsafe_methods": false,
+        |    "drop_console": false
+        |  },
+        |  "mangle": {
+        |    "toplevel": false
+        |  },
+        |  "format": {
+        |    "comments": false
+        |  },
+        |  "ecma": 2020,
+        |  "module": true,
+        |  "toplevel": false
+        |}
+        |""".stripMargin
+    )
+    PathRef(Task.dest / "terser.config.json")
+  }
+
+  override def fastLinkJS: Task.Simple[Report] = Task {
+    val report = super.fastLinkJS()
+    val hashedReport = FileBasedContentHashScalaJSModule.applyContentHash(report, Task.dest)
+    hashedReport
+  }
+
+  /** Full link with wasm-opt minification (WASM path) or standard content-hashed output.
+    *
+    * When the linker produces `.wasm` files, each is optimised with `wasm-opt` using [[wasmOptFlags]] and given a
+    * content-hashed filename before the rest of the output is processed by
+    * [[FileBasedContentHashScalaJSModule.applyContentHash]]. The `-all` flag is mandatory for Scala.js WASM output —
+    * `wasm-opt` must be available on `$$PATH`.
+    *
+    * For non-WASM output the report is returned unchanged (same behaviour as the default `fullLinkJS`).
+    */
+  override def fullLinkJS: Task.Simple[Report] = Task {
+    val report = super.fullLinkJS()
+    val srcDir = report.dest.path
+    val wasmFiles = os.list(srcDir).filter(p => os.isFile(p) && p.ext == "wasm")
+
+    if wasmFiles.nonEmpty then
+      val flags = wasmOptFlags()
+      val digest = MessageDigest.getInstance("SHA-256")
+      // Copy everything to a temp dir so we can modify files without touching super's dest.
+      val tempDir = os.temp.dir()
+      try
+        os.list(srcDir).foreach(f => os.copy(f, tempDir / f.last))
+
+        wasmFiles.foreach {
+          f =>
+            val tempWasm = tempDir / f.last
+            val tempOut = tempDir / "output.wasm"
+            os.proc(List("wasm-opt", tempWasm.toString) ++ flags.toList ++ List("-o", tempOut.toString))
+              .call(stdout = os.Inherit, stderr = os.Inherit)
+            val originalSize = os.size(tempWasm)
+            val optimisedBytes = os.read.bytes(tempOut)
+            val hash = digest.digest(optimisedBytes).take(8).map("%02x".format(_)).mkString
+            val hashedName = s"${f.baseName}.$hash.wasm"
+            os.remove(tempWasm)
+            os.remove(tempOut)
+            os.write(tempDir / hashedName, optimisedBytes)
+            Task.log.info(f"wasm-opt ${f.last}: $originalSize → ${optimisedBytes.length} bytes → $hashedName")
         }
+
+        val updatedReport = Report(report.publicModules, PathRef(tempDir))
+        FileBasedContentHashScalaJSModule.applyContentHash(updatedReport, Task.dest)
+      finally os.remove.all(tempDir)
+      end try
+    else report
+    end if
+  }
+
+  def minified = Task {
+    val full = fullLinkJS()
+    val terserConfigFile = terserConfig()
+    val tempDir = os.temp.dir()
+
+    try
+      val files = os.walk(full.dest.path).filter(p => os.isFile(p) && p.ext == "js")
+      files.foreach {
+        f =>
+          Task.log.info(s"Minifying ${f}...")
+          val fName = f.last
+          // Strip the pre-minification content hash so applyContentHash applies a single post-min hash.
+          val strippedName = FileBasedContentHashScalaJSModule.stripContentHash(fName)
+          val outPath = tempDir / strippedName
+          tempDir / (strippedName + ".map")
+          Task.log.info(s"  → ${outPath}")
+
+          os.proc(
+              "terser",
+              f.toString,
+              "-o",
+              outPath.toString,
+              "--source-map",
+              s"content='${f}.map',url='${strippedName}.map'",
+              "--config-file",
+              terserConfigFile.path.toString
+            )
+            .call(
+              cwd = tempDir,
+              mergeErrIntoOut = true,
+              stdin = os.Inherit,
+              stdout = os.Inherit,
+              stderr = os.Inherit
+            )
+          // Copy the input source map's corresponding .map if terser didn't produce one
+          // (shouldn't happen, but defensive)
+          val inSizeMb = os.size(f).toDouble / (1024 * 1024)
+          val outSizeMb = os.size(outPath).toDouble / (1024 * 1024)
+          Task.log.info(f"Minified $fName: $inSizeMb%.4f Mb → $outSizeMb%.4f Mb")
+      }
+
+      // Build a synthetic Report pointing at the temp directory so applyContentHash can process it.
+      val syntheticReport = Report(
+        publicModules = full
+          .publicModules
+          .map {
+            m =>
+              Report.Module(
+                moduleID = m.moduleID,
+                jsFileName = FileBasedContentHashScalaJSModule.stripContentHash(m.jsFileName),
+                sourceMapName = m.sourceMapName.map(FileBasedContentHashScalaJSModule.stripContentHash),
+                moduleKind = m.moduleKind
+              )
+          },
+        dest = PathRef(tempDir)
+      )
+      FileBasedContentHashScalaJSModule.applyContentHash(syntheticReport, Task.dest)
     finally os.remove.all(tempDir)
     end try
-  end linkJs
+  }
 
 end FileBasedContentHashScalaJSModule
 
@@ -135,12 +229,14 @@ object FileBasedContentHashScalaJSModule:
         val f = srcDir / name
         val content = os.read(f)
 
+        // TODO: This re-wwrites across the entire file. In scalaJS, we know that these referenecs appers _only_ in the header.
         // Rewrite cross-module import references using the hashes we already know.
         val rewrittenContent = rewriteJsReferences(content, jsHashMapping.toMap)
 
         // Hash the rewritten content (so the filename hash reflects the final content).
         val hash = computeContentHash(rewrittenContent.getBytes("UTF-8"))
-        val hashedName = s"${f.baseName}.$hash.${f.ext}"
+        // Replace "-" with "_" in base name: terser struggles with hyphens in external source maps.
+        val hashedName = s"${f.baseName.replace("-", "_")}.$hash.${f.ext}"
         jsHashMapping(name) = hashedName
 
         // Also update the sourceMappingURL comment that points to this file's own map.
@@ -242,6 +338,32 @@ object FileBasedContentHashScalaJSModule:
     val digest = MessageDigest.getInstance("SHA-256")
     digest.digest(bytes).take(8).map("%02x".format(_)).mkString
   end computeContentHash
+
+  /** Remove the content hash segment from a hashed filename.
+    *
+    * A content-hashed filename has the form `<base>.<16hexchars>.<ext>`, e.g. `main.a1b2c3d4e5f6g7h8.js`. This method
+    * strips the hash segment and returns `<base>.<ext>`, e.g. `main.js`.
+    *
+    * For source map files (`*.js.map`), the form is `<base>.<16hexchars>.js.map` and the hash is the third-to-last
+    * segment.
+    *
+    * If the filename does not match the expected pattern, it is returned unchanged.
+    */
+  def stripContentHash(name: String): String =
+    val hexPattern = "^[0-9a-f]{16}$".r
+    val parts = name.split('.')
+    // For .js.map files: parts = [base..., hash, js, map] — hash is at length-3
+    // For .js files:     parts = [base..., hash, js]       — hash is at length-2
+    val hashIdx =
+      if parts.length >= 4 && parts(parts.length - 1) == "map" && parts(parts.length - 2) == "js" then parts.length - 3
+      else if parts.length >= 3 then parts.length - 2
+      else -1
+
+    if hashIdx > 0 && hexPattern.matches(parts(hashIdx)) then
+      (parts.take(hashIdx) ++ parts.drop(hashIdx + 1)).mkString(".")
+    else name
+    end if
+  end stripContentHash
 
   /** Replace quoted module names and sourceMappingURL references throughout `content`.
     *

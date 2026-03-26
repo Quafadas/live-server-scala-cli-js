@@ -6,6 +6,9 @@
     "scalameta.metals": [
       "workspace"
     ]
+  },
+  "chat.tools.terminal.autoApprove": {
+    "mkdir": true
   }
 
 }

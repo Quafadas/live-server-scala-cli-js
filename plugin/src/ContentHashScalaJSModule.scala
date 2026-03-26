@@ -1,14 +1,15 @@
 package mill.scalajslib
 
 import java.security.MessageDigest
+
 import scala.collection.mutable
 
 import mill.*
 import mill.api.Result
+import mill.api.Task.Simple
 import mill.api.TaskCtx
 import mill.scalajslib.api.*
 import mill.scalajslib.worker.ScalaJSWorker
-import mill.api.Task.Simple
 
 /** A Mill module trait that adds content hashing to Scala.js linked output.
   *
@@ -140,7 +141,8 @@ object ContentHashScalaJSModule:
 
         // Hash the rewritten content (so the filename hash reflects the final content).
         val hash = computeContentHash(rewrittenContent.getBytes("UTF-8"))
-        val hashedName = s"${f.baseName}.$hash.${f.ext}"
+        // Replace "-" with "_" in base name: terser struggles with hyphens in external source maps.
+        val hashedName = s"${f.baseName.replace("-", "_")}.$hash.${f.ext}"
         jsHashMapping(name) = hashedName
 
         // Also update the sourceMappingURL comment that points to this file's own map.

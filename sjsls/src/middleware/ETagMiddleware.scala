@@ -28,11 +28,14 @@ object ETagMiddleware:
             case Some(hash) if uriIsHashed(req.uri.path) =>
               logger.debug(s"File ${req.uri.path} is already hashed and assumed to be immutable") >>
                 IO(
-                  resp.putHeaders(
-                    Header.Raw(ci"Cache-control", "max-age=31536000"),
-                    Header.Raw(ci"Cache-control", "immutable"),
-                    Header.Raw(ci"Cache-control", "public")
-                  )
+                  resp
+                    .removeHeader(ci"ETag")
+                    .removeHeader(ci"Last-Modified")
+                    .putHeaders(
+                      Header.Raw(ci"Cache-control", "max-age=31536000"),
+                      Header.Raw(ci"Cache-control", "immutable"),
+                      Header.Raw(ci"Cache-control", "public")
+                    )
                 )
 
             case Some(hash) =>

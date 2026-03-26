@@ -1,9 +1,12 @@
 package io.github.quafadas
 
+import java.nio.ByteBuffer
 import java.security.MessageDigest
+import scala.collection.mutable
 
 import mill.PathRef
 import mill.scalajslib.ContentHashScalaJSModule
+import io.github.quafadas.FileBasedContentHashScalaJSModule
 import mill.scalajslib.api.ModuleKind
 import mill.scalajslib.api.Report
 import munit.FunSuite
@@ -322,6 +325,186 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
       os.remove.all(srcDir)
       os.remove.all(destDir)
     end try
+  }
+
+  // --------------------------------------------------------------------------
+  // Filename sanitisation: "-" → "_"
+  // --------------------------------------------------------------------------
+
+  // --------------------------------------------------------------------------
+  // In-memory hashing helpers (mirrors InMemoryHashScalaJSModule logic)
+  // --------------------------------------------------------------------------
+
+  test("in-memory: MemOutputDirectory round-trips bytes correctly") {
+    val dir = MemOutputDirectory()
+    val data = "export const x = 1;\n".getBytes("UTF-8")
+    dir.put("chunk.js", ByteBuffer.wrap(data))
+
+    val buf = dir.content("chunk.js").get
+    val readBack = new Array[Byte](buf.remaining())
+    buf.get(readBack)
+    assertEquals(new String(readBack, "UTF-8"), "export const x = 1;\n")
+  }
+
+  test("in-memory: repeated content() calls each return full bytes") {
+    val dir = MemOutputDirectory()
+    dir.put("file.js", ByteBuffer.wrap("hello".getBytes("UTF-8")))
+
+    def readStr(): String =
+      val buf = dir.content("file.js").get
+      val bytes = new Array[Byte](buf.remaining())
+      buf.get(bytes)
+      new String(bytes, "UTF-8")
+    end readStr
+
+    assertEquals(readStr(), "hello")
+    assertEquals(readStr(), "hello")
+  }
+
+  test("in-memory: hashing workflow with MemOutputDirectory produces sanitised names") {
+    val C = ContentHashScalaJSModule
+
+    val dir = MemOutputDirectory()
+    dir.put("my-chunk.js", ByteBuffer.wrap("export const y = 2;\n".getBytes("UTF-8")))
+    dir.put("my-app.js", ByteBuffer.wrap("""import * as c from "./my-chunk.js";""".getBytes("UTF-8")))
+
+    val jsFileNames = dir.fileNames().filter(_.endsWith(".js")).toSet
+
+    def readStr(name: String): String =
+      val buf = dir.content(name).get
+      val bytes = new Array[Byte](buf.remaining())
+      buf.get(bytes)
+      new String(bytes, "UTF-8")
+    end readStr
+
+    val fileDeps: Map[String, Set[String]] = jsFileNames
+      .map {
+        name =>
+          val imported = C.parseJsImports(readStr(name)).filter(jsFileNames.contains)
+          (name, imported.toSet)
+      }
+      .toMap
+
+    val sortedNames = C.topologicalSort(jsFileNames.toList, fileDeps)
+    val jsHashMapping = mutable.LinkedHashMap.empty[String, String]
+
+    sortedNames.foreach {
+      name =>
+        val content = readStr(name)
+        val rewritten = C.rewriteJsReferences(content, jsHashMapping.toMap)
+        val hash = C.computeContentHash(rewritten.getBytes("UTF-8"))
+        val baseName = name.stripSuffix(".js").replace("-", "_")
+        val hashedName = s"$baseName.$hash.js"
+        jsHashMapping(name) = hashedName
+    }
+
+    // Both entries should be sanitised (no hyphens in the hashed output names).
+    jsHashMapping
+      .values
+      .foreach {
+        hashed =>
+          assert(!hashed.contains("-"), s"hashed name should not contain hyphen: $hashed")
+      }
+    assert(jsHashMapping("my-chunk.js").startsWith("my_chunk."))
+    assert(jsHashMapping("my-app.js").startsWith("my_app."))
+
+    // The hashed app.js should reference the hashed chunk name (with underscore).
+    val hashedChunk = jsHashMapping("my-chunk.js")
+    val appContent = C.rewriteJsReferences(readStr("my-app.js"), jsHashMapping.toMap)
+    assert(appContent.contains(hashedChunk), s"app content should reference $hashedChunk:\n$appContent")
+  }
+
+  test("applyContentHash sanitises hyphenated filenames: my-module.js → my_module.<hash>.js") {
+    val srcDir = os.temp.dir()
+    val destDir = os.temp.dir()
+
+    try
+      os.write(srcDir / "my-module.js", "export const x = 1;\n//# sourceMappingURL=my-module.js.map\n")
+      os.write(srcDir / "my-module.js.map", """{"version":3,"file":"my-module.js"}""")
+
+      val report = Report(
+        publicModules = Seq(
+          Report.Module(
+            moduleID = "my-module",
+            jsFileName = "my-module.js",
+            sourceMapName = Some("my-module.js.map"),
+            moduleKind = ModuleKind.ESModule
+          )
+        ),
+        dest = PathRef(srcDir)
+      )
+
+      val result = C.applyContentHash(report, destDir)
+      val files = os.list(destDir).map(_.last).toSet
+
+      assert(!files.contains("my-module.js"), s"hyphenated original should not exist: $files")
+      assert(!files.exists(_.contains("-")), s"no hashed filename should contain a hyphen: $files")
+
+      val sanitised = files.find(f => f.startsWith("my_module.") && f.endsWith(".js") && !f.endsWith(".js.map"))
+      assert(sanitised.isDefined, s"sanitised name (my_module.<hash>.js) not found in: $files")
+
+      assertEquals(result.publicModules.head.jsFileName, sanitised.get)
+      assert(result.publicModules.head.sourceMapName.exists(_.startsWith("my_module.")))
+
+    finally
+      os.remove.all(srcDir)
+      os.remove.all(destDir)
+    end try
+  }
+
+  test("applyContentHash sanitises hyphens in cross-module imports") {
+    val srcDir = os.temp.dir()
+    val destDir = os.temp.dir()
+
+    try
+      os.write(srcDir / "my-chunk.js", "export const y = 2;\n")
+      os.write(srcDir / "main.js", """import * as c from "./my-chunk.js";""" + "\n")
+
+      val report = Report(
+        publicModules = Seq(Report.Module("main", "main.js", None, ModuleKind.ESModule)),
+        dest = PathRef(srcDir)
+      )
+
+      C.applyContentHash(report, destDir)
+      val files = os.list(destDir).map(_.last).toSet
+
+      assert(!files.exists(_.contains("-")), s"no output file should contain a hyphen: $files")
+
+      val hashedMain = files.find(f => f.startsWith("main.") && f.endsWith(".js")).get
+      val mainContent = os.read(destDir / hashedMain)
+      assert(!mainContent.contains("my-chunk"), s"main.js should not reference hyphenated name:\n$mainContent")
+      assert(mainContent.contains("my_chunk"), s"main.js should reference sanitised name:\n$mainContent")
+
+    finally
+      os.remove.all(srcDir)
+      os.remove.all(destDir)
+    end try
+  }
+
+  // --------------------------------------------------------------------------
+  // stripContentHash
+  // --------------------------------------------------------------------------
+
+  private val FB = FileBasedContentHashScalaJSModule
+
+  test("stripContentHash removes 16-hex-char hash from simple name") {
+    assertEquals(FB.stripContentHash("main.a1b2c3d4e5f6a7b8.js"), "main.js")
+  }
+
+  test("stripContentHash removes hash from underscore-containing base name") {
+    assertEquals(FB.stripContentHash("my_module.a1b2c3d4e5f6a7b8.js"), "my_module.js")
+  }
+
+  test("stripContentHash passes through unhashed filenames") {
+    assertEquals(FB.stripContentHash("main.js"), "main.js")
+  }
+
+  test("stripContentHash passes through names with non-hex second-to-last segment") {
+    assertEquals(FB.stripContentHash("main.notahex.js"), "main.notahex.js")
+  }
+
+  test("stripContentHash handles .js.map extension correctly") {
+    assertEquals(FB.stripContentHash("main.a1b2c3d4e5f6a7b8.js.map"), "main.js.map")
   }
 
 end ContentHashScalaJSModuleSuite

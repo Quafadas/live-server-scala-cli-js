@@ -135,4 +135,25 @@ private[sjsls] object CliOps:
       "Whether or not to attempt killing any processes that are using the specified port. Default: true"
     )
     .orTrue
+
+  val logFileOpt: Opts[Option[String]] = Opts
+    .option[String](
+      "log-file",
+      "Write server logs to this file path instead of (or in addition to) the console. Useful when running under Mill watch mode where stdout/stderr is managed per-task."
+    )
+    .orNone
+
+  val workspaceRootOpt: Opts[Option[String]] = Opts
+    .option[String](
+      "workspace-root",
+      "Absolute path to the project source root for Chrome DevTools automatic workspace folder integration. When provided, serves `/.well-known/appspecific/com.chrome.devtools.json`."
+    )
+    .orNone
+
+  val workspaceUuidOpt: Opts[Option[String]] = Opts
+    .option[String](
+      "workspace-uuid",
+      "UUID to use in the Chrome DevTools workspace descriptor. If omitted a random UUID is generated. Only used when --workspace-root is also supplied."
+    )
+    .orNone
 end CliOps
