@@ -168,5 +168,70 @@ object SiteWasmTests extends TestSuite:
           end if
       }
     }
+
+    test("FileBasedContentHashScalaJSModule minified skips terser in WASM mode") {
+      object build extends TestRootModule with FileBasedContentHashScalaJSModule:
+        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaJSExperimentalUseWebAssembly = true
+
+        override def mvnDeps = Seq(
+          mvn"com.raquo::laminar::17.0.0"
+        )
+
+        lazy val millDiscover = Discover[this.type]
+      end build
+
+      val resourceFolder = os.Path(sys.env("MILL_TEST_RESOURCE_DIR"))
+
+      UnitTester(build, resourceFolder / "simple").scoped {
+        eval =>
+          val Right(minResult) = eval(build.minified).runtimeChecked
+          val minDir = minResult.value.dest.path
+
+          // Output must contain exactly one .wasm file.
+          val wasmFiles = os.list(minDir).filter(p => os.isFile(p) && p.ext == "wasm")
+          if wasmFiles.size != 1 then
+            throw new java.lang.AssertionError(s"Expected exactly 1 wasm file in minified output, got: $wasmFiles")
+          end if
+
+          // Output must contain at least one .js file (the WASM JS loader).
+          val jsFiles = os.list(minDir).filter(p => os.isFile(p) && p.ext == "js")
+          if jsFiles.isEmpty then
+            throw new java.lang.AssertionError(s"Expected at least 1 js file in minified output, got none")
+          end if
+
+          // The public module must reference a file that exists in the output.
+          assert(minResult.value.publicModules.nonEmpty)
+          minResult.value.publicModules.foreach {
+            m =>
+              val jsFile = minDir / m.jsFileName
+              if !os.exists(jsFile) then
+                throw new java.lang.AssertionError(
+                  s"Public module '${m.moduleID}' jsFileName '${m.jsFileName}' not found in minified output"
+                )
+              end if
+          }
+
+          // JS files must be byte-for-byte identical to the fullLinkJS output (terser did not run).
+          val Right(fullResult) = eval(build.fullLinkJS).runtimeChecked
+          val fullDir = fullResult.value.dest.path
+          jsFiles.foreach {
+            minJs =>
+              val fullJs = fullDir / minJs.last
+              if !os.exists(fullJs) then
+                throw new java.lang.AssertionError(
+                  s"minified JS file ${minJs.last} has no counterpart in fullLinkJS output"
+                )
+              end if
+              val minSize = os.size(minJs)
+              val fullSize = os.size(fullJs)
+              if minSize != fullSize then
+                throw new java.lang.AssertionError(
+                  s"${minJs.last}: expected size $fullSize (fullLinkJS) but got $minSize (minified) — terser must not have run"
+                )
+              end if
+          }
+      }
+    }
   }
 end SiteWasmTests

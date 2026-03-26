@@ -55,6 +55,33 @@ trait InMemoryHashScalaJSModule extends ScalaJSConfigModule:
 
   def wasmOptFlags: Task[Seq[String]] = Task(Seq("-O2", "-all"))
 
+  def terserConfig = Task {
+    os.write(
+      Task.dest / "terser.config.json",
+      """{
+        |  "compress": {
+        |    "passes": 2,
+        |    "pure_getters": true,
+        |    "unsafe": false,
+        |    "unsafe_arrows": false,
+        |    "unsafe_methods": false,
+        |    "drop_console": false
+        |  },
+        |  "mangle": {
+        |    "toplevel": false
+        |  },
+        |  "format": {
+        |    "comments": false
+        |  },
+        |  "ecma": 2020,
+        |  "module": true,
+        |  "toplevel": false
+        |}
+        |""".stripMargin
+    )
+    PathRef(Task.dest / "terser.config.json")
+  }
+
   /** */
   def processWasm(report: Report)(using logCtx: Log): Report =
 
@@ -252,6 +279,34 @@ trait InMemoryHashScalaJSModule extends ScalaJSConfigModule:
         buf.get(bytes)
         bytes
       end readBytes
+
+      // Optionally run terser on JS files for production size reduction.
+      // Gated on scalaJSMinify so users can opt out by setting `override def scalaJSMinify = Task(false)`.
+      if scalaJSMinify() then
+        val terserCfg = terserConfig()
+        val terserTempDir = os.temp.dir()
+        try
+          jsFileNames.foreach {
+            name =>
+              val inputPath = terserTempDir / name
+              os.write(inputPath, readBytes(name))
+              val outputPath = terserTempDir / ("min." + name)
+              os.proc(
+                  "terser",
+                  inputPath.toString,
+                  "-o",
+                  outputPath.toString,
+                  "--config-file",
+                  terserCfg.path.toString
+                )
+                .call(mergeErrIntoOut = true, stdout = os.Inherit, stderr = os.Inherit)
+              val minifiedBytes = os.read.bytes(outputPath)
+              inMemoryOutputDirectory.remove(name)
+              inMemoryOutputDirectory.put(name, ByteBuffer.wrap(minifiedBytes))
+          }
+        finally os.remove.all(terserTempDir)
+        end try
+      end if
 
       // Build dependency graph.
       val fileDeps: Map[String, Set[String]] = jsFileNames
