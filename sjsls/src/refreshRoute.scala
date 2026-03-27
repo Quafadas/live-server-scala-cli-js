@@ -17,6 +17,7 @@ import scala.concurrent.duration.DurationDouble
 
 def refreshRoutes(
     refreshTopic: Topic[IO, Unit],
+    assetRefreshTopic: Topic[IO, String],
     buildTool: BuildTool,
     stringPath: fs2.io.file.Path,
     mr: Ref[IO, Map[String, String]],
@@ -29,6 +30,11 @@ def refreshRoutes(
     .evalTap(_ => logger.debug("[refreshRoute] raw event received from refreshTopic (pre-debounce)"))
     .debounce(0.1.second)
     .evalTap(_ => logger.debug("[refreshRoute] event passed debounce — will send SSE PageRefresh to client"))
+  val assetRefresh = assetRefreshTopic
+    .subscribe(10)
+    .debounce(0.1.second)
+    .evalTap(path => logger.debug(s"[refreshRoute] asset refresh event for path: $path"))
+    .map(path => AssetRefresh(path))
 
   buildTool match
     case _: NoBuildTool =>
@@ -46,13 +52,17 @@ def refreshRoutes(
                 )
                 .as(PageRefresh())
             )
+            .merge(assetRefresh)
             .evalTap(msg => logger.debug(s"Publishing refresh event: $msg"))
             .map(msg => ServerSentEvent(Some(msg.asJson.noSpaces)))
         )
     case _ =>
       case GET -> Root / "refresh" / "v1" / "sse" =>
         Ok(
-          keepAlive.merge(refresh.as(PageRefresh())).map(msg => ServerSentEvent(Some(msg.asJson.noSpaces)))
+          keepAlive
+            .merge(refresh.as(PageRefresh()))
+            .merge(assetRefresh)
+            .map(msg => ServerSentEvent(Some(msg.asJson.noSpaces)))
         )
   end match
 }

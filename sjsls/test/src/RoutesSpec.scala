@@ -191,9 +191,11 @@ class RoutesSuite extends CatsEffectSuite:
         fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
         _ <- updateMapRef(tempDir.toFs2, fileToHashRef)(logger).toResource
         refreshPub <- Topic[IO, Unit].toResource
+        assetRefreshPub <- Topic[IO, String].toResource
         theseRoutes: HttpRoutes[IO] <- routes(
           tempDir.toString,
           refreshPub,
+          assetRefreshPub,
           None,
           HttpRoutes.empty[IO],
           fileToHashRef,
@@ -279,9 +281,11 @@ class RoutesSuite extends CatsEffectSuite:
           fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
           fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
           refreshPub <- Topic[IO, Unit].toResource
+          assetRefreshPub <- Topic[IO, String].toResource
           theseRoutes <- routes(
             appDir.toString,
             refreshPub,
+            assetRefreshPub,
             Some(IndexHtmlConfig.IndexHtmlPath(staticDir.toFs2)),
             HttpRoutes.empty[IO],
             fileToHashRef,
@@ -311,9 +315,11 @@ class RoutesSuite extends CatsEffectSuite:
         fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
         fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
         refreshPub <- Topic[IO, Unit].toResource
+        assetRefreshPub <- Topic[IO, String].toResource
         theseRoutes <- routes(
           appDir.toString,
           refreshPub,
+          assetRefreshPub,
           None,
           HttpRoutes.empty[IO],
           fileToHashRef,
@@ -344,9 +350,11 @@ class RoutesSuite extends CatsEffectSuite:
           fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
           fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
           refreshPub <- Topic[IO, Unit].toResource
+          assetRefreshPub <- Topic[IO, String].toResource
           theseRoutes <- routes(
             appDir.toString,
             refreshPub,
+            assetRefreshPub,
             Some(IndexHtmlConfig.StylesOnly(styleDir.toFs2)),
             HttpRoutes.empty[IO],
             fileToHashRef,
@@ -379,9 +387,11 @@ class RoutesSuite extends CatsEffectSuite:
           fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
           fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
           refreshPub <- Topic[IO, Unit].toResource
+          assetRefreshPub <- Topic[IO, String].toResource
           theseRoutes <- routes(
             appDir.toString,
             refreshPub,
+            assetRefreshPub,
             Some(IndexHtmlConfig.StylesOnly(styleDir.toFs2)),
             HttpRoutes.empty[IO],
             fileToHashRef,
@@ -407,6 +417,7 @@ class RoutesSuite extends CatsEffectSuite:
         fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
         fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
         refreshPub <- Topic[IO, Unit].toResource
+        assetRefreshPub <- Topic[IO, String].toResource
         _ <- logger.trace(os.stat(staticDir / "image.webp").toString()).toResource
         modifedAt <- fileLastModified((staticDir / "image.webp").toFs2)
           .map {
@@ -417,6 +428,7 @@ class RoutesSuite extends CatsEffectSuite:
         theseRoutes <- routes(
           os.temp.dir().toString,
           refreshPub,
+          assetRefreshPub,
           Some(IndexHtmlConfig.IndexHtmlPath(staticDir.toFs2)),
           HttpRoutes.empty[IO],
           fileToHashRef,
@@ -465,9 +477,11 @@ class RoutesSuite extends CatsEffectSuite:
         fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
         _ <- updateMapRef(tempDir.toFs2, fileToHashRef)(logger).toResource
         refreshPub <- Topic[IO, Unit].toResource
+        assetRefreshPub <- Topic[IO, String].toResource
         theseRoutes <- routes(
           tempDir.toString,
           refreshPub,
+          assetRefreshPub,
           None,
           HttpRoutes.empty[IO],
           fileToHashRef,
@@ -505,9 +519,11 @@ class RoutesSuite extends CatsEffectSuite:
         fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
         _ <- updateMapRef(tempDir.toFs2, fileToHashRef)(logger).toResource
         refreshPub <- Topic[IO, Unit].toResource
+        assetRefreshPub <- Topic[IO, String].toResource
         theseRoutes <- routes(
           tempDir.toString,
           refreshPub,
+          assetRefreshPub,
           None,
           HttpRoutes.empty[IO],
           fileToHashRef,
@@ -531,9 +547,11 @@ class RoutesSuite extends CatsEffectSuite:
         fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
         _ <- updateMapRef(tempDir.toFs2, fileToHashRef)(logger).toResource
         refreshPub <- Topic[IO, Unit].toResource
+        assetRefreshPub <- Topic[IO, String].toResource
         theseRoutes <- routes(
           tempDir.toString,
           refreshPub,
+          assetRefreshPub,
           None,
           HttpRoutes.empty[IO],
           fileToHashRef,
@@ -562,9 +580,11 @@ class RoutesSuite extends CatsEffectSuite:
         fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
         fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
         refreshPub <- Topic[IO, Unit].toResource
+        assetRefreshPub <- Topic[IO, String].toResource
         theseRoutes <- routes(
           os.temp.dir().toString,
           refreshPub,
+          assetRefreshPub,
           Some(IndexHtmlConfig.IndexHtmlPath(staticDir.toFs2)),
           HttpRoutes.empty[IO],
           fileToHashRef,
@@ -655,9 +675,11 @@ class DevToolsRouteSuite extends CatsEffectSuite:
       logger <- IO(scribe.cats[IO]).toResource
       fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
       refreshPub <- Topic[IO, Unit].toResource
+      assetRefreshPub <- Topic[IO, String].toResource
       theseRoutes <- routes(
         os.temp.dir().toString,
         refreshPub,
+        assetRefreshPub,
         None,
         HttpRoutes.empty[IO],
         fileToHashRef,

@@ -56,6 +56,7 @@ object LiveServer extends IOApp:
     dezombifyOpt,
     logFileOpt,
     None.pure[Opts],
+    None.pure[Opts],
     (workspaceRootOpt, workspaceUuidOpt).mapN {
       case (Some(root), uuidOpt) =>
         val uuid = uuidOpt.getOrElse(java.util.UUID.randomUUID().toString)
@@ -111,6 +112,14 @@ object LiveServer extends IOApp:
         .drain
         .background
         .void
+      assetRefreshTopic <- lsc
+        .customAssetRefresh
+        .fold(Topic[IO, String])(
+          t =>
+            scribe.cats[IO].debug("Custom asset refresh topic supplied") >>
+              IO(t)
+        )
+        .toResource
       linkingTopic <- Topic[IO, Unit].toResource
       client <- EmberClientBuilder.default[IO].build
       baseDirPath <- lsc.baseDir.fold(Files[IO].currentWorkingDirectory.toResource)(toDirectoryPath)
@@ -167,6 +176,7 @@ object LiveServer extends IOApp:
       app <- routes(
         outDirString,
         refreshTopic,
+        assetRefreshTopic,
         indexOpts,
         proxyRoutes,
         fileToHashRef,
@@ -185,7 +195,7 @@ object LiveServer extends IOApp:
       // the same output directory would fire a second time for the same logical change.
       _ <- (lsc.customRefresh, indexOpts) match
         case (None, Some(IndexHtmlConfig.IndexHtmlPath(indexHtmlatPath))) =>
-          staticWatcher(refreshTopic, fs2.io.file.Path(indexHtmlatPath.toString))(logger)
+          staticWatcher(refreshTopic, assetRefreshTopic, fs2.io.file.Path(indexHtmlatPath.toString))(logger)
         case _ => Resource.unit[IO]
 
       // _ <- stylesDir.fold(Resource.unit[IO])(sd => fileWatcher(fs2.io.file.Path(sd), mr))

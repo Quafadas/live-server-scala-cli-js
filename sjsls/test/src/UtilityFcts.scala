@@ -42,8 +42,11 @@ class UtilityFcs extends CatsEffectSuite:
     )
 
     assert(
-      html.contains("""location.reload()});</script>
-</body></html>""")
+      html.contains("location.reload()")
+    )
+
+    assert(
+      html.contains("AssetRefresh")
     )
   }
 

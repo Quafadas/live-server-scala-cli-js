@@ -24,6 +24,7 @@ import cats.syntax.all.*
 
 def staticWatcher(
     refreshTopic: Topic[IO, Unit],
+    assetRefreshTopic: Topic[IO, String],
     staticDir: fs2.io.file.Path
     // mr: MapRef[IO, String, Option[String]]
 )(
@@ -44,7 +45,12 @@ def staticWatcher(
         .isRegularFile(Path(path.toString()))
         .map(b => b && !path.toString().endsWith(".less")) // don't force a refrseh if we're editing a .less file
         .ifM(
-          logger.debug(s"[staticWatcher] publishing to refreshTopic — file $op: $path") >> refreshTopic.publish1(()),
+          if path.toString().endsWith(".css") then
+            logger.debug(s"[staticWatcher] publishing to assetRefreshTopic — CSS file $op: $path") >>
+              assetRefreshTopic.publish1(path.getFileName().toString()).void
+          else
+            logger.debug(s"[staticWatcher] publishing to refreshTopic — file $op: $path") >> refreshTopic.publish1(())
+          ,
           logger.trace(s"[staticWatcher] skipping refresh for $path (not a regular file, or .less)")
         )
     yield ()

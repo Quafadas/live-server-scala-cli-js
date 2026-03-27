@@ -20,6 +20,7 @@ implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionC
 trait ScalaJsRefreshModule extends ScalaJSConfigModule:
 
   lazy val updateServer = Topic[IO, Unit].unsafeRunSync()
+  lazy val updateAsset = Topic[IO, String].unsafeRunSync()
 
   override def moduleKind: Simple[ModuleKind] = ModuleKind.ESModule
 
@@ -72,6 +73,18 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
         |  if ('PageRefresh' in msg) {
         |    console.log("PageRefresh @ " + new Date().toISOString());
         |    location.reload();
+        |  }
+        |
+        |  if ('AssetRefresh' in msg) {
+        |    const path = msg.AssetRefresh.path;
+        |    const links = document.querySelectorAll('link[rel="stylesheet"]');
+        |    links.forEach(link => {
+        |      if (link.href.includes(path)) {
+        |        const url = new URL(link.href);
+        |        url.searchParams.set('t', Date.now());
+        |        link.href = url.toString();
+        |      }
+        |    });
         |  }
         |
         |});
@@ -134,7 +147,14 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
   def siteGen = Task {
     val path = fastLinkJS().dest.path
     os.copy.over(indexHtml().path, Task.dest / "index.html")
-    if os.exists(assetsDir) then os.copy(assets().path, Task.dest, mergeFolders = true)
+    if os.exists(assetsDir) then
+      os.copy(assets().path, Task.dest, mergeFolders = true)
+      // Publish CSS asset paths for hot reload
+      val cssPaths = os
+        .walk(Task.dest)
+        .filter(p => p.ext == "css" && os.isFile(p))
+        .map(_.relativeTo(Task.dest).toString())
+      cssPaths.foreach(p => updateAsset.publish1(p).unsafeRunSync())
     end if
     updateServer.publish1(Task.log.info("publish update")).unsafeRunSync()
     (Task.dest.toString(), path.toString())
@@ -164,6 +184,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
       logLevel = logLevel(),
       logFile = logFile().fold[Option[String]](None)(p => Some(p.path.toString)),
       customRefresh = Some(updateServer),
+      customAssetRefresh = Some(updateAsset),
       devToolsWorkspace = Some((moduleDir.toString(), devToolsUuid()))
     )
   }
