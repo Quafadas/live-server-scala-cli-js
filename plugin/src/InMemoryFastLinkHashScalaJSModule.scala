@@ -149,6 +149,8 @@ trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModul
     end try
   }
 
+  /** Avoids disk IO by keeping everything in memory.
+    */
   override def fastLinkJS = Task {
     val report = super.fastLinkJS()
     hashedOutputFiles.clear()
@@ -245,6 +247,7 @@ trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModul
               moduleKind = m.moduleKind
             )
         }
+
       api.Report(updatedModules, PathRef(Task.dest))
     end if
   }
