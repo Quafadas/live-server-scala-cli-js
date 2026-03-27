@@ -45,6 +45,27 @@ trait ScalaJsWebAppModule extends FileBasedContentHashScalaJSModule with ScalaJs
 end ScalaJsWebAppModule
 trait ScalaJsInMemWebAppModule extends InMemoryFastLinkHashScalaJSModule with ScalaJsRefreshModule:
 
+  override def lcs = Task.Worker {
+    val (site, js) = siteGen()
+    Task.log.info("Gen lsc (in-memory)")
+    LiveServerConfig(
+      baseDir = None,
+      outDir = Some(js),
+      port =
+        com.comcast.ip4s.Port.fromInt(port()).getOrElse(throw new IllegalArgumentException(s"invalid port: ${port()}")),
+      indexHtmlTemplate = Some(site),
+      buildTool = io.github.quafadas.sjsls.NoBuildTool(),
+      openBrowserAt = "/index.html",
+      preventBrowserOpen = !openBrowser(),
+      dezombify = dezombify(),
+      logLevel = logLevel(),
+      logFile = logFile().fold[Option[String]](None)(p => Some(p.path.toString)),
+      customRefresh = Some(updateServer),
+      devToolsWorkspace = Some((moduleDir.toString(), devToolsUuid())),
+      inMemoryFiles = Some(hashedOutputFiles)
+    )
+  }
+
   def publish = Task {
     val report = fullLinkJS()
     val minifiedDir = report.dest.path

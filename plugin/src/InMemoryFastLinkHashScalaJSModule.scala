@@ -2,6 +2,7 @@ package io.github.quafadas.sjsls
 
 import java.nio.ByteBuffer
 import java.security.MessageDigest
+import java.util.concurrent.ConcurrentHashMap
 
 import scala.collection.mutable
 
@@ -46,6 +47,7 @@ import mill.api.BuildCtx
   */
 trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModule with ScalaJSConfigModule:
   val inMemoryOutputDirectory: MemOutputDirectory = MemOutputDirectory()
+  val hashedOutputFiles: ConcurrentHashMap[String, Array[Byte]] = new ConcurrentHashMap()
 
   override def customLinkerOutputDir: Option[OutputDirectory] =
     Some(inMemoryOutputDirectory)
@@ -147,9 +149,25 @@ trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModul
     end try
   }
 
+  /** Avoids disk IO by keeping everything in memory.
+    */
   override def fastLinkJS = Task {
     val report = super.fastLinkJS()
-    if scalaJSExperimentalUseWebAssembly() then processWasm(report)
+    hashedOutputFiles.clear()
+    if scalaJSExperimentalUseWebAssembly() then
+      val wasmReport = processWasm(report)
+      // Populate hashedOutputFiles from inMemoryOutputDirectory after WASM processing
+      inMemoryOutputDirectory
+        .fileNames()
+        .foreach {
+          name =>
+            Task.log.debug(s"Adding in-memory file to hashedOutputFiles: $name")
+            val buf = inMemoryOutputDirectory.content(name).get
+            val bytes = new Array[Byte](buf.remaining())
+            buf.get(bytes)
+            hashedOutputFiles.put(name, bytes)
+        }
+      wasmReport
     else
       // Hash JS files from the in-memory output directory, then write hashed output to Task.dest.
       import mill.scalajslib.ContentHashScalaJSModule as C
@@ -184,8 +202,6 @@ trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModul
       val sortedNames = C.topologicalSort(jsFileNames.toList, fileDeps)
       val jsHashMapping = mutable.LinkedHashMap.empty[String, String]
 
-      os.makeDir.all(Task.dest)
-
       sortedNames.foreach {
         name =>
           val content = readStr(name)
@@ -200,7 +216,7 @@ trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModul
             "sourceMappingURL=" + name + ".map",
             "sourceMappingURL=" + hashedName + ".map"
           )
-          os.write(Task.dest / hashedName, finalContent.getBytes("UTF-8"))
+          hashedOutputFiles.put(hashedName, finalContent.getBytes("UTF-8"))
       }
 
       // Build full mapping including source-map renames.
@@ -210,13 +226,13 @@ trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModul
         }
         .toMap
 
-      // Write remaining files (source maps, etc.) to Task.dest.
+      // Store remaining files (source maps, etc.) in hashedOutputFiles.
       allFiles
         .filterNot(jsFileNames.contains)
         .foreach {
           name =>
             val targetName = fullMapping.getOrElse(name, name)
-            os.write(Task.dest / targetName, readBytes(name))
+            hashedOutputFiles.put(targetName, readBytes(name))
         }
 
       // Build updated Report.
@@ -231,6 +247,7 @@ trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModul
               moduleKind = m.moduleKind
             )
         }
+
       api.Report(updatedModules, PathRef(Task.dest))
     end if
   }

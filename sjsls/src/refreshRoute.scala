@@ -1,5 +1,7 @@
 package io.github.quafadas.sjsls
 
+import java.util.concurrent.ConcurrentHashMap
+
 import scala.concurrent.duration.DurationInt
 
 import org.http4s.HttpRoutes
@@ -20,15 +22,16 @@ def refreshRoutes(
     buildTool: BuildTool,
     stringPath: fs2.io.file.Path,
     mr: Ref[IO, Map[String, String]],
-    logger: Scribe[IO]
+    logger: Scribe[IO],
+    inMemoryFiles: Option[ConcurrentHashMap[String, Array[Byte]]] = None
 ) = HttpRoutes.of[IO] {
 
   val keepAlive = fs2.Stream.fixedRate[IO](10.seconds).as(KeepAlive())
   val refresh = refreshTopic
     .subscribe(10)
     .evalTap(_ => logger.debug("[refreshRoute] raw event received from refreshTopic (pre-debounce)"))
-    .debounce(0.1.second)
-    .evalTap(_ => logger.debug("[refreshRoute] event passed debounce — will send SSE PageRefresh to client"))
+  // .debounce(0.1.second)
+  // .evalTap(_ => logger.debug("[refreshRoute] event passed debounce — will send SSE PageRefresh to client"))
 
   buildTool match
     case _: NoBuildTool =>
@@ -42,7 +45,17 @@ def refreshRoutes(
                   _ =>
                     // A different tool is responsible for linking, so we hash the files "on the fly" when an update is requested
                     logger.debug("Updating Map Ref") >>
-                      updateMapRef(stringPath, mr)(logger)
+                      (inMemoryFiles match
+                        case Some(files) =>
+                          logger.debug(
+                            s"[refreshRoute] Updating from IN-MEMORY files. count=${files.size()} keys=${scala
+                                .jdk
+                                .CollectionConverters
+                                .SetHasAsScala(files.keySet())
+                                .asScala
+                                .mkString(", ")}"
+                          ) >> updateMapRefFromMemory(files, mr)(logger)
+                        case None => updateMapRef(stringPath, mr)(logger))
                 )
                 .as(PageRefresh())
             )

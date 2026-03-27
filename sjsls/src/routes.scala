@@ -1,6 +1,7 @@
 package io.github.quafadas.sjsls
 
 import java.time.ZonedDateTime
+import java.util.concurrent.ConcurrentHashMap
 
 import org.http4s.HttpRoutes
 import org.http4s.MediaType
@@ -43,14 +44,19 @@ def routes[F[_]: Files: MonadThrow](
     clientRoutingPrefix: Option[String],
     injectPreloads: Boolean,
     buildTool: BuildTool,
-    devToolsWorkspace: Option[(String, String)] = None
+    devToolsWorkspace: Option[(String, String)] = None,
+    inMemoryFiles: Option[ConcurrentHashMap[String, Array[Byte]]] = None
 )(logger: Scribe[IO]): Resource[IO, HttpRoutes[IO]] =
 
   val traceLogger = traceLoggerMiddleware(logger)
   val zdt = ZonedDateTime.now()
 
-  // val linkedAppWithCaching: HttpRoutes[IO] = appRoute[IO](stringPath)
-  val linkedAppWithCaching: HttpRoutes[IO] = ETagMiddleware(appRoute[IO](stringPath), ref)(logger)
+  val linkedAppWithCaching: HttpRoutes[IO] = inMemoryFiles match
+    case Some(files) =>
+      val lookup: String => Option[Array[Byte]] = name => Option(files.get(name))
+      appRouteInMemory[IO](lookup)(using Async[IO], logger)
+    case None =>
+      ETagMiddleware(appRoute[IO](stringPath), ref)(logger)
   val spaRoutes = clientRoutingPrefix.map(s => (s, buildSpaRoute(indexOpts, ref, zdt, injectPreloads)(logger)))
   val staticRoutes = Some(staticAssetRoutes(indexOpts, ref, zdt, injectPreloads)(logger))
 
@@ -63,12 +69,22 @@ def routes[F[_]: Files: MonadThrow](
 
   val refreshableApp = traceLogger(
     devToolsRoute(devToolsWorkspace)
-      .combineK(refreshRoutes(refreshTopic, buildTool, fs2.io.file.Path(stringPath), ref, logger))
+      .combineK(refreshRoutes(refreshTopic, buildTool, fs2.io.file.Path(stringPath), ref, logger, inMemoryFiles))
       .combineK(proxyRoutes)
       .combineK(routes)
   )
   logger.info("Routes created  at : ").toResource >>
     logger.info("Path: " + stringPath).toResource >>
+    (inMemoryFiles match
+      case Some(files) =>
+        logger
+          .debug(
+            s"[routes] Using IN-MEMORY appRoute. inMemoryFiles.size=${files
+                .size()} keys=${scala.jdk.CollectionConverters.SetHasAsScala(files.keySet()).asScala.mkString(", ")}"
+          )
+          .toResource
+      case None =>
+        logger.debug(s"[routes] Using DISK appRoute. path=$stringPath").toResource) >>
     IO(refreshableApp).toResource
 
 end routes
