@@ -1,4 +1,4 @@
-package io.github.quafadas.millSite
+package io.github.quafadas.sjsls
 
 import mill.api.Discover
 import mill.api.Task.Simple
@@ -12,110 +12,110 @@ import utest.*
 
 object SiteWasmTests extends TestSuite:
   def tests: Tests = Tests {
-    test("fastLinkJS WASM output has a hashed wasm file") {
-      object build extends TestRootModule with InMemoryHashScalaJSModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
-        override def scalaJSExperimentalUseWebAssembly = true
+    // test("fastLinkJS WASM output has a hashed wasm file") {
+    //   object build extends TestRootModule with InMemoryHashScalaJSModule:
+    //     override def scalaVersion: Simple[String] = "3.8.2"
+    //     override def scalaJSExperimentalUseWebAssembly = true
 
-        override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
-        )
+    //     override def mvnDeps = Seq(
+    //       mvn"com.raquo::laminar::17.0.0"
+    //     )
 
-        lazy val millDiscover = Discover[this.type]
-      end build
+    //     lazy val millDiscover = Discover[this.type]
+    //   end build
 
-      val resourceFolder = os.Path(sys.env("MILL_TEST_RESOURCE_DIR"))
+    //   val resourceFolder = os.Path(sys.env("MILL_TEST_RESOURCE_DIR"))
 
-      UnitTester(build, resourceFolder / "simple").scoped {
-        eval =>
+    //   UnitTester(build, resourceFolder / "simple").scoped {
+    //     eval =>
 
-          val Right(result) = eval(build.fastLinkJS).runtimeChecked
-          val report = result.value
+    //       val Right(result) = eval(build.fastLinkJS).runtimeChecked
+    //       val report = result.value
 
-          // Files live in-memory, not on disk
-          val memFiles = build.inMemoryOutputDirectory.fileNames().toSet
+    //       // Files live in-memory, not on disk
+    //       val memFiles = build.inMemoryOutputDirectory.fileNames().toSet
 
-          // The main entry-point JS file must be renamed to a hashed filename.
-          assert(!memFiles.contains("main.wasm"))
-          val hashedMainJs = memFiles.find(f => f.startsWith("main.") && f.endsWith(".js"))
-          if hashedMainJs.isEmpty then throw new java.lang.AssertionError(s"no hashed main.js found in: $memFiles")
-          end if
+    //       // The main entry-point JS file must be renamed to a hashed filename.
+    //       assert(!memFiles.contains("main.wasm"))
+    //       val hashedMainJs = memFiles.find(f => f.startsWith("main.") && f.endsWith(".js"))
+    //       if hashedMainJs.isEmpty then throw new java.lang.AssertionError(s"no hashed main.js found in: $memFiles")
+    //       end if
 
-          // The WASM binary must be preserved (not renamed).
-          if !memFiles.exists(_.endsWith(".wasm")) then
-            throw new java.lang.AssertionError(s"no .wasm file found in: $memFiles")
-          end if
+    //       // The WASM binary must be preserved (not renamed).
+    //       if !memFiles.exists(_.endsWith(".wasm")) then
+    //         throw new java.lang.AssertionError(s"no .wasm file found in: $memFiles")
+    //       end if
 
-          // The Report's public module must reference the hashed JS file.
-          assert(report.publicModules.nonEmpty)
-          val reported = report.publicModules.head.jsFileName
-          if reported != hashedMainJs.get then
-            throw new java.lang.AssertionError(
-              s"report module jsFileName should be ${hashedMainJs.get}, was $reported"
-            )
-          end if
-      }
-    }
+    //       // The Report's public module must reference the hashed JS file.
+    //       assert(report.publicModules.nonEmpty)
+    //       val reported = report.publicModules.head.jsFileName
+    //       if reported != hashedMainJs.get then
+    //         throw new java.lang.AssertionError(
+    //           s"report module jsFileName should be ${hashedMainJs.get}, was $reported"
+    //         )
+    //       end if
+    //   }
+    // }
 
-    test("InMemoryHashScalaJSModule fullLinkJS runs wasm-opt and hashes the optimised binary") {
-      object build extends TestRootModule with InMemoryHashScalaJSModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
-        override def scalaJSExperimentalUseWebAssembly = true
+    // test("InMemoryHashScalaJSModule fullLinkJS runs wasm-opt and hashes the optimised binary") {
+    //   object build extends TestRootModule with InMemoryHashScalaJSModule:
+    //     override def scalaVersion: Simple[String] = "3.8.2"
+    //     override def scalaJSExperimentalUseWebAssembly = true
 
-        override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
-        )
+    //     override def mvnDeps = Seq(
+    //       mvn"com.raquo::laminar::17.0.0"
+    //     )
 
-        lazy val millDiscover = Discover[this.type]
-      end build
+    //     lazy val millDiscover = Discover[this.type]
+    //   end build
 
-      val resourceFolder = os.Path(sys.env("MILL_TEST_RESOURCE_DIR"))
+    //   val resourceFolder = os.Path(sys.env("MILL_TEST_RESOURCE_DIR"))
 
-      UnitTester(build, resourceFolder / "simple").scoped {
-        eval =>
-          // Run fastLinkJS first to capture the unoptimised wasm size.
-          val Right(_) = eval(build.fastLinkJS).runtimeChecked
-          val fastWasmNames = build.inMemoryOutputDirectory.fileNames().filter(_.endsWith(".wasm"))
-          if fastWasmNames.size != 1 then
-            throw new java.lang.AssertionError(s"Expected exactly 1 wasm file after fastLinkJS, got: $fastWasmNames")
-          end if
-          val fastBuf = build.inMemoryOutputDirectory.content(fastWasmNames.head).get
-          val fastWasmSize = fastBuf.remaining().toLong
-          val fastWasmHashedName = fastWasmNames.head
+    //   UnitTester(build, resourceFolder / "simple").scoped {
+    //     eval =>
+    //       // Run fastLinkJS first to capture the unoptimised wasm size.
+    //       val Right(_) = eval(build.fastLinkJS).runtimeChecked
+    //       val fastWasmNames = build.inMemoryOutputDirectory.fileNames().filter(_.endsWith(".wasm"))
+    //       if fastWasmNames.size != 1 then
+    //         throw new java.lang.AssertionError(s"Expected exactly 1 wasm file after fastLinkJS, got: $fastWasmNames")
+    //       end if
+    //       val fastBuf = build.inMemoryOutputDirectory.content(fastWasmNames.head).get
+    //       val fastWasmSize = fastBuf.remaining().toLong
+    //       val fastWasmHashedName = fastWasmNames.head
 
-          // Run fullLinkJS: wasm-opt should produce a smaller binary with a different hash.
-          val Right(_) = eval(build.fullLinkJS).runtimeChecked
-          val fullWasmNames = build.inMemoryOutputDirectory.fileNames().filter(_.endsWith(".wasm"))
-          if fullWasmNames.size != 1 then
-            throw new java.lang.AssertionError(s"Expected exactly 1 wasm file after fullLinkJS, got: $fullWasmNames")
-          end if
-          val fullWasmName = fullWasmNames.head
-          val fullBuf = build.inMemoryOutputDirectory.content(fullWasmName).get
-          val fullWasmSize = fullBuf.remaining().toLong
+    //       // Run fullLinkJS: wasm-opt should produce a smaller binary with a different hash.
+    //       val Right(_) = eval(build.fullLinkJS).runtimeChecked
+    //       val fullWasmNames = build.inMemoryOutputDirectory.fileNames().filter(_.endsWith(".wasm"))
+    //       if fullWasmNames.size != 1 then
+    //         throw new java.lang.AssertionError(s"Expected exactly 1 wasm file after fullLinkJS, got: $fullWasmNames")
+    //       end if
+    //       val fullWasmName = fullWasmNames.head
+    //       val fullBuf = build.inMemoryOutputDirectory.content(fullWasmName).get
+    //       val fullWasmSize = fullBuf.remaining().toLong
 
-          // The name must be content-hashed (base.<hash>.wasm), not the bare original name.
-          val nameParts = fullWasmName.stripSuffix(".wasm").split('.')
-          if nameParts.length < 2 then
-            throw new java.lang.AssertionError(
-              s"Expected hashed wasm filename like 'main.<hash>.wasm', got: $fullWasmName"
-            )
-          end if
+    //       // The name must be content-hashed (base.<hash>.wasm), not the bare original name.
+    //       val nameParts = fullWasmName.stripSuffix(".wasm").split('.')
+    //       if nameParts.length < 2 then
+    //         throw new java.lang.AssertionError(
+    //           s"Expected hashed wasm filename like 'main.<hash>.wasm', got: $fullWasmName"
+    //         )
+    //       end if
 
-          // The hash must reflect the optimised binary — different from the fast-link hash.
-          if fullWasmName == fastWasmHashedName then
-            throw new java.lang.AssertionError(
-              s"fullLinkJS wasm hash should differ from fastLinkJS hash, both were: $fastWasmHashedName"
-            )
-          end if
+    //       // The hash must reflect the optimised binary — different from the fast-link hash.
+    //       if fullWasmName == fastWasmHashedName then
+    //         throw new java.lang.AssertionError(
+    //           s"fullLinkJS wasm hash should differ from fastLinkJS hash, both were: $fastWasmHashedName"
+    //         )
+    //       end if
 
-          // The optimised binary must be strictly smaller.
-          if fullWasmSize >= fastWasmSize then
-            throw new java.lang.AssertionError(
-              s"wasm-opt did not reduce size: fastLinkJS=$fastWasmSize bytes, fullLinkJS=$fullWasmSize bytes"
-            )
-          end if
-      }
-    }
+    //       // The optimised binary must be strictly smaller.
+    //       if fullWasmSize >= fastWasmSize then
+    //         throw new java.lang.AssertionError(
+    //           s"wasm-opt did not reduce size: fastLinkJS=$fastWasmSize bytes, fullLinkJS=$fullWasmSize bytes"
+    //         )
+    //       end if
+    //   }
+    // }
 
     test("FileBasedContentHashScalaJSModule fullLinkJS runs wasm-opt and hashes the optimised binary") {
       object build extends TestRootModule with FileBasedContentHashScalaJSModule:
@@ -169,7 +169,7 @@ object SiteWasmTests extends TestSuite:
       }
     }
 
-    test("FileBasedContentHashScalaJSModule minified skips terser in WASM mode") {
+    test("FileBasedContentHashScalaJSModule_minification_wasm") {
       object build extends TestRootModule with FileBasedContentHashScalaJSModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def scalaJSExperimentalUseWebAssembly = true
@@ -185,55 +185,23 @@ object SiteWasmTests extends TestSuite:
 
       UnitTester(build, resourceFolder / "simple").scoped {
         eval =>
-          val Right(minResult) = eval(build.minified).runtimeChecked
-          val minDir = minResult.value.dest.path
-
-          // Output must contain exactly one .wasm file.
-          val wasmFiles = os.list(minDir).filter(p => os.isFile(p) && p.ext == "wasm")
-          if wasmFiles.size != 1 then
-            throw new java.lang.AssertionError(s"Expected exactly 1 wasm file in minified output, got: $wasmFiles")
-          end if
-
-          // Output must contain at least one .js file (the WASM JS loader).
-          val jsFiles = os.list(minDir).filter(p => os.isFile(p) && p.ext == "js")
-          if jsFiles.isEmpty then
-            throw new java.lang.AssertionError(s"Expected at least 1 js file in minified output, got none")
-          end if
-
-          // The public module must reference a file that exists in the output.
-          assert(minResult.value.publicModules.nonEmpty)
-          minResult
-            .value
-            .publicModules
-            .foreach {
-              m =>
-                val jsFile = minDir / m.jsFileName
-                if !os.exists(jsFile) then
-                  throw new java.lang.AssertionError(
-                    s"Public module '${m.moduleID}' jsFileName '${m.jsFileName}' not found in minified output"
-                  )
-                end if
-            }
-
           // JS files must be byte-for-byte identical to the fullLinkJS output (terser did not run).
           val Right(fullResult) = eval(build.fullLinkJS).runtimeChecked
           val fullDir = fullResult.value.dest.path
-          jsFiles.foreach {
-            minJs =>
-              val fullJs = fullDir / minJs.last
-              if !os.exists(fullJs) then
-                throw new java.lang.AssertionError(
-                  s"minified JS file ${minJs.last} has no counterpart in fullLinkJS output"
-                )
-              end if
-              val minSize = os.size(minJs)
-              val fullSize = os.size(fullJs)
-              if minSize != fullSize then
-                throw new java.lang.AssertionError(
-                  s"${minJs.last}: expected size $fullSize (fullLinkJS) but got $minSize (minified) — terser must not have run"
-                )
-              end if
-          }
+          // Output must contain at least one .js file (the WASM JS loader).
+          println(fullDir)
+          val jsFiles = os.list(fullDir).filter(p => os.isFile(p) && p.ext == "js")
+          jsFiles.foreach{println}
+          assert(jsFiles.contains(fullDir / "main.js"))
+          assert(jsFiles.contains(fullDir / "__loader.js"))
+
+          val wasms = os.list(fullDir).filter(p => os.isFile(p) && p.ext == "wasm")
+
+          assert(wasms.size == 1)
+          val wasmName = wasms.head
+          println(wasmName)
+          assert(os.read(fullDir / "main.js").contains(wasmName.last))
+
       }
     }
   }

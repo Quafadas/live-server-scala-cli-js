@@ -2,10 +2,8 @@ package io.github.quafadas
 
 import scalatags.Text.all.*
 
-import mill.api.BuildCtx
 import mill.api.Task.Simple
 import mill.scalajslib.*
-import mill.scalajslib.api.ModuleKind
 import mill.scalajslib.api.Report
 import mill.PathRef
 import mill.Task
@@ -13,7 +11,7 @@ import mill.Task
 trait ScalaJsWebAppModule extends FileBasedContentHashScalaJSModule with ScalaJsRefreshModule:
 
   def publish = Task {
-    val report = minified()
+    val report = fullLinkJS()
     val minifiedDir = report.dest.path
 
     val scriptTags = report.publicModules.map(m => script(src := s"/${m.jsFileName}", `type` := "module"))
