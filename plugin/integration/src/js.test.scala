@@ -215,25 +215,16 @@ object SiteJsTests extends TestSuite:
       UnitTester(buildNoMinify, resourceFolder / "simple").scoped {
         evalNoMinify =>
           val Right(noMinResult) = evalNoMinify(buildNoMinify.fullLinkJS).runtimeChecked
-          noMinSize = os
-            .list(noMinResult.value.dest.path)
-            .filter(p => os.isFile(p) && p.ext == "js")
-            .map(os.size)
-            .sum
+          noMinSize = os.list(noMinResult.value.dest.path).filter(p => os.isFile(p) && p.ext == "js").map(os.size).sum
       }
 
       UnitTester(buildMinify, resourceFolder / "simple").scoped {
         evalMinify =>
           val Right(minResult) = evalMinify(buildMinify.fullLinkJS).runtimeChecked
-          val minSize = os
-            .list(minResult.value.dest.path)
-            .filter(p => os.isFile(p) && p.ext == "js")
-            .map(os.size)
-            .sum
+          val minSize = os.list(minResult.value.dest.path).filter(p => os.isFile(p) && p.ext == "js").map(os.size).sum
 
           assert(
             minSize < noMinSize
-
           )
       }
     }

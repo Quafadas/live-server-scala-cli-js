@@ -110,15 +110,18 @@ trait InMemoryHashScalaJSModule extends ScalaJSConfigModule:
 
     // Patch wasm references in JS loader files so they point to the hashed wasm filename.
     import mill.scalajslib.ContentHashScalaJSModule as C
-    inMemoryOutputDirectory.fileNames().filter(_.endsWith(".js")).foreach {
-      jsName =>
-        val buf = inMemoryOutputDirectory.content(jsName).get
-        val bytes = new Array[Byte](buf.remaining())
-        buf.get(bytes)
-        val patched = C.rewriteJsReferences(new String(bytes, "UTF-8"), renameMap)
-        inMemoryOutputDirectory.remove(jsName)
-        inMemoryOutputDirectory.put(jsName, ByteBuffer.wrap(patched.getBytes("UTF-8")))
-    }
+    inMemoryOutputDirectory
+      .fileNames()
+      .filter(_.endsWith(".js"))
+      .foreach {
+        jsName =>
+          val buf = inMemoryOutputDirectory.content(jsName).get
+          val bytes = new Array[Byte](buf.remaining())
+          buf.get(bytes)
+          val patched = C.rewriteJsReferences(new String(bytes, "UTF-8"), renameMap)
+          inMemoryOutputDirectory.remove(jsName)
+          inMemoryOutputDirectory.put(jsName, ByteBuffer.wrap(patched.getBytes("UTF-8")))
+      }
 
     val updatedModules = report
       .publicModules
