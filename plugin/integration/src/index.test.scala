@@ -1,4 +1,4 @@
-package io.github.quafadas.millSite
+package io.github.quafadas.sjsls
 
 import mill.api.Discover
 import mill.api.Task.Simple

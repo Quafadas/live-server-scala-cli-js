@@ -40,6 +40,6 @@ trait ScalaJsWebAppModule extends FileBasedContentHashScalaJSModule with ScalaJs
     */
   def serveCommand = Task {
     val publishDir = publish().path
-    s"jwebserver -d $publishDir -p 8080"
+    s"jwebserver -d  \"$publishDir\" -p 8080"
   }
 end ScalaJsWebAppModule

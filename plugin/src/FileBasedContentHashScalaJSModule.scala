@@ -106,9 +106,11 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
       // val mapFiles = os.list(srcDir).filter(p => os.isFile(p) && p.ext == "map" && p.last.endsWith(".wasm.map"))
       val flags = wasmOptFlags()
       val digest = MessageDigest.getInstance("SHA-256")
-      // Copy everything to a temp dir so we can modify files without touching super's dest.
-      val tempDir = Task.dest / "tempWasmDir_deleteMe"
-      os.makeDir.all(tempDir)
+      // Copy everything to a system temp dir (guaranteed no spaces in path) so wasm-opt is happy as it doesn't like spaces.
+      // and to avoid touching super's dest.
+      val tempDir = os.temp.dir(deleteOnExit = false)
+      Task.log.debug(s"Created temporary directory for wasm-opt processing: $tempDir")
+
       try
         val originalLinkerOutput = os.list(srcDir)
 
@@ -129,6 +131,7 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
                     Seq("-ism", s"${f}.map" , "-osm", tempOutPathMap.toString)
                   else
                     Seq.empty[String]
+
                   val forWasmOpt = List(f.toString) ++
                     flags.toList ++
                     List("-o",  tempOutPath.toString) ++
@@ -158,6 +161,7 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
 
               case "js" =>
                 os.copy.over(f, Task.dest / f.last)
+              case ".map" => Task.log.debug(s"Map files ignored as should be processed as part of wasm-opt: ${f.last}")
               case _ =>
                 Task.log.info(s"ignoring non-js/wasm file in fullLinkJS output: ${f.last}")
         }
