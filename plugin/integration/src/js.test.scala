@@ -9,7 +9,6 @@ import mill.javalib.DepSyntax
 import mill.scalajslib.ContentHashScalaJSModule
 import mill.scalajslib.api.ModuleSplitStyle
 import utest.*
-import io.github.quafadas.FileBasedContentHashScalaJSModule
 
 object SiteJsTests extends TestSuite:
   def tests: Tests = Tests {
@@ -139,54 +138,6 @@ object SiteJsTests extends TestSuite:
                     s"Public module '${m.moduleID}' jsFileName '${m.jsFileName}' not found in output"
                   )
             }
-
-          // val Right(mini) = eval(build.minified).runtimeChecked
-          // val miniDir = mini.value.dest.path
-          // val miniFiles = os.list(miniDir).map(_.last).toSet
-          // val miniJsFiles = miniFiles.filter(f => f.endsWith(".js") && !f.endsWith(".js.map"))
-          // val miniMapFiles = miniFiles.filter(_.endsWith(".js.map"))
-
-          // // 3.1: Every minified .js file has a corresponding .js.map
-          // miniJsFiles.foreach {
-          //   jsFile =>
-          //     val expectedMap = jsFile + ".map"
-          //     if !miniMapFiles.contains(expectedMap) then
-          //       throw new java.lang.AssertionError(
-          //         s"Minified $jsFile has no corresponding source map. Maps: ${miniMapFiles.mkString(", ")}"
-          //       )
-          //     end if
-          // }
-
-          // // 3.2: Minified hashes differ from fullLinkJS hashes
-          // // (post-minification content is different, so hashes must differ)
-          // miniJsFiles.foreach {
-          //   miniName =>
-          //     if jsFiles.contains(miniName) then
-          //       throw new java.lang.AssertionError(
-          //         s"Minified filename '$miniName' is identical to fullLinkJS output — hash should differ"
-          //       )
-          // }
-
-          // // 3.3: sourceMappingURL in each minified JS points to a .map file that exists in output
-          // miniJsFiles.foreach {
-          //   jsFile =>
-          //     val content = os.read(miniDir / jsFile)
-          //     val urlPattern = """//# sourceMappingURL=(.+)""".r
-          //     urlPattern.findFirstMatchIn(content) match
-          //       case Some(m) =>
-          //         val mapRef = m.group(1).trim
-          //         if !miniMapFiles.contains(mapRef) then
-          //           throw new java.lang.AssertionError(
-          //             s"In $jsFile: sourceMappingURL=$mapRef but file not found. Maps: ${miniMapFiles.mkString(", ")}"
-          //           )
-          //         end if
-          //       case None =>
-          //         throw new java.lang.AssertionError(
-          //           s"Minified $jsFile has no sourceMappingURL comment"
-          //         )
-          //     end match
-          // }
-
       }
     }
 

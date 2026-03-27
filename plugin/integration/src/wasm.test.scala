@@ -6,14 +6,12 @@ import mill.testkit.TestRootModule
 import mill.testkit.UnitTester
 import mill.util.TokenReaders.*
 import mill.javalib.DepSyntax
-import io.github.quafadas.InMemoryHashScalaJSModule
-import io.github.quafadas.FileBasedContentHashScalaJSModule
 import utest.*
 
 object SiteWasmTests extends TestSuite:
   def tests: Tests = Tests {
     test("fastLinkJS WASM output has a hashed wasm file") {
-      object build extends TestRootModule with InMemoryHashScalaJSModule:
+      object build extends TestRootModule with InMemoryFastLinkHashScalaJSModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def scalaJSExperimentalUseWebAssembly = true
 
@@ -57,8 +55,8 @@ object SiteWasmTests extends TestSuite:
       }
     }
 
-    test("InMemoryHashScalaJSModule fullLinkJS runs wasm-opt and hashes the optimised binary") {
-      object build extends TestRootModule with InMemoryHashScalaJSModule:
+    test("InMemoryFastLinkHashScalaJSModule fullLinkJS runs wasm-opt and hashes the optimised binary") {
+      object build extends TestRootModule with InMemoryFastLinkHashScalaJSModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def scalaJSExperimentalUseWebAssembly = true
 

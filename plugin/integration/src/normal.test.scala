@@ -12,7 +12,7 @@ import utest.*
 object WebAppModuleTests extends TestSuite:
   def tests: Tests = Tests {
     test("ScalaJsWebAppModule siteGen generates HTML with hashed script references") {
-      object build extends TestRootModule with io.github.quafadas.ScalaJsWebAppModule:
+      object build extends TestRootModule with ScalaJsWebAppModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
@@ -83,7 +83,7 @@ object WebAppModuleTests extends TestSuite:
     test("siteGen succeeds and produces index.html when assets directory does not exist") {
       // The 'simple' resource folder has no assets/ subdirectory, so assetsDir
       // resolves to a non-existent path — exercises the optional-assets guard.
-      object build extends TestRootModule with io.github.quafadas.ScalaJsWebAppModule:
+      object build extends TestRootModule with ScalaJsWebAppModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
@@ -116,7 +116,7 @@ object WebAppModuleTests extends TestSuite:
       os.makeDir(assetsTempDir / "fonts")
       os.write(assetsTempDir / "fonts" / "font.woff2", "fake-font")
 
-      object build extends TestRootModule with io.github.quafadas.ScalaJsWebAppModule:
+      object build extends TestRootModule with ScalaJsWebAppModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
@@ -151,7 +151,7 @@ object WebAppModuleTests extends TestSuite:
     }
 
     test("publish generates correct index.html referencing minified JS and omits SSE script") {
-      object build extends TestRootModule with io.github.quafadas.ScalaJsWebAppModule:
+      object build extends TestRootModule with ScalaJsWebAppModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
@@ -210,7 +210,7 @@ object WebAppModuleTests extends TestSuite:
     }
 
     test("publish succeeds without assets directory") {
-      object build extends TestRootModule with io.github.quafadas.ScalaJsWebAppModule:
+      object build extends TestRootModule with ScalaJsWebAppModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
@@ -238,7 +238,7 @@ object WebAppModuleTests extends TestSuite:
       os.makeDir(assetsTempDir / "fonts")
       os.write(assetsTempDir / "fonts" / "font.woff2", "fake-font")
 
-      object build extends TestRootModule with io.github.quafadas.ScalaJsWebAppModule:
+      object build extends TestRootModule with ScalaJsWebAppModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")

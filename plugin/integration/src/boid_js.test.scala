@@ -9,7 +9,7 @@ import mill.javalib.DepSyntax
 import mill.scalajslib.ContentHashScalaJSModule
 import mill.scalajslib.api.ModuleSplitStyle
 import utest.*
-import io.github.quafadas.FileBasedContentHashScalaJSModule
+import io.github.quafadas.sjsls.FileBasedContentHashScalaJSModule
 
 object BoidJsTests extends TestSuite:
   def tests: Tests = Tests {

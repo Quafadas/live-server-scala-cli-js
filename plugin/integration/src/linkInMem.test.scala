@@ -13,7 +13,7 @@ import utest.*
 object MemJsTests extends TestSuite:
   def tests: Tests = Tests {
     test("Hashed JS files have correct cross-module references") {
-      object build extends TestRootModule with io.github.quafadas.InMemoryHashScalaJSModule:
+      object build extends TestRootModule with InMemoryFastLinkHashScalaJSModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
@@ -73,7 +73,7 @@ object MemJsTests extends TestSuite:
     }
 
     test("InMemoryHashScalaJSModule fullLinkJS with scalaJSMinify=true produces smaller JS than fastLinkJS") {
-      object build extends TestRootModule with io.github.quafadas.InMemoryHashScalaJSModule:
+      object build extends TestRootModule with InMemoryFastLinkHashScalaJSModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
@@ -120,7 +120,7 @@ object MemJsTests extends TestSuite:
     }
 
     test("InMemoryHashScalaJSModule fullLinkJS with scalaJSMinify=false writes hashed files without terser") {
-      object build extends TestRootModule with io.github.quafadas.InMemoryHashScalaJSModule:
+      object build extends TestRootModule with InMemoryFastLinkHashScalaJSModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
