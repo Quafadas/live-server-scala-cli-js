@@ -159,6 +159,7 @@ trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModul
         .fileNames()
         .foreach {
           name =>
+            Task.log.debug(s"Adding in-memory file to hashedOutputFiles: $name")
             val buf = inMemoryOutputDirectory.content(name).get
             val bytes = new Array[Byte](buf.remaining())
             buf.get(bytes)

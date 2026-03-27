@@ -54,7 +54,7 @@ def routes[F[_]: Files: MonadThrow](
   val linkedAppWithCaching: HttpRoutes[IO] = inMemoryFiles match
     case Some(files) =>
       val lookup: String => Option[Array[Byte]] = name => Option(files.get(name))
-      ETagMiddleware(appRouteInMemory[IO](lookup), ref)(logger)
+      ETagMiddleware(appRouteInMemory[IO](lookup)(using Async[IO], logger), ref)(logger)
     case None =>
       ETagMiddleware(appRoute[IO](stringPath), ref)(logger)
   val spaRoutes = clientRoutingPrefix.map(s => (s, buildSpaRoute(indexOpts, ref, zdt, injectPreloads)(logger)))
@@ -75,6 +75,16 @@ def routes[F[_]: Files: MonadThrow](
   )
   logger.info("Routes created  at : ").toResource >>
     logger.info("Path: " + stringPath).toResource >>
+    (inMemoryFiles match
+      case Some(files) =>
+        logger
+          .debug(
+            s"[routes] Using IN-MEMORY appRoute. inMemoryFiles.size=${files.size()} keys=${scala.jdk.CollectionConverters.SetHasAsScala(files.keySet()).asScala.mkString(", ")}"
+          )
+          .toResource
+      case None =>
+        logger.debug(s"[routes] Using DISK appRoute. path=$stringPath").toResource
+    ) >>
     IO(refreshableApp).toResource
 
 end routes

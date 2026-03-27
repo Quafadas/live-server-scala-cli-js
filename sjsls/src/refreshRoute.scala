@@ -45,10 +45,13 @@ def refreshRoutes(
                   _ =>
                     // A different tool is responsible for linking, so we hash the files "on the fly" when an update is requested
                     logger.debug("Updating Map Ref") >>
-                      updateMapRef(stringPath, mr)(logger)
-                    // (inMemoryFiles match
-                    //   case Some(files) => updateMapRefFromMemory(files, mr)(logger)
-                    //   case None        => updateMapRef(stringPath, mr)(logger))
+                      (inMemoryFiles match
+                        case Some(files) =>
+                          logger.debug(
+                            s"[refreshRoute] Updating from IN-MEMORY files. count=${files.size()} keys=${scala.jdk.CollectionConverters.SetHasAsScala(files.keySet()).asScala.mkString(", ")}"
+                          ) >> updateMapRefFromMemory(files, mr)(logger)
+                        case None => updateMapRef(stringPath, mr)(logger)
+                      )
                 )
                 .as(PageRefresh())
             )

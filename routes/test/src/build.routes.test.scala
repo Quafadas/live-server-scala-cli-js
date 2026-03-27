@@ -10,6 +10,8 @@ import munit.CatsEffectSuite
 
 class BuildRoutesSuite extends CatsEffectSuite:
 
+  given scribe.Scribe[IO] = scribe.cats[IO]
+
   def makeReq(s: String) = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString(s))
 
   // def simpleResponse(body: String) = HttpRoutes.of[IO] {

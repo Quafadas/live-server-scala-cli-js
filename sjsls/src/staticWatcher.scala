@@ -146,4 +146,9 @@ def updateMapRefFromMemory(
           name -> hash
       }
       .toMap
-  }.flatMap(newMap => logger.trace(s"Updated in-memory hashes $newMap") *> mr.set(newMap))
+  }.flatMap(newMap =>
+    logger.debug(
+      s"[updateMapRefFromMemory] keys=${newMap.keys.mkString(", ")} hashes=${newMap.mkString(", ")}"
+    ) *>
+      logger.debug(s"Updated in-memory hashes $newMap") *> mr.set(newMap)
+  )

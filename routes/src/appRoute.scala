@@ -13,6 +13,9 @@ import org.http4s.server.staticcontent.fileService
 import fs2.io.file.Files
 
 import cats.effect.kernel.Async
+import cats.syntax.all.*
+
+import scribe.Scribe
 
 def appRoute[F[_]: Files](stringPath: String)(using f: Async[F]): HttpRoutes[F] = HttpRoutes.of[F] {
 
@@ -33,25 +36,29 @@ def appRoute[F[_]: Files](stringPath: String)(using f: Async[F]): HttpRoutes[F] 
 
 }
 
-def appRouteInMemory[F[_]](lookup: String => Option[Array[Byte]])(using f: Async[F]): HttpRoutes[F] =
+def appRouteInMemory[F[_]](lookup: String => Option[Array[Byte]])(using
+    f: Async[F],
+    logger: Scribe[F]
+): HttpRoutes[F] =
   def contentTypeFor(ext: String): `Content-Type` =
     MediaType.forExtension(ext).fold(`Content-Type`(MediaType.application.`octet-stream`))(m => `Content-Type`(m))
 
+  def serve(req: org.http4s.Request[F], ext: String): F[Response[F]] =
+    val key = req.uri.path.renderString.stripPrefix("/")
+    lookup(key) match
+      case Some(bytes) =>
+        logger.debug(
+          s"[appRouteInMemory] HIT  ext=$ext key='$key' size=${bytes.length} bytes"
+        ) >> f.pure(Response[F](Status.Ok).withEntity(bytes).withContentType(contentTypeFor(ext)))
+      case None =>
+        logger.debug(
+          s"[appRouteInMemory] MISS ext=$ext key='$key'"
+        ) >> f.pure(Response[F](Status.NotFound))
+
   HttpRoutes.of[F] {
-    case req @ GET -> Root / fName ~ "js" =>
-      lookup(req.uri.path.renderString.stripPrefix("/")) match
-        case Some(bytes) => f.pure(Response[F](Status.Ok).withEntity(bytes).withContentType(contentTypeFor("js")))
-        case None        => f.pure(Response[F](Status.NotFound))
-
-    case req @ GET -> Root / fName ~ "wasm" =>
-      lookup(req.uri.path.renderString.stripPrefix("/")) match
-        case Some(bytes) => f.pure(Response[F](Status.Ok).withEntity(bytes).withContentType(contentTypeFor("wasm")))
-        case None        => f.pure(Response[F](Status.NotFound))
-
-    case req @ GET -> Root / fName ~ "map" =>
-      lookup(req.uri.path.renderString.stripPrefix("/")) match
-        case Some(bytes) => f.pure(Response[F](Status.Ok).withEntity(bytes).withContentType(contentTypeFor("map")))
-        case None        => f.pure(Response[F](Status.NotFound))
+    case req @ GET -> Root / fName ~ "js"   => serve(req, "js")
+    case req @ GET -> Root / fName ~ "wasm" => serve(req, "wasm")
+    case req @ GET -> Root / fName ~ "map"  => serve(req, "map")
   }
 end appRouteInMemory
 
