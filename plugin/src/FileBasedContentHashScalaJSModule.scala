@@ -1,4 +1,4 @@
-package io.github.quafadas
+package io.github.quafadas.sjsls
 
 import java.security.MessageDigest
 
@@ -10,6 +10,7 @@ import mill.api.Task.Simple
 import mill.api.TaskCtx
 import mill.scalajslib.api.*
 import mill.scalajslib.config.ScalaJSConfigModule
+import os.temp
 
 /** A Mill module trait that adds content hashing to Scala.js linked output.
   *
@@ -93,121 +94,157 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
     */
   override def fullLinkJS: Task.Simple[Report] = Task {
     val report = super.fullLinkJS()
-    val srcDir = report.dest.path
-    val wasmFiles = os.list(srcDir).filter(p => os.isFile(p) && p.ext == "wasm")
+    Task.log.info(s"Running fullLinkJS with content hashing on ${report.dest.path}...")
+    val minify = scalaJSMinify()
+    val sourceMap = scalaJSSourceMap()
 
-    if wasmFiles.nonEmpty then
-      val flags = wasmOptFlags()
-      val digest = MessageDigest.getInstance("SHA-256")
-      // Copy everything to a temp dir so we can modify files without touching super's dest.
-      val tempDir = os.temp.dir()
-      try
-        os.list(srcDir).foreach(f => os.copy(f, tempDir / f.last))
-
-        wasmFiles.foreach {
-          f =>
-            val tempWasm = tempDir / f.last
-            val tempOut = tempDir / "output.wasm"
-            os.proc(List("wasm-opt", tempWasm.toString) ++ flags.toList ++ List("-o", tempOut.toString))
-              .call(stdout = os.Inherit, stderr = os.Inherit)
-            val originalSize = os.size(tempWasm)
-            val optimisedBytes = os.read.bytes(tempOut)
-            val hash = digest.digest(optimisedBytes).take(8).map("%02x".format(_)).mkString
-            val hashedName = s"${f.baseName}.$hash.wasm"
-            os.remove(tempWasm)
-            os.remove(tempOut)
-            os.write(tempDir / hashedName, optimisedBytes)
-            Task.log.info(f"wasm-opt ${f.last}: $originalSize → ${optimisedBytes.length} bytes → $hashedName")
-        }
-
-        val updatedReport = Report(report.publicModules, PathRef(tempDir))
-        FileBasedContentHashScalaJSModule.applyContentHash(updatedReport, Task.dest)
-      finally os.remove.all(tempDir)
-      end try
-    else FileBasedContentHashScalaJSModule.applyContentHash(report, Task.dest)
-    end if
-  }
-
-  /** Produces a terser-minified and content-hashed copy of the [[fullLinkJS]] output.
-    *
-    * For non-WASM builds, each `.js` file is passed through `terser` for further size reduction before content hashing.
-    * Note that `scalaJSMinify` separately controls Scala.js linker-level reduction; this task additionally runs terser
-    * on top.
-    *
-    * For WASM builds (`scalaJSExperimentalUseWebAssembly = true`), terser is skipped entirely. The `.wasm` binary is
-    * already optimised by `wasm-opt` inside [[fullLinkJS]], and the JS loader files use WebAssembly-specific bootstrap
-    * patterns that terser can break. The already-hashed output of [[fullLinkJS]] is copied unchanged to `Task.dest`.
-    */
-  def minified = Task {
-    val full = fullLinkJS()
     if scalaJSExperimentalUseWebAssembly() then
-      // WASM mode: wasm-opt already ran inside fullLinkJS; terser must not touch the JS loader.
-      // Simply copy the fully-optimised, content-hashed output to Task.dest unchanged.
-      os.makeDir.all(Task.dest)
-      os.list(full.dest.path).foreach(f => os.copy(f, Task.dest / f.last))
-      Report(full.publicModules, PathRef(Task.dest))
-    else
-      val terserConfigFile = terserConfig()
-      val tempDir = os.temp.dir()
-
-      try
-        val files = os.walk(full.dest.path).filter(p => os.isFile(p) && p.ext == "js")
-        files.foreach {
-          f =>
-            Task.log.info(s"Minifying ${f}...")
-            val fName = f.last
-            // Strip the pre-minification content hash so applyContentHash applies a single post-min hash.
-            val strippedName = FileBasedContentHashScalaJSModule.stripContentHash(fName)
-            val outPath = tempDir / strippedName
-            tempDir / (strippedName + ".map")
-            Task.log.info(s"  → ${outPath}")
-
-            os.proc(
-                "terser",
-                f.toString,
-                "-o",
-                outPath.toString,
-                "--source-map",
-                s"content='${f}.map',url='${strippedName}.map'",
-                "--config-file",
-                terserConfigFile.path.toString
-              )
-              .call(
-                cwd = tempDir,
-                mergeErrIntoOut = true,
-                stdin = os.Inherit,
-                stdout = os.Inherit,
-                stderr = os.Inherit
-              )
-            val inSizeMb = os.size(f).toDouble / (1024 * 1024)
-            val outSizeMb = os.size(outPath).toDouble / (1024 * 1024)
-            Task.log.info(f"Minified $fName: $inSizeMb%.4f Mb → $outSizeMb%.4f Mb")
-        }
-
-        // Build a synthetic Report pointing at the temp directory so applyContentHash can process it.
-        val syntheticReport = Report(
-          publicModules = full
-            .publicModules
-            .map {
-              m =>
-                Report.Module(
-                  moduleID = m.moduleID,
-                  jsFileName = FileBasedContentHashScalaJSModule.stripContentHash(m.jsFileName),
-                  sourceMapName = m.sourceMapName.map(FileBasedContentHashScalaJSModule.stripContentHash),
-                  moduleKind = m.moduleKind
-                )
-            },
-          dest = PathRef(tempDir)
-        )
-        FileBasedContentHashScalaJSModule.applyContentHash(syntheticReport, Task.dest)
-      finally os.remove.all(tempDir)
-      end try
+      FileBasedContentHashScalaJSModule.processWasmFullLink(report, Task.dest, wasmOptFlags(), minify, sourceMap)
+    else if minify then
+      FileBasedContentHashScalaJSModule.processTerserFullLink(report, Task.dest, terserConfig().path, sourceMap)
+    else FileBasedContentHashScalaJSModule.applyContentHash(report, Task.dest)
     end if
   }
 
 end FileBasedContentHashScalaJSModule
 
 object FileBasedContentHashScalaJSModule:
+
+  /** Process WASM fullLinkJS output: optionally run wasm-opt, content-hash .wasm files, patch JS loaders.
+    *
+    * @param report
+    *   the linker report whose `dest.path` contains the raw linker output
+    * @param destDir
+    *   directory to write hashed output files into
+    * @param flags
+    *   wasm-opt flags (e.g. `Seq("-O2", "-all")`)
+    * @param minify
+    *   whether to run wasm-opt (if false, .wasm files are just content-hashed)
+    * @param sourceMap
+    *   whether to process source maps alongside .wasm files
+    */
+  def processWasmFullLink(
+      report: Report,
+      destDir: os.Path,
+      flags: Seq[String],
+      minify: Boolean,
+      sourceMap: Boolean
+  ): Report =
+    val srcDir = report.dest.path
+    os.makeDir.all(destDir)
+    val digest = MessageDigest.getInstance("SHA-256")
+    // Use a system temp dir (guaranteed no spaces in path) so wasm-opt is happy.
+    val tempDir = os.temp.dir()
+    try
+      val wasmRenames = mutable.Map.empty[String, String]
+      os.list(srcDir)
+        .filter(os.isFile)
+        .foreach {
+          f =>
+            f.ext match
+              case "wasm" =>
+                val tempOutPath = tempDir / f.last
+                val tempOutPathMap = tempDir / (f.last + ".map")
+                if minify then
+                  val mapFlags: Seq[String] =
+                    if sourceMap then Seq("-ism", s"${f}.map", "-osm", tempOutPathMap.toString)
+                    else Seq.empty[String]
+                  os.proc(
+                      "wasm-opt",
+                      List(f.toString) ++ flags.toList ++ List("-o", tempOutPath.toString) ++ mapFlags
+                    )
+                    .call(stdout = os.Inherit, stderr = os.Inherit, mergeErrIntoOut = true, check = false)
+                else
+                  os.copy.over(f, tempOutPath)
+                  if sourceMap then os.copy.over(f / os.up / (f.last + ".map"), tempOutPathMap)
+                  end if
+                end if
+
+                val optimisedBytes = os.read.bytes(tempOutPath)
+                val hash = digest.digest(optimisedBytes).take(8).map("%02x".format(_)).mkString
+                val hashedName = s"${f.baseName}.$hash.wasm"
+                wasmRenames(f.last) = hashedName
+                os.write.over(destDir / hashedName, optimisedBytes)
+                if sourceMap && minify then os.copy.over(tempOutPathMap, destDir / (hashedName + ".map"))
+                end if
+
+              case "js" =>
+                os.copy.over(f, destDir / f.last)
+              case _ => ()
+            end match
+        }
+
+      // Patch wasm references in JS loader files so they point to the hashed wasm filename.
+      os.list(destDir)
+        .filter(p => os.isFile(p) && p.ext == "js" && p.last.contains("main"))
+        .foreach {
+          jsFile =>
+            val patched = rewriteJsReferences(os.read(jsFile), wasmRenames.toMap)
+            os.write.over(jsFile, patched)
+        }
+
+      Report(report.publicModules, PathRef(destDir))
+    finally os.remove.all(tempDir)
+    end try
+  end processWasmFullLink
+
+  /** Run terser on JS files, then apply content hashing.
+    *
+    * @param report
+    *   the linker report whose `dest.path` contains the raw linker output
+    * @param destDir
+    *   directory to write hashed output files into
+    * @param terserConfigPath
+    *   path to the terser JSON config file
+    * @param sourceMap
+    *   whether to process source maps alongside JS files
+    */
+  def processTerserFullLink(
+      report: Report,
+      destDir: os.Path,
+      terserConfigPath: os.Path,
+      sourceMap: Boolean
+  ): Report =
+    val srcDir = report.dest.path
+    val tempDir = os.temp.dir(deleteOnExit = false)
+    try
+      val jsFiles = os.list(srcDir).filter(p => os.isFile(p) && p.ext == "js")
+      jsFiles.foreach {
+        f =>
+          val outPath = tempDir / f.last
+          val smArgs: Seq[String] =
+            if sourceMap then Seq("--source-map", s"content='${f}.map',url='${f.last}.map'")
+            else Seq.empty
+          os.proc(
+              "terser",
+              f.toString,
+              "-o",
+              outPath.toString,
+              "--config-file",
+              terserConfigPath.toString,
+              smArgs
+            )
+            .call(
+              cwd = tempDir,
+              mergeErrIntoOut = true,
+              stdin = os.Inherit,
+              stdout = os.Inherit,
+              stderr = os.Inherit
+            )
+      }
+      // Copy non-JS files (e.g. source maps not produced by terser) to temp dir.
+      os.list(srcDir)
+        .filter(p => os.isFile(p) && p.ext != "js")
+        .foreach {
+          f =>
+            val dest = tempDir / f.last
+            if !os.exists(dest) then os.copy(f, dest)
+            end if
+        }
+      applyContentHash(Report(report.publicModules, PathRef(tempDir)), destDir)
+    finally os.remove.all(tempDir)
+    end try
+  end processTerserFullLink
 
   /** Post-process a `Report` by computing SHA-256 content hashes for every emitted `.js` file, renaming each file to
     * include the hash, rewriting all intra-bundle references, and returning an updated `Report`.

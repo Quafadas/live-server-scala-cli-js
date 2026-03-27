@@ -1,4 +1,4 @@
-package io.github.quafadas
+package io.github.quafadas.sjsls
 
 import java.nio.ByteBuffer
 import java.security.MessageDigest
@@ -6,7 +6,6 @@ import scala.collection.mutable
 
 import mill.PathRef
 import mill.scalajslib.ContentHashScalaJSModule
-import io.github.quafadas.FileBasedContentHashScalaJSModule
 import mill.scalajslib.api.ModuleKind
 import mill.scalajslib.api.Report
 import munit.FunSuite

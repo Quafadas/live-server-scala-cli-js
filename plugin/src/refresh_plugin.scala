@@ -1,4 +1,4 @@
-package io.github.quafadas
+package io.github.quafadas.sjsls
 import scalatags.Text.all.*
 
 import fs2.concurrent.Topic
