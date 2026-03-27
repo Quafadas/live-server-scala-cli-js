@@ -189,5 +189,53 @@ object SiteJsTests extends TestSuite:
 
       }
     }
+
+    test("fullLinkJS terser-minifies JS output when scalaJSMinify is true") {
+      object buildMinify extends TestRootModule with FileBasedContentHashScalaJSModule:
+        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaJSMinify: Simple[Boolean] = true
+        override def moduleSplitStyle: Simple[ModuleSplitStyle] =
+          ModuleSplitStyle.SmallModulesFor("webapp")
+        override def mvnDeps = Seq(mvn"com.raquo::laminar::17.0.0")
+        lazy val millDiscover = Discover[this.type]
+      end buildMinify
+
+      object buildNoMinify extends TestRootModule with FileBasedContentHashScalaJSModule:
+        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaJSMinify: Simple[Boolean] = false
+        override def moduleSplitStyle: Simple[ModuleSplitStyle] =
+          ModuleSplitStyle.SmallModulesFor("webapp")
+        override def mvnDeps = Seq(mvn"com.raquo::laminar::17.0.0")
+        lazy val millDiscover = Discover[this.type]
+      end buildNoMinify
+
+      val resourceFolder = os.Path(sys.env("MILL_TEST_RESOURCE_DIR"))
+
+      var noMinSize = 0L
+      UnitTester(buildNoMinify, resourceFolder / "simple").scoped {
+        evalNoMinify =>
+          val Right(noMinResult) = evalNoMinify(buildNoMinify.fullLinkJS).runtimeChecked
+          noMinSize = os
+            .list(noMinResult.value.dest.path)
+            .filter(p => os.isFile(p) && p.ext == "js")
+            .map(os.size)
+            .sum
+      }
+
+      UnitTester(buildMinify, resourceFolder / "simple").scoped {
+        evalMinify =>
+          val Right(minResult) = evalMinify(buildMinify.fullLinkJS).runtimeChecked
+          val minSize = os
+            .list(minResult.value.dest.path)
+            .filter(p => os.isFile(p) && p.ext == "js")
+            .map(os.size)
+            .sum
+
+          assert(
+            minSize < noMinSize
+
+          )
+      }
+    }
   }
 end SiteJsTests

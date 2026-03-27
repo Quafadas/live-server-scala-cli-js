@@ -185,8 +185,51 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
       end try
 
     else
-
-      FileBasedContentHashScalaJSModule.applyContentHash(report, Task.dest)
+      if minify then
+        val terserConfigFile = terserConfig()
+        val tempDir = os.temp.dir(deleteOnExit = false)
+        try
+          val srcDir = report.dest.path
+          val jsFiles = os.list(srcDir).filter(p => os.isFile(p) && p.ext == "js")
+          jsFiles.foreach {
+            f =>
+              Task.log.info(s"Terser minifying ${f.last}...")
+              val outPath = tempDir / f.last
+              val smArgs: Seq[String] = if sourceMap then
+                Seq("--source-map", s"content='${f}.map',url='${f.last}.map'")
+              else Seq.empty
+              os.proc(
+                "terser",
+                f.toString,
+                "-o",
+                outPath.toString,
+                "--config-file",
+                terserConfigFile.path.toString,
+                smArgs
+              ).call(
+                cwd = tempDir,
+                mergeErrIntoOut = true,
+                stdin = os.Inherit,
+                stdout = os.Inherit,
+                stderr = os.Inherit
+              )
+              val inKb = os.size(f).toDouble / 1024
+              val outKb = os.size(outPath).toDouble / 1024
+              Task.log.info(f"Terser: ${f.last} $inKb%.1f KB → $outKb%.1f KB")
+          }
+          // Copy non-JS files (e.g. source maps not produced by terser) to temp dir.
+          os.list(srcDir).filter(p => os.isFile(p) && p.ext != "js").foreach {
+            f =>
+              val dest = tempDir / f.last
+              if !os.exists(dest) then os.copy(f, dest)
+          }
+          FileBasedContentHashScalaJSModule.applyContentHash(Report(report.publicModules, PathRef(tempDir)), Task.dest)
+        finally
+          os.remove.all(tempDir)
+        end try
+      else
+        FileBasedContentHashScalaJSModule.applyContentHash(report, Task.dest)
+      end if
     end if
   }
 
