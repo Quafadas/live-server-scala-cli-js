@@ -2,8 +2,10 @@ package io.github.quafadas.sjsls
 
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.ConcurrentHashMap
 
 import scala.concurrent.duration.*
+import scala.jdk.CollectionConverters.*
 
 import fs2.*
 import fs2.concurrent.Topic
@@ -123,3 +125,25 @@ private def fileWatcher(
     .background
     .void
 end fileWatcher
+
+def updateMapRefFromMemory(
+    files: ConcurrentHashMap[String, Array[Byte]],
+    mr: Ref[IO, Map[String, String]]
+)(logger: Scribe[IO]): IO[Unit] =
+  IO {
+    files
+      .entrySet()
+      .asScala
+      .iterator
+      .map {
+        entry =>
+          val name = entry.getKey
+          val hash =
+            if name.matches(".*\\.[a-f0-9]{8,}\\..*") then name
+            else
+              val md = java.security.MessageDigest.getInstance("MD5")
+              md.digest(entry.getValue).map("%02x".format(_)).mkString
+          name -> hash
+      }
+      .toMap
+  }.flatMap(newMap => logger.trace(s"Updated in-memory hashes $newMap") *> mr.set(newMap))
