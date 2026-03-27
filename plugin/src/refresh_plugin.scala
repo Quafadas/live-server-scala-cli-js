@@ -46,7 +46,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
 
   def titleString: String = "App"
 
-  def bodyHtmlFromReport(report: Report, basePath: String = "./", includeRefresh: Boolean = false): String =
+  def bodyHtmlFromReport(report: Report, basePath: String = "/", includeRefresh: Boolean = false): String =
     val scriptTags = report.publicModules.map(m => script(src := s"$basePath${m.jsFileName}", `type` := "module"))
     body(
       frag(scriptTags.toSeq*),
