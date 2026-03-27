@@ -11,6 +11,7 @@ import mill.api.TaskCtx
 import mill.scalajslib.api.*
 import mill.scalajslib.worker.ScalaJSWorker
 
+// Helpers
 object ContentHashScalaJSModule:
 
   /** Post-process a `Report` by computing SHA-256 content hashes for every emitted `.js` file, renaming each file to
