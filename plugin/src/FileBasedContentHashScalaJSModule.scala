@@ -185,7 +185,6 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
       end try
 
     else
-      // Non-WASM mode: simply apply content hashing to the linker output as-is.
 
       FileBasedContentHashScalaJSModule.applyContentHash(report, Task.dest)
     end if
