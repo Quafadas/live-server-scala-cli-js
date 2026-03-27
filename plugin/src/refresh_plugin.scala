@@ -123,7 +123,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     * mode captures stdout/stderr per-task, making background server output invisible between evaluations. Example
     * ```override def logFile = Task { Some(PathRef(Task.dest / "sjsls.log")) }```
     */
-  def logFile: Task[Option[PathRef]] = Task {
+  def logFile: Task.Simple[Option[PathRef]] = Task {
     None
   }
 
