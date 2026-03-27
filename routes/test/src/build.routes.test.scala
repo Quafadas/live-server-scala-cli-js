@@ -69,9 +69,7 @@ class BuildRoutesSuite extends CatsEffectSuite:
 
     val found = route(makeReq("/main.abc12345.js")).map(_.status).getOrElse(Status.NotFound)
     val notFound = route(makeReq("/missing.js")).map(_.status).getOrElse(Status.NotFound)
-    val body = route(makeReq("/main.abc12345.js"))
-      .semiflatMap(_.body.compile.to(Array))
-      .getOrElse(Array.empty[Byte])
+    val body = route(makeReq("/main.abc12345.js")).semiflatMap(_.body.compile.to(Array)).getOrElse(Array.empty[Byte])
 
     assertIO(found, Status.Ok) >>
       assertIO(notFound, Status.NotFound) >>
@@ -82,7 +80,7 @@ class BuildRoutesSuite extends CatsEffectSuite:
     val wasmContent = Array[Byte](0, 97, 115, 109) // fake wasm magic bytes
     val lookup: String => Option[Array[Byte]] = {
       case "module.abc12345.wasm" => Some(wasmContent)
-      case _                     => None
+      case _                      => None
     }
     val route = appRouteInMemory[IO](lookup)
 

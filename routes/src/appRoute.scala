@@ -54,6 +54,8 @@ def appRouteInMemory[F[_]](lookup: String => Option[Array[Byte]])(using
         logger.debug(
           s"[appRouteInMemory] MISS ext=$ext key='$key'"
         ) >> f.pure(Response[F](Status.NotFound))
+    end match
+  end serve
 
   HttpRoutes.of[F] {
     case req @ GET -> Root / fName ~ "js"   => serve(req, "js")

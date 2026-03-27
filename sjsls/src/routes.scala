@@ -79,12 +79,12 @@ def routes[F[_]: Files: MonadThrow](
       case Some(files) =>
         logger
           .debug(
-            s"[routes] Using IN-MEMORY appRoute. inMemoryFiles.size=${files.size()} keys=${scala.jdk.CollectionConverters.SetHasAsScala(files.keySet()).asScala.mkString(", ")}"
+            s"[routes] Using IN-MEMORY appRoute. inMemoryFiles.size=${files
+                .size()} keys=${scala.jdk.CollectionConverters.SetHasAsScala(files.keySet()).asScala.mkString(", ")}"
           )
           .toResource
       case None =>
-        logger.debug(s"[routes] Using DISK appRoute. path=$stringPath").toResource
-    ) >>
+        logger.debug(s"[routes] Using DISK appRoute. path=$stringPath").toResource) >>
     IO(refreshableApp).toResource
 
 end routes

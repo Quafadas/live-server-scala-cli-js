@@ -38,7 +38,6 @@ object MemWasmTests extends TestSuite:
           assert(memFiles.contains("__loader.js"))
           assert(memFiles.contains("main.js"))
 
-
           // The WASM binary must be preserved (not renamed).
           if !memFiles.exists(_.endsWith(".wasm")) then
             throw new java.lang.AssertionError(s"no .wasm file found in: $memFiles")

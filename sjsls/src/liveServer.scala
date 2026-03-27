@@ -180,9 +180,12 @@ object LiveServer extends IOApp:
 
       _ <- lsc.inMemoryFiles match
         case Some(files) =>
-          logger.debug(
-              s"[liveServer] Seeding hash ref from IN-MEMORY files. count=${files.size()} keys=${scala.jdk.CollectionConverters.SetHasAsScala(files.keySet()).asScala.mkString(", ")}"
-          ).toResource >>
+          logger
+            .debug(
+              s"[liveServer] Seeding hash ref from IN-MEMORY files. count=${files
+                  .size()} keys=${scala.jdk.CollectionConverters.SetHasAsScala(files.keySet()).asScala.mkString(", ")}"
+            )
+            .toResource >>
             updateMapRefFromMemory(files, fileToHashRef)(logger).toResource
         case None =>
           logger.debug(s"[liveServer] Seeding hash ref from DISK. outDirPath=$outDirPath").toResource >>

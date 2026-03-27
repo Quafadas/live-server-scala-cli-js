@@ -30,8 +30,8 @@ def refreshRoutes(
   val refresh = refreshTopic
     .subscribe(10)
     .evalTap(_ => logger.debug("[refreshRoute] raw event received from refreshTopic (pre-debounce)"))
-    // .debounce(0.1.second)
-    // .evalTap(_ => logger.debug("[refreshRoute] event passed debounce — will send SSE PageRefresh to client"))
+  // .debounce(0.1.second)
+  // .evalTap(_ => logger.debug("[refreshRoute] event passed debounce — will send SSE PageRefresh to client"))
 
   buildTool match
     case _: NoBuildTool =>
@@ -48,10 +48,14 @@ def refreshRoutes(
                       (inMemoryFiles match
                         case Some(files) =>
                           logger.debug(
-                            s"[refreshRoute] Updating from IN-MEMORY files. count=${files.size()} keys=${scala.jdk.CollectionConverters.SetHasAsScala(files.keySet()).asScala.mkString(", ")}"
+                            s"[refreshRoute] Updating from IN-MEMORY files. count=${files.size()} keys=${scala
+                                .jdk
+                                .CollectionConverters
+                                .SetHasAsScala(files.keySet())
+                                .asScala
+                                .mkString(", ")}"
                           ) >> updateMapRefFromMemory(files, mr)(logger)
-                        case None => updateMapRef(stringPath, mr)(logger)
-                      )
+                        case None => updateMapRef(stringPath, mr)(logger))
                 )
                 .as(PageRefresh())
             )
