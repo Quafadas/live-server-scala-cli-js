@@ -38,10 +38,10 @@ object WebAppModuleTests extends TestSuite:
           val html = os.read(siteDir / "index.html")
 
           // 1. Must NOT reference the static unhashed name
-          assert(!html.contains("src=\"/main.js\""))
+          assert(!html.contains("src=\"./main.js\""))
 
           // 2. Extract all <script src="..."> references from the HTML
-          val scriptSrcPattern = """src="/([^"]+\.js)"""".r
+          val scriptSrcPattern = """src="\./([^"]+\.js)"""".r
           val scriptRefs = scriptSrcPattern.findAllMatchIn(html).map(_.group(1)).toList
           if scriptRefs.isEmpty then
             throw new java.lang.AssertionError(s"No <script src=...> found in index.html:\n$html")
@@ -180,7 +180,7 @@ object WebAppModuleTests extends TestSuite:
           end if
 
           // Extract all <script src="..."> references
-          val scriptSrcPattern = """src="/([^"]+\.js)"""".r
+          val scriptSrcPattern = """src="\./([^"]+\.js)"""".r
           val scriptRefs = scriptSrcPattern.findAllMatchIn(html).map(_.group(1)).toList
           if scriptRefs.isEmpty then
             throw new java.lang.AssertionError(s"No <script src=...> found in publish index.html:\n$html")
