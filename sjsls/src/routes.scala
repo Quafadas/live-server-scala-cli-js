@@ -54,7 +54,7 @@ def routes[F[_]: Files: MonadThrow](
   val linkedAppWithCaching: HttpRoutes[IO] = inMemoryFiles match
     case Some(files) =>
       val lookup: String => Option[Array[Byte]] = name => Option(files.get(name))
-      ETagMiddleware(appRouteInMemory[IO](lookup)(using Async[IO], logger), ref)(logger)
+      appRouteInMemory[IO](lookup)(using Async[IO], logger)
     case None =>
       ETagMiddleware(appRoute[IO](stringPath), ref)(logger)
   val spaRoutes = clientRoutingPrefix.map(s => (s, buildSpaRoute(indexOpts, ref, zdt, injectPreloads)(logger)))
