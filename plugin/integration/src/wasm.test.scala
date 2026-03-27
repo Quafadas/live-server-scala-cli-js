@@ -71,7 +71,7 @@ object SiteWasmTests extends TestSuite:
 
       UnitTester(build, resourceFolder / "simple").scoped {
         eval =>
-          // Run fastLinkJS first to capture the unoptimised wasm size.
+          // Run fastLinkJS first to capture the unoptimised wasm size (lives in-memory).
           val Right(_) = eval(build.fastLinkJS).runtimeChecked
           val fastWasmNames = build.inMemoryOutputDirectory.fileNames().filter(_.endsWith(".wasm"))
           if fastWasmNames.size != 1 then
@@ -79,30 +79,25 @@ object SiteWasmTests extends TestSuite:
           end if
           val fastBuf = build.inMemoryOutputDirectory.content(fastWasmNames.head).get
           val fastWasmSize = fastBuf.remaining().toLong
-          val fastWasmHashedName = fastWasmNames.head
 
           // Run fullLinkJS: wasm-opt should produce a smaller binary with a different hash.
-          val Right(_) = eval(build.fullLinkJS).runtimeChecked
-          val fullWasmNames = build.inMemoryOutputDirectory.fileNames().filter(_.endsWith(".wasm"))
-          if fullWasmNames.size != 1 then
-            throw new java.lang.AssertionError(s"Expected exactly 1 wasm file after fullLinkJS, got: $fullWasmNames")
-          end if
-          val fullWasmName = fullWasmNames.head
-          val fullBuf = build.inMemoryOutputDirectory.content(fullWasmName).get
-          val fullWasmSize = fullBuf.remaining().toLong
-
-          // The name must be content-hashed (base.<hash>.wasm), not the bare original name.
-          val nameParts = fullWasmName.stripSuffix(".wasm").split('.')
-          if nameParts.length < 2 then
+          // fullLinkJS writes file-based output to Task.dest (not in-memory).
+          val Right(fullResult) = eval(build.fullLinkJS).runtimeChecked
+          val fullDir = fullResult.value.dest.path
+          val fullWasmFiles = os.list(fullDir).filter(p => os.isFile(p) && p.ext == "wasm")
+          if fullWasmFiles.size != 1 then
             throw new java.lang.AssertionError(
-              s"Expected hashed wasm filename like 'main.<hash>.wasm', got: $fullWasmName"
+              s"Expected exactly 1 wasm file after fullLinkJS, got: $fullWasmFiles"
             )
           end if
+          val fullWasm = fullWasmFiles.head
+          val fullWasmSize = os.size(fullWasm)
 
-          // The hash must reflect the optimised binary — different from the fast-link hash.
-          if fullWasmName == fastWasmHashedName then
+          // The name must be content-hashed (base.<hash>.wasm), not the bare original name.
+          val nameParts = fullWasm.baseName.split('.')
+          if nameParts.length < 2 then
             throw new java.lang.AssertionError(
-              s"fullLinkJS wasm hash should differ from fastLinkJS hash, both were: $fastWasmHashedName"
+              s"Expected hashed wasm filename like 'main.<hash>.wasm', got: ${fullWasm.last}"
             )
           end if
 

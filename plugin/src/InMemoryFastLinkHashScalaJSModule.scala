@@ -14,6 +14,7 @@ import mill.scalajslib.api
 import mill.scalajslib.api.ModuleKind
 import mill.scalajslib.api.Report
 import mill.scalajslib.config.ScalaJSConfigModule
+import mill.api.BuildCtx
 
 /** A Mill module trait that adds content hashing to Scala.js linked output, using an in-memory linker output directory.
   *
@@ -43,7 +44,7 @@ import mill.scalajslib.config.ScalaJSConfigModule
   * Running `mill app.fastLinkJS` (or `fullLinkJS`) will produce hashed files in the task output directory, e.g.
   * `out/app/fastLinkJS.dest/main.a1b2c3d4.js`.
   */
-trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModule:
+trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModule with ScalaJSConfigModule:
   val inMemoryOutputDirectory: MemOutputDirectory = MemOutputDirectory()
 
   override def customLinkerOutputDir: Option[OutputDirectory] =
@@ -112,6 +113,39 @@ trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModul
       .debug(s"Renamed WASM files: ${jsRenames.map { case (orig, hashed, _) => s"$orig -> $hashed" }.mkString(", ")}")
     api.Report(updatedModules, report.dest)
   end processWasm
+
+  override def fullLinkJS: Simple[Report] = Task {
+    val report = super[ScalaJSConfigModule].fullLinkJS()
+    val tmpDir = os.temp.dir(deleteOnExit = false)
+    try
+      Task.log.debug(s"Full link JS: dumping in-memory files to $tmpDir")
+      for f <- inMemoryOutputDirectory.fileNames() do os.write.over(tmpDir / f, inMemoryOutputDirectory.content(f).get)
+      end for
+
+      val syntheticReport = Report(report.publicModules, PathRef(tmpDir))
+      val minify = scalaJSMinify()
+      val sourceMap = scalaJSSourceMap()
+
+      if scalaJSExperimentalUseWebAssembly() then
+        FileBasedContentHashScalaJSModule.processWasmFullLink(
+          syntheticReport,
+          Task.dest,
+          wasmOptFlags(),
+          minify,
+          sourceMap
+        )
+      else if minify then
+        FileBasedContentHashScalaJSModule.processTerserFullLink(
+          syntheticReport,
+          Task.dest,
+          terserConfig().path,
+          sourceMap
+        )
+      else FileBasedContentHashScalaJSModule.applyContentHash(syntheticReport, Task.dest)
+      end if
+    finally os.remove.all(tmpDir)
+    end try
+  }
 
   override def fastLinkJS = Task {
     val report = super.fastLinkJS()
