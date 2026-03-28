@@ -15,7 +15,6 @@ import cats.effect.IO
 import _root_.io.circe.syntax.EncoderOps
 import cats.effect.kernel.Ref
 import scribe.Scribe
-import scala.concurrent.duration.DurationDouble
 
 def refreshRoutes(
     refreshTopic: Topic[IO, Unit],
@@ -34,6 +33,7 @@ def refreshRoutes(
 
   val assetRefresh = assetRefreshTopic
     .subscribe(10)
+    .map(AssetRefresh(_))
     .evalTap(s => logger.debug("[assetRefreshRoute] raw event received from assetRefreshTopic (pre-debounce) $s"))
 
 
