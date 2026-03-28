@@ -144,20 +144,29 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     java.util.UUID.randomUUID().toString
   }
 
+  def pulseOnRefresh = Task {
+    val report = fastLinkJS()
+    updateServer.publish1(Task.log.debug("publish update")).unsafeRunSync()
+    report
+  }
   def siteGen = Task {
-    val path = fastLinkJS().dest.path
+    val linkReport = pulseOnRefresh()
     os.copy.over(indexHtml().path, Task.dest / "index.html")
     if os.exists(assetsDir) then
       os.copy(assets().path, Task.dest, mergeFolders = true)
       // Publish CSS asset paths for hot reload
       val cssPaths = os
         .walk(Task.dest)
-        .filter(p => p.ext == "css" && os.isFile(p))
+        .filter(p => (p.ext == "css" || p.ext == "less") && os.isFile(p))
         .map(_.relativeTo(Task.dest).toString())
-      cssPaths.foreach(p => updateAsset.publish1(p).unsafeRunSync())
+
+      cssPaths.foreach {
+        p =>
+          Task.log.debug(s"Publishing asset refresh for $p")
+          updateAsset.publish1(p).unsafeRunSync()
+      }
     end if
-    updateServer.publish1(Task.log.info("publish update")).unsafeRunSync()
-    (Task.dest.toString(), path.toString())
+    (Task.dest.toString(), linkReport.toString())
   }
 
   def siteGenFull = Task {

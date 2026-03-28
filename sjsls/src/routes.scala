@@ -70,7 +70,17 @@ def routes[F[_]: Files: MonadThrow](
 
   val refreshableApp = traceLogger(
     devToolsRoute(devToolsWorkspace)
-      .combineK(refreshRoutes(refreshTopic, assetRefreshTopic, buildTool, fs2.io.file.Path(stringPath), ref, logger, inMemoryFiles))
+      .combineK(
+        refreshRoutes(
+          refreshTopic,
+          assetRefreshTopic,
+          buildTool,
+          fs2.io.file.Path(stringPath),
+          ref,
+          logger,
+          inMemoryFiles
+        )
+      )
       .combineK(proxyRoutes)
       .combineK(routes)
   )

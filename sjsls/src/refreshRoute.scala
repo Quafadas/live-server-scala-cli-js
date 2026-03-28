@@ -36,7 +36,6 @@ def refreshRoutes(
     .map(AssetRefresh(_))
     .evalTap(s => logger.debug("[assetRefreshRoute] raw event received from assetRefreshTopic (pre-debounce) $s"))
 
-
   buildTool match
     case _: NoBuildTool =>
 
