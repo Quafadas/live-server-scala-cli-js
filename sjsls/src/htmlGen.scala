@@ -83,7 +83,20 @@ sse.addEventListener('message', (e) => {
       console.log("KeepAlive")
 
   if ('PageRefresh' in msg)
-      location.reload()});"""))
+      location.reload()
+
+  if ('AssetRefresh' in msg) {
+    const path = msg.AssetRefresh.path;
+    const links = document.querySelectorAll('link[rel="stylesheet"]');
+    links.forEach(link => {
+      if (link.href.includes(path)) {
+        const url = new URL(link.href);
+        url.searchParams.set('t', Date.now());
+        link.href = url.toString();
+      }
+    });
+  }
+});"""))
 
 /*
  * create an html template with that has a head, which includes script tags, that have modulepreload enabled

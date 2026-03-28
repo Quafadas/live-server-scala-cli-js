@@ -6,3 +6,4 @@ sealed trait FrontendEvent derives Encoder.AsObject
 
 case class KeepAlive() extends FrontendEvent derives Encoder.AsObject
 case class PageRefresh() extends FrontendEvent derives Encoder.AsObject
+case class AssetRefresh(path: String) extends FrontendEvent derives Encoder.AsObject

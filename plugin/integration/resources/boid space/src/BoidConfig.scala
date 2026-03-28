@@ -7,3 +7,4 @@ object BoidConfig:
   val separationDistance = 30.0
   val alignmentDistance = 50.0
   val cohesionDistance = 50.0
+end BoidConfig

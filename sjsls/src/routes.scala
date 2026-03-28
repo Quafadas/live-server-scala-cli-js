@@ -38,6 +38,7 @@ private def devToolsRoute(workspace: Option[(String, String)]): HttpRoutes[IO] =
 def routes[F[_]: Files: MonadThrow](
     stringPath: String,
     refreshTopic: Topic[IO, Unit],
+    assetRefreshTopic: Topic[IO, String],
     indexOpts: Option[IndexHtmlConfig],
     proxyRoutes: HttpRoutes[IO],
     ref: Ref[IO, Map[String, String]],
@@ -69,7 +70,17 @@ def routes[F[_]: Files: MonadThrow](
 
   val refreshableApp = traceLogger(
     devToolsRoute(devToolsWorkspace)
-      .combineK(refreshRoutes(refreshTopic, buildTool, fs2.io.file.Path(stringPath), ref, logger, inMemoryFiles))
+      .combineK(
+        refreshRoutes(
+          refreshTopic,
+          assetRefreshTopic,
+          buildTool,
+          fs2.io.file.Path(stringPath),
+          ref,
+          logger,
+          inMemoryFiles
+        )
+      )
       .combineK(proxyRoutes)
       .combineK(routes)
   )

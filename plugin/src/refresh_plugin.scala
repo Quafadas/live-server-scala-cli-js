@@ -21,6 +21,7 @@ implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionC
 trait ScalaJsRefreshModule extends ScalaJSConfigModule:
 
   lazy val updateServer = Topic[IO, Unit].unsafeRunSync()
+  lazy val updateAsset = Topic[IO, String].unsafeRunSync()
 
   override def moduleKind: Simple[ModuleKind] = ModuleKind.ESModule
 
@@ -80,6 +81,18 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
         |    location.reload();
         |  }
         |
+        |  if ('AssetRefresh' in msg) {
+        |    const path = msg.AssetRefresh.path;
+        |    const links = document.querySelectorAll('link[rel="stylesheet"]');
+        |    links.forEach(link => {
+        |      if (link.href.includes(path)) {
+        |        const url = new URL(link.href);
+        |        url.searchParams.set('t', Date.now());
+        |        link.href = url.toString();
+        |      }
+        |    });
+        |  }
+        |
         |});
         |""".stripMargin)
     ).render
@@ -131,13 +144,29 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     java.util.UUID.randomUUID().toString
   }
 
+  def pulseOnRefresh = Task {
+    val report = fastLinkJS()
+    updateServer.publish1(Task.log.debug("publish update")).unsafeRunSync()
+    report
+  }
   def siteGen = Task {
-    val path = fastLinkJS().dest.path
+    val linkReport = pulseOnRefresh()
     os.copy.over(indexHtml().path, Task.dest / "index.html")
-    if os.exists(assetsDir) then os.copy(assets().path, Task.dest, mergeFolders = true)
+    if os.exists(assetsDir) then
+      os.copy(assets().path, Task.dest, mergeFolders = true)
+      // Publish CSS asset paths for hot reload
+      val cssPaths = os
+        .walk(Task.dest)
+        .filter(p => (p.ext == "css" || p.ext == "less") && os.isFile(p))
+        .map(_.relativeTo(Task.dest).toString())
+
+      cssPaths.foreach {
+        p =>
+          Task.log.debug(s"Publishing asset refresh for $p")
+          updateAsset.publish1(p).unsafeRunSync()
+      }
     end if
-    updateServer.publish1(Task.log.info("publish update")).unsafeRunSync()
-    (Task.dest.toString(), path.toString())
+    (Task.dest.toString(), linkReport.dest.path.toString())
   }
 
   def siteGenFull = Task {
@@ -164,6 +193,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
       logLevel = logLevel(),
       logFile = logFile().fold[Option[String]](None)(p => Some(p.path.toString)),
       customRefresh = Some(updateServer),
+      customAssetRefresh = Some(updateAsset),
       devToolsWorkspace = Some((moduleDir.toString(), devToolsUuid()))
     )
   }
