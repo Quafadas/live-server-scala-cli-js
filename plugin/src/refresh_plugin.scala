@@ -166,7 +166,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
           updateAsset.publish1(p).unsafeRunSync()
       }
     end if
-    (Task.dest.toString(), linkReport.toString())
+    (Task.dest.toString(), linkReport.dest.path.toString())
   }
 
   def siteGenFull = Task {

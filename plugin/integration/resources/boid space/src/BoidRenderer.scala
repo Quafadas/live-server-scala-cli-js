@@ -25,6 +25,7 @@ object BoidRenderer:
     ctx.textBaseline = "middle"
 
     (canvas, ctx)
+  end createCanvas
 
   def drawBoids(
       ctx: dom.CanvasRenderingContext2D,
@@ -37,3 +38,6 @@ object BoidRenderer:
       ctx.beginPath()
       ctx.arc(positions(i, 0), positions(i, 1), 5, 0, 2 * math.Pi)
       ctx.fill()
+    end for
+  end drawBoids
+end BoidRenderer

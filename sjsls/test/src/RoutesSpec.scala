@@ -664,6 +664,48 @@ class RoutesSuite extends CatsEffectSuite:
       yield assertEquals(count, 1, s"Expected exactly 1 refresh event but got $count")
   }
 
+  // Regression test: publishing to assetRefreshTopic must cause an AssetRefresh SSE event.
+  test("SSE endpoint emits AssetRefresh event when assetRefreshTopic fires") {
+    (for
+      logger <- IO(scribe.cats[IO]).toResource
+      fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+      refreshPub <- Topic[IO, Unit].toResource
+      assetRefreshPub <- Topic[IO, String].toResource
+    yield (refreshPub, assetRefreshPub, fileToHashRef, logger)).use {
+      case (refreshPub, assetRefreshPub, fileToHashRef, logger) =>
+        val theseRoutes = refreshRoutes(
+          refreshPub,
+          assetRefreshPub,
+          NoBuildTool(),
+          fs2.io.file.Path("/tmp"),
+          fileToHashRef,
+          logger
+        )
+        val served = theseRoutes.orNotFound
+        served(Request[IO](uri = uri"/refresh/v1/sse"))
+          .flatMap {
+            resp =>
+              resp
+                .body
+                .through(ServerSentEvent.decoder)
+                .collect { case ServerSentEvent(Some(data), _, _, _, _) => data }
+                .filter(!_.contains("KeepAlive"))
+                .head
+                .concurrently(
+                  fs2.Stream.sleep[IO](100.millis) >>
+                    fs2.Stream.eval(assetRefreshPub.publish1("styles.css").void)
+                )
+                .compile
+                .lastOrError
+          }
+          .map {
+            data =>
+              assert(data.contains("AssetRefresh"), s"Expected AssetRefresh in: $data")
+              assert(data.contains("styles.css"), s"Expected styles.css in: $data")
+          }
+    }
+  }
+
 end RoutesSuite
 
 class DevToolsRouteSuite extends CatsEffectSuite:

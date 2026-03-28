@@ -28,6 +28,7 @@ import BoidRenderer.*
     positions((i, 1)) = Random.nextDouble() * height
     velocities((i, 0)) = (Random.nextDouble() - 0.5) * maxSpeed
     velocities((i, 1)) = (Random.nextDouble() - 0.5) * maxSpeed
+  end for
 
   inline def animate(): Unit =
     // Calculate all forces in one pass
@@ -39,6 +40,7 @@ import BoidRenderer.*
       accelerations((i, 0)) = sepX * 1.5 + aliX * 1.0 + cohX * 1.0
       accelerations((i, 1)) = sepY * 1.5 + aliY * 1.0 + cohY * 1.0
       i += 1
+    end while
 
     // Update boids
     for i <- 0 until numBoids do
@@ -50,12 +52,16 @@ import BoidRenderer.*
       if speed > maxSpeed then
         velocities((i, 0)) = velocities((i, 0)) * maxSpeed / speed
         velocities((i, 1)) = velocities((i, 1)) * maxSpeed / speed
+      end if
 
       positions((i, 0)) = positions((i, 0)) + velocities((i, 0))
       positions((i, 1)) = positions((i, 1)) + velocities((i, 1))
 
       wrapBoundaries(positions, i, width, height)
+    end for
 
     drawBoids(ctx, positions, width, height)
+  end animate
 
   dom.window.setInterval(() => animate(), 25)
+end main
