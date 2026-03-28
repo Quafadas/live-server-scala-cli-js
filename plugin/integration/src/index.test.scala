@@ -1,4 +1,4 @@
-package io.github.quafadas.millSite
+package io.github.quafadas.sjsls
 
 import mill.api.Discover
 import mill.api.Task.Simple
@@ -13,7 +13,7 @@ import utest.*
 object IndexHtmlTests extends TestSuite:
   def tests: Tests = Tests {
     test("Hashed JS files have correct cross-module references") {
-      object build extends TestRootModule with io.github.quafadas.ScalaJsRefreshModule:
+      object build extends TestRootModule with ScalaJsRefreshModule:
         override def scalaVersion: Simple[String] = "3.8.2"
 
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =

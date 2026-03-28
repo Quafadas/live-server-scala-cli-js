@@ -27,5 +27,6 @@ case class LiveServerConfig(
     logFile: Option[String] = None,
     customRefresh: Option[Topic[IO, Unit]] = None,
     customAssetRefresh: Option[Topic[IO, String]] = None,
-    devToolsWorkspace: Option[(String, String)] = None
+    devToolsWorkspace: Option[(String, String)] = None,
+    inMemoryFiles: Option[java.util.concurrent.ConcurrentHashMap[String, Array[Byte]]] = None
 )

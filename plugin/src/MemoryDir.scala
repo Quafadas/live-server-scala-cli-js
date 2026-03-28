@@ -1,4 +1,4 @@
-package io.github.quafadas
+package io.github.quafadas.sjsls
 
 import java.io.IOException
 import java.nio.ByteBuffer

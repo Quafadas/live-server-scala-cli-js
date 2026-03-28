@@ -1,4 +1,4 @@
-package io.github.quafadas.millSite
+package io.github.quafadas.sjsls
 
 import mill.api.Discover
 import mill.api.Task.Simple
@@ -13,7 +13,7 @@ import utest.*
 object MemJsTests extends TestSuite:
   def tests: Tests = Tests {
     test("Hashed JS files have correct cross-module references") {
-      object build extends TestRootModule with io.github.quafadas.InMemoryHashScalaJSModule:
+      object build extends TestRootModule with InMemoryFastLinkHashScalaJSModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
@@ -32,8 +32,10 @@ object MemJsTests extends TestSuite:
 
           val Right(result) = eval(build.fastLinkJS).runtimeChecked
           val report = result.value
-          val outputDir = report.dest.path
-          val files = os.list(outputDir).map(_.last).toSet
+
+          // Read from the in-memory map rather than disk.
+          import scala.jdk.CollectionConverters.*
+          val files = build.hashedOutputFiles.keySet().asScala.toSet
           val jsFiles = files.filter(f => f.endsWith(".js") && !f.endsWith(".js.map"))
 
           // No original (unhashed) JS filename should exist.
@@ -42,10 +44,10 @@ object MemJsTests extends TestSuite:
           // No hashed JS filename should contain a hyphen (all "-" must be replaced with "_").
           jsFiles.foreach(filename => assert(!filename.contains("-")))
 
-          // Every cross-module import must reference a file that actually exists in the output directory.
+          // Every cross-module import must reference a file that actually exists in the in-memory map.
           jsFiles.foreach {
             filename =>
-              val content = os.read(outputDir / filename)
+              val content = new String(build.hashedOutputFiles.get(filename), "UTF-8")
               val imports = ContentHashScalaJSModule.parseJsImports(content)
               imports.foreach {
                 importedName =>
@@ -73,7 +75,7 @@ object MemJsTests extends TestSuite:
     }
 
     test("InMemoryHashScalaJSModule fullLinkJS with scalaJSMinify=true produces smaller JS than fastLinkJS") {
-      object build extends TestRootModule with io.github.quafadas.InMemoryHashScalaJSModule:
+      object build extends TestRootModule with InMemoryFastLinkHashScalaJSModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
@@ -90,8 +92,15 @@ object MemJsTests extends TestSuite:
       UnitTester(build, resourceFolder / "simple").scoped {
         eval =>
           val Right(fastResult) = eval(build.fastLinkJS).runtimeChecked
-          val fastDir = fastResult.value.dest.path
-          val fastTotalSize = os.list(fastDir).filter(p => os.isFile(p) && p.ext == "js").map(os.size).sum
+          // fastLinkJS stores output in-memory; compute total JS size from hashedOutputFiles.
+          import scala.jdk.CollectionConverters.*
+          val fastTotalSize = build
+            .hashedOutputFiles
+            .entrySet()
+            .asScala
+            .filter(e => e.getKey.endsWith(".js") && !e.getKey.endsWith(".js.map"))
+            .map(_.getValue.length.toLong)
+            .sum
 
           val Right(fullResult) = eval(build.fullLinkJS).runtimeChecked
           val fullDir = fullResult.value.dest.path
@@ -120,7 +129,7 @@ object MemJsTests extends TestSuite:
     }
 
     test("InMemoryHashScalaJSModule fullLinkJS with scalaJSMinify=false writes hashed files without terser") {
-      object build extends TestRootModule with io.github.quafadas.InMemoryHashScalaJSModule:
+      object build extends TestRootModule with InMemoryFastLinkHashScalaJSModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")

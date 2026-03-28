@@ -62,7 +62,8 @@ object LiveServer extends IOApp:
         val uuid = uuidOpt.getOrElse(java.util.UUID.randomUUID().toString)
         Some((root, uuid))
       case _ => None
-    }
+    },
+    None.pure[Opts]
   ).mapN(LiveServerConfig.apply)
 
   def main(lsc: LiveServerConfig): Resource[IO, Server] =
@@ -183,10 +184,22 @@ object LiveServer extends IOApp:
         lsc.clientRoutingPrefix,
         lsc.injectPreloads,
         lsc.buildTool,
-        lsc.devToolsWorkspace
+        lsc.devToolsWorkspace,
+        lsc.inMemoryFiles
       )(logger)
 
-      _ <- updateMapRef(outDirPath, fileToHashRef)(logger).toResource
+      _ <- lsc.inMemoryFiles match
+        case Some(files) =>
+          logger
+            .debug(
+              s"[liveServer] Seeding hash ref from IN-MEMORY files. count=${files
+                  .size()} keys=${scala.jdk.CollectionConverters.SetHasAsScala(files.keySet()).asScala.mkString(", ")}"
+            )
+            .toResource >>
+            updateMapRefFromMemory(files, fileToHashRef)(logger).toResource
+        case None =>
+          logger.debug(s"[liveServer] Seeding hash ref from DISK. outDirPath=$outDirPath").toResource >>
+            updateMapRef(outDirPath, fileToHashRef)(logger).toResource
       // _ <- stylesDir.fold(Resource.unit)(sd => seedMapOnStart(sd, mr))
       _ <- fileWatcher(outDirPath, fileToHashRef, linkingTopic, refreshTopic)(logger)
       // Only watch the indexHtmlTemplate dir for changes when the caller has NOT supplied a

@@ -1,4 +1,4 @@
-package io.github.quafadas.millSite
+package io.github.quafadas.sjsls
 
 import mill.api.Discover
 import mill.api.Task.Simple
@@ -12,7 +12,7 @@ import utest.*
 object WebAppModuleTests extends TestSuite:
   def tests: Tests = Tests {
     test("ScalaJsWebAppModule siteGen generates HTML with hashed script references") {
-      object build extends TestRootModule with io.github.quafadas.ScalaJsWebAppModule:
+      object build extends TestRootModule with ScalaJsWebAppModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
@@ -38,10 +38,10 @@ object WebAppModuleTests extends TestSuite:
           val html = os.read(siteDir / "index.html")
 
           // 1. Must NOT reference the static unhashed name
-          assert(!html.contains("src=\"/main.js\""))
+          assert(!html.contains("src=\"./main.js\""))
 
           // 2. Extract all <script src="..."> references from the HTML
-          val scriptSrcPattern = """src="/([^"]+\.js)"""".r
+          val scriptSrcPattern = """src="\./([^"]+\.js)"""".r
           val scriptRefs = scriptSrcPattern.findAllMatchIn(html).map(_.group(1)).toList
           if scriptRefs.isEmpty then
             throw new java.lang.AssertionError(s"No <script src=...> found in index.html:\n$html")
@@ -83,7 +83,7 @@ object WebAppModuleTests extends TestSuite:
     test("siteGen succeeds and produces index.html when assets directory does not exist") {
       // The 'simple' resource folder has no assets/ subdirectory, so assetsDir
       // resolves to a non-existent path — exercises the optional-assets guard.
-      object build extends TestRootModule with io.github.quafadas.ScalaJsWebAppModule:
+      object build extends TestRootModule with ScalaJsWebAppModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
@@ -116,7 +116,7 @@ object WebAppModuleTests extends TestSuite:
       os.makeDir(assetsTempDir / "fonts")
       os.write(assetsTempDir / "fonts" / "font.woff2", "fake-font")
 
-      object build extends TestRootModule with io.github.quafadas.ScalaJsWebAppModule:
+      object build extends TestRootModule with ScalaJsWebAppModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
@@ -151,7 +151,7 @@ object WebAppModuleTests extends TestSuite:
     }
 
     test("publish generates correct index.html referencing minified JS and omits SSE script") {
-      object build extends TestRootModule with io.github.quafadas.ScalaJsWebAppModule:
+      object build extends TestRootModule with ScalaJsWebAppModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
@@ -180,7 +180,7 @@ object WebAppModuleTests extends TestSuite:
           end if
 
           // Extract all <script src="..."> references
-          val scriptSrcPattern = """src="/([^"]+\.js)"""".r
+          val scriptSrcPattern = """src="\./([^"]+\.js)"""".r
           val scriptRefs = scriptSrcPattern.findAllMatchIn(html).map(_.group(1)).toList
           if scriptRefs.isEmpty then
             throw new java.lang.AssertionError(s"No <script src=...> found in publish index.html:\n$html")
@@ -210,7 +210,7 @@ object WebAppModuleTests extends TestSuite:
     }
 
     test("publish succeeds without assets directory") {
-      object build extends TestRootModule with io.github.quafadas.ScalaJsWebAppModule:
+      object build extends TestRootModule with ScalaJsWebAppModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
@@ -238,7 +238,7 @@ object WebAppModuleTests extends TestSuite:
       os.makeDir(assetsTempDir / "fonts")
       os.write(assetsTempDir / "fonts" / "font.woff2", "fake-font")
 
-      object build extends TestRootModule with io.github.quafadas.ScalaJsWebAppModule:
+      object build extends TestRootModule with ScalaJsWebAppModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")

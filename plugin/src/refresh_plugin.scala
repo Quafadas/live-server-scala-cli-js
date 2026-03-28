@@ -1,4 +1,5 @@
-package io.github.quafadas
+package io.github.quafadas.sjsls
+
 import scalatags.Text.all.*
 
 import fs2.concurrent.Topic
@@ -46,19 +47,24 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
 
   def titleString: String = "App"
 
-  def indexHtmlBody = Task {
-    val report = fastLinkJS()
-    val scriptTags = report
-      .publicModules
-      .map {
-        m =>
-          script(src := s"/${m.jsFileName}", `type` := "module")
-      }
+  def bodyHtmlFromReport(report: Report, basePath: String = "./", includeRefresh: Boolean = false): String =
+    val scriptTags = report.publicModules.map(m => script(src := s"$basePath${m.jsFileName}", `type` := "module"))
     body(
       frag(scriptTags.toSeq*),
       div(id := appRoot),
-      raw(refreshScript)
+      if includeRefresh then raw(refreshScript) else frag()
     ).render
+  end bodyHtmlFromReport
+
+  def fullDocHtml(headHtml: String, bodyHtml: String): String =
+    "<!doctype html>\n" +
+      html(
+        raw(headHtml),
+        raw(bodyHtml)
+      ).render
+
+  def indexHtmlBody = Task {
+    bodyHtmlFromReport(fastLinkJS(), includeRefresh = true)
   }
 
   def refreshScript: String =
@@ -92,13 +98,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     ).render
 
   def indexHtml = Task {
-    val doc =
-      "<!doctype html>\n" +
-        html(
-          raw(indexHtmlHead()),
-          raw(indexHtmlBody())
-        ).render
-
+    val doc = fullDocHtml(indexHtmlHead(), indexHtmlBody())
     os.write.over(Task.dest / "index.html", doc)
     PathRef(Task.dest / "index.html")
   }
@@ -134,9 +134,9 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
 
   /** Path to write server logs to. When set, logs go to this file instead of the console — useful because Mill watch
     * mode captures stdout/stderr per-task, making background server output invisible between evaluations. Example
-    * override: `def logFile = Task { Some("/tmp/sjsls.log") }`
+    * ```override def logFile = Task { Some(PathRef(Task.dest / "sjsls.log")) }```
     */
-  def logFile: Task[Option[PathRef]] = Task {
+  def logFile: Task.Simple[Option[PathRef]] = Task {
     None
   }
 
