@@ -64,7 +64,6 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
         |  "module": true,
         |  "compress": {
         |    "module": true,
-        |    "ecma": 2015,
         |    "toplevel": true,
         |    "passes": 1,
         |    "hoist_props": false,
