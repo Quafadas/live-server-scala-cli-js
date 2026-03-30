@@ -22,21 +22,32 @@ import scribe.Scribe
 
 private val hashedPattern = ".*\\.[a-f0-9]{8,}\\..*".r
 
+private def cacheHeaders[F[_]](key: String)(resp: Response[F]): Response[F] =
+  if hashedPattern.matches(key) then
+    resp.putHeaders(Header.Raw(ci"Cache-Control", "public, max-age=31536000, immutable"))
+  else resp.putHeaders(Header.Raw(ci"Cache-Control", "no-cache, must-revalidate"))
+
 def appRoute[F[_]: Files](stringPath: String)(using f: Async[F]): HttpRoutes[F] = HttpRoutes.of[F] {
 
   case req @ GET -> Root / fName ~ "js" =>
+    val key = req.uri.path.renderString
     StaticFile
-      .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
+      .fromPath(fs2.io.file.Path(stringPath) / key, Some(req))
+      .map(cacheHeaders(key))
       .getOrElseF(f.pure(Response[F](Status.NotFound)))
 
   case req @ GET -> Root / fName ~ "wasm" =>
+    val key = req.uri.path.renderString
     StaticFile
-      .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
+      .fromPath(fs2.io.file.Path(stringPath) / key, Some(req))
+      .map(cacheHeaders(key))
       .getOrElseF(f.pure(Response[F](Status.NotFound)))
 
   case req @ GET -> Root / fName ~ "map" =>
+    val key = req.uri.path.renderString
     StaticFile
-      .fromPath(fs2.io.file.Path(stringPath) / req.uri.path.renderString, Some(req))
+      .fromPath(fs2.io.file.Path(stringPath) / key, Some(req))
+      .map(cacheHeaders(key))
       .getOrElseF(f.pure(Response[F](Status.NotFound)))
 
 }
@@ -52,16 +63,7 @@ def appRouteInMemory[F[_]](lookup: String => Option[Array[Byte]])(using
     val key = req.uri.path.renderString.stripPrefix("/")
     lookup(key) match
       case Some(bytes) =>
-        val base = Response[F](Status.Ok).withEntity(bytes).withContentType(contentTypeFor(ext))
-        val resp =
-          if hashedPattern.matches(key) then
-            base.putHeaders(
-              Header.Raw(ci"Cache-Control", "public, max-age=31536000, immutable")
-            )
-          else
-            base.putHeaders(
-              Header.Raw(ci"Cache-Control", "no-cache, must-revalidate")
-            )
+        val resp = cacheHeaders(key)(Response[F](Status.Ok).withEntity(bytes).withContentType(contentTypeFor(ext)))
         logger.debug(
           s"[appRouteInMemory] HIT  ext=$ext key='$key' size=${bytes.length} bytes hashed=${hashedPattern.matches(key)}"
         ) >> f.pure(resp)
