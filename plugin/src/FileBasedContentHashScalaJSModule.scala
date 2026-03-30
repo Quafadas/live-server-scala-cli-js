@@ -52,27 +52,46 @@ trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
     */
   def wasmOptFlags: Task[Seq[String]] = Task(Seq("-O2", "-all"))
 
+  // Conservative Terser config tuned for Scala.js ESModule output.
+  // See https://github.com/Quafadas/live-server-scala-cli-js/issues/63 for the full rationale and an aggressive
+  // alternative. Key decisions: enable module mode, preserve class/function names for reflection and stack traces,
+  // disable property mangling and all unsafe transforms.
   def terserConfig = Task {
     os.write(
       Task.dest / "terser.config.json",
       """{
-        |  "compress": {
-        |    "passes": 2,
-        |    "pure_getters": true,
-        |    "unsafe": false,
-        |    "unsafe_arrows": false,
-        |    "unsafe_methods": false,
-        |    "drop_console": false
-        |  },
-        |  "mangle": {
-        |    "toplevel": false
-        |  },
-        |  "format": {
-        |    "comments": false
-        |  },
         |  "ecma": 2020,
         |  "module": true,
-        |  "toplevel": false
+        |  "compress": {
+        |    "module": true,
+        |    "ecma": 2015,
+        |    "toplevel": true,
+        |    "passes": 1,
+        |    "hoist_props": false,
+        |    "pure_getters": "strict",
+        |    "reduce_funcs": true,
+        |    "reduce_vars": true,
+        |    "collapse_vars": true,
+        |    "sequences": true,
+        |    "side_effects": true,
+        |    "conditionals": true,
+        |    "comparisons": true,
+        |    "evaluate": true,
+        |    "drop_console": false,
+        |    "keep_classnames": true,
+        |    "keep_fnames": true
+        |  },
+        |  "mangle": {
+        |    "module": true,
+        |    "toplevel": true,
+        |    "properties": false,
+        |    "keep_classnames": true,
+        |    "keep_fnames": true
+        |  },
+        |  "format": {
+        |    "comments": false,
+        |    "beautify": false
+        |  }
         |}
         |""".stripMargin
     )
