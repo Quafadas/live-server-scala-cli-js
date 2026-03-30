@@ -3,6 +3,8 @@ package io.github.quafadas.sjsls
 import java.security.MessageDigest
 
 import scala.collection.mutable
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.Duration
 
 import mill.*
 import mill.api.Result
@@ -209,29 +211,32 @@ object FileBasedContentHashScalaJSModule:
     val tempDir = os.temp.dir(deleteOnExit = false)
     try
       val jsFiles = os.list(srcDir).filter(p => os.isFile(p) && p.ext == "js")
-      jsFiles.foreach {
+      val futures = jsFiles.map {
         f =>
-          val outPath = tempDir / f.last
-          val smArgs: Seq[String] =
-            if sourceMap then Seq("--source-map", s"content='${f}.map',url='${f.last}.map'")
-            else Seq.empty
-          os.proc(
-              "terser",
-              f.toString,
-              "-o",
-              outPath.toString,
-              "--config-file",
-              terserConfigPath.toString,
-              smArgs
-            )
-            .call(
-              cwd = tempDir,
-              mergeErrIntoOut = true,
-              stdin = os.Inherit,
-              stdout = os.Inherit,
-              stderr = os.Inherit
-            )
+          Future {
+            val outPath = tempDir / f.last
+            val smArgs: Seq[String] =
+              if sourceMap then Seq("--source-map", s"content='${f}.map',url='${f.last}.map'")
+              else Seq.empty
+            os.proc(
+                "terser",
+                f.toString,
+                "-o",
+                outPath.toString,
+                "--config-file",
+                terserConfigPath.toString,
+                smArgs
+              )
+              .call(
+                cwd = tempDir,
+                mergeErrIntoOut = true,
+                stdin = os.Inherit,
+                stdout = os.Inherit,
+                stderr = os.Inherit
+              )
+          }
       }
+      Await.result(Future.sequence(futures), Duration.Inf)
       // Copy non-JS files (e.g. source maps not produced by terser) to temp dir.
       os.list(srcDir)
         .filter(p => os.isFile(p) && p.ext != "js")
