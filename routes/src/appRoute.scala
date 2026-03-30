@@ -58,7 +58,10 @@ def appRouteInMemory[F[_]](lookup: String => Option[Array[Byte]])(using
             base.putHeaders(
               Header.Raw(ci"Cache-Control", "public, max-age=31536000, immutable")
             )
-          else base
+          else
+            base.putHeaders(
+              Header.Raw(ci"Cache-Control", "no-cache, must-revalidate")
+            )
         logger.debug(
           s"[appRouteInMemory] HIT  ext=$ext key='$key' size=${bytes.length} bytes hashed=${hashedPattern.matches(key)}"
         ) >> f.pure(resp)

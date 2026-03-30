@@ -174,6 +174,20 @@ object LiveServer extends IOApp:
         lsc.buildToolInvocation
       )(logger)
 
+      // For ScalaCli mode, build an in-memory content-hashed file map so that
+      // internal JS modules are served with immutable cache headers and cache
+      // busting happens automatically on each rebuild.  Files on disk are never
+      // modified.
+      cliInMemoryFiles <- (lsc.buildTool, lsc.inMemoryFiles) match
+        case (_: ScalaCli, None) =>
+          logger.debug("[liveServer] ScalaCli mode — creating CLI in-memory content-hash map").toResource >>
+            ContentHasher.buildInMemoryHashedFiles(outDirPath)(logger).map(f => Some(f)).toResource
+        case _ =>
+          Resource.pure[IO, Option[java.util.concurrent.ConcurrentHashMap[String, Array[Byte]]]](None)
+
+      // Plugin-provided inMemoryFiles take priority; CLI-created is the fallback.
+      effectiveInMemoryFiles = lsc.inMemoryFiles.orElse(cliInMemoryFiles)
+
       app <- routes(
         outDirString,
         refreshTopic,
@@ -185,10 +199,10 @@ object LiveServer extends IOApp:
         lsc.injectPreloads,
         lsc.buildTool,
         lsc.devToolsWorkspace,
-        lsc.inMemoryFiles
+        effectiveInMemoryFiles
       )(logger)
 
-      _ <- lsc.inMemoryFiles match
+      _ <- effectiveInMemoryFiles match
         case Some(files) =>
           logger
             .debug(
@@ -201,7 +215,7 @@ object LiveServer extends IOApp:
           logger.debug(s"[liveServer] Seeding hash ref from DISK. outDirPath=$outDirPath").toResource >>
             updateMapRef(outDirPath, fileToHashRef)(logger).toResource
       // _ <- stylesDir.fold(Resource.unit)(sd => seedMapOnStart(sd, mr))
-      _ <- fileWatcher(outDirPath, fileToHashRef, linkingTopic, refreshTopic)(logger)
+      _ <- fileWatcher(outDirPath, fileToHashRef, linkingTopic, refreshTopic, cliInMemoryFiles)(logger)
       // Only watch the indexHtmlTemplate dir for changes when the caller has NOT supplied a
       // customRefresh topic.  When customRefresh is present (e.g. the Mill plugin) the caller
       // already publishes explicitly at the end of each build step; the staticWatcher watching
