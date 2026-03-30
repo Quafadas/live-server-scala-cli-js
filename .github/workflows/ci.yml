@@ -52,12 +52,12 @@ jobs:
 
       - name: Cache Playwright dependencies
         id: cache-pw
-        uses: actions/cache@main
+        uses: actions/cache@v4
         with:
-          path: /home/runner/.cache/ms-playwright
+          path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.mill') }}
           restore-keys: |
-            playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.mill') }}
+            playwright-${{ runner.os }}-
 
       - name: formatCheck
         run: ./mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
