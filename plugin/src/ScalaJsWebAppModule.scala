@@ -4,17 +4,16 @@ import mill.PathRef
 import mill.Task
 import mill.api.Task.Simple
 
-
-/** Convenience trait for Scala.js browser applications that need both live reload during development and
-  * content-hashed artifacts for deployment.
+/** Convenience trait for Scala.js browser applications that need both live reload during development and content-hashed
+  * artifacts for deployment.
   *
   * Mix this into a Mill `ScalaJSModule` to get three pieces of behaviour wired together:
   *
-  * 1. `serve` starts the live development server inherited from [[ScalaJsRefreshModule]].
-  * 1. `fastLinkJS` output is content-hashed in memory via [[InMemoryFastLinkHashScalaJSModule]], so the generated
-  *    `index.html` always references the real linker output filenames.
-  * 1. [[assembleSite]] builds a static site directory containing `index.html`, all hashed linker output, and any
-  *    files from `assetsDir`, ready to serve with a plain static file server.
+  *   1. `serve` starts the live development server inherited from [[ScalaJsRefreshModule]].
+  *   1. `fastLinkJS` output is content-hashed in memory via [[InMemoryFastLinkHashScalaJSModule]], so the generated
+  *      `index.html` always references the real linker output filenames.
+  *   1. [[assembleSite]] builds a static site directory containing `index.html`, all hashed linker output, and any
+  *      files from `assetsDir`, ready to serve with a plain static file server.
   *
   * Compared with using [[ScalaJsRefreshModule]] on its own, this trait does not assume a fixed `/main.js` entrypoint.
   * Script tags are generated from the Scala.js linker [[mill.scalajslib.api.Report]], which means split modules and
@@ -25,17 +24,13 @@ import mill.api.Task.Simple
   * keeps browser reloads fast while still reflecting hashed filenames.
   *
   * @example
-  *   {{
-  * object webapp extends ScalaJsWebAppModule {
-  *   def scalaVersion = "3.3.6"
-  * }
-  *   }}
+  *   {{ object webapp extends ScalaJsWebAppModule { def scalaVersion = "3.3.6" } }}
   *
   * Typical commands:
   *
-  * - `mill -w webapp.serve` for local development with automatic reload.
-  * - `mill webapp.assembleSite` to emit a self-contained static site directory.
-  * - `mill show webapp.serveCommand` to print a simple command for serving the assembled site.
+  *   - `mill -w webapp.serve` for local development with automatic reload.
+  *   - `mill webapp.assembleSite` to emit a self-contained static site directory.
+  *   - `mill show webapp.serveCommand` to print a simple command for serving the assembled site.
   */
 trait ScalaJsWebAppModule extends InMemoryFastLinkHashScalaJSModule with ScalaJsRefreshModule:
 

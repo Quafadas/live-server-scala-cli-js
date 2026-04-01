@@ -22,13 +22,13 @@ implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionC
   *
   * Mix this into a `ScalaJSModule` to get:
   *
-  * - an `index.html` generated from the Scala.js linker report
-  * - a live-reload SSE channel for page refreshes
-  * - optional stylesheet refresh notifications for copied CSS and LESS assets
-  * - a `serve` worker that runs the local development server
+  *   - an `index.html` generated from the Scala.js linker report
+  *   - a live-reload SSE channel for page refreshes
+  *   - optional stylesheet refresh notifications for copied CSS and LESS assets
+  *   - a `serve` worker that runs the local development server
   *
-  * This trait is intentionally development-oriented. It assumes `fastLinkJS` output, injects the browser refresh
-  * script into the generated HTML, and coordinates with the live server through `fs2.Topic` instances.
+  * This trait is intentionally development-oriented. It assumes `fastLinkJS` output, injects the browser refresh script
+  * into the generated HTML, and coordinates with the live server through `fs2.Topic` instances.
   *
   * Traits such as [[ScalaJsWebAppModule]] extend this base with content-hashed site assembly for deployment.
   */
@@ -41,8 +41,8 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
 
   /** Render the `<head>` section used by generated HTML.
     *
-    * Override the smaller extension points such as [[titleString]] or [[externalStylesheets]] instead of replacing
-    * this whole task unless you need full control over the generated markup.
+    * Override the smaller extension points such as [[titleString]] or [[externalStylesheets]] instead of replacing this
+    * whole task unless you need full control over the generated markup.
     */
   def indexHtmlHead = Task {
     head(
@@ -71,8 +71,8 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
 
   /** Build the HTML body from a Scala.js linker report.
     *
-    * Every public module in `report` becomes a `<script type="module">` tag. `includeRefresh` controls whether the
-    * SSE live-reload client script is appended after the application root node.
+    * Every public module in `report` becomes a `<script type="module">` tag. `includeRefresh` controls whether the SSE
+    * live-reload client script is appended after the application root node.
     */
   def bodyHtmlFromReport(report: Report, basePath: String = "./", includeRefresh: Boolean = false): String =
     val scriptTags = report.publicModules.map(m => script(src := s"$basePath${m.jsFileName}", `type` := "module"))

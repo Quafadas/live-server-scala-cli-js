@@ -65,6 +65,17 @@ trait Testy extends TestModule.Munit with FormatFix:
   )
 end Testy
 
+object PlaywrightSetup extends JavaModule:
+
+  def mvnDeps = Seq(
+    mvn"com.microsoft.playwright:playwright:${build.pwV}",
+    mvn"com.microsoft.playwright:driver-bundle:${build.pwV}"
+  )
+
+  def mainClass = Some("com.microsoft.playwright.CLI")
+end PlaywrightSetup
+
+
 // SN deps which aren't yet there.
 /** 1 targets failed project.resolvedmvnDeps Resolution failed for 2 modules:
   * -------------------------------------------- com.outr:scribe-cats_native0.4_3:3.13.5 not found:

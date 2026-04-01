@@ -44,9 +44,6 @@ serveMill:
     --proxy-prefix-path /api \
     --proxy-target-port 8080
 
-setupPlaywright:
-  cs launch com.microsoft.playwright:playwright:1.51.0 -M "com.microsoft.playwright.CLI" -- install --with-deps
-
 publishLocal:
   ./mill __.publishLocal
 
@@ -59,7 +56,5 @@ format:
 fix:
   ./mill __.fix
 
-serveUnidoc: 
+serveUnidoc:
   cs launch io.github.quafadas::sjsls:0.2.8 -- --path-to-index-html C:\live-server-scala-cli-js\out\SiteUnidoc\unidocLocal.dest --build-tool none
-
-gha: setupMill setupPlaywright test
