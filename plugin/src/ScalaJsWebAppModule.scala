@@ -2,8 +2,24 @@ package io.github.quafadas.sjsls
 
 import mill.PathRef
 import mill.Task
+import mill.scalajslib.api.ModuleSplitStyle
+import mill.scalajslib.api.ESModuleImportMapping
+import mill.api.Task.Simple
 
 trait ScalaJsWebAppModule extends FileBasedContentHashScalaJSModule with ScalaJsRefreshModule:
+
+  def smallModulesFor = Task(
+    Seq.empty[String]
+  )
+
+  def importMap: Task.Simple[Map[String, String]] = Task(Map.empty[String, String])
+
+  override def scalaJSImportMap: Simple[Seq[ESModuleImportMapping]] = Task {
+    importMap().map { case (importName, path) => ESModuleImportMapping.Prefix(importName, path) }.toSeq
+  }
+
+  override def moduleSplitStyle: Task.Simple[ModuleSplitStyle] =
+    Task(ModuleSplitStyle.SmallModulesFor(smallModulesFor()*))
 
   def publish = Task {
     val report = fullLinkJS()

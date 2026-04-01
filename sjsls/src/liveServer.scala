@@ -33,7 +33,7 @@ object LiveServer extends IOApp:
     .withHost(host"localhost")
     .withPort(port)
     .withHttpApp(httpApp)
-    .withShutdownTimeout(1.milli)
+    .withShutdownTimeout(Duration.Zero)
     .build
 
   def parseOpts = (

@@ -30,7 +30,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
       meta(charset := "utf-8"),
       meta(name := "viewport", content := "width=device-width, initial-scale=1"),
       title := titleString,
-      externalStylesheets.map {
+      externalStylesheets().map {
         hrefLink =>
           link(href := hrefLink, rel := "stylesheet")
       },
@@ -41,7 +41,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     ).render
   }
 
-  def externalStylesheets = Seq.empty[String]
+  def externalStylesheets = Task{Seq.empty[String]}
 
   def appRoot: String = "app"
 

@@ -45,13 +45,6 @@ import os.temp
 trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
   override def moduleKind: Task.Simple[ModuleKind] = Task(ModuleKind.ESModule)
 
-  def smallModulesFor = Task(
-    Seq.empty[String]
-  )
-
-  override def moduleSplitStyle: Task.Simple[ModuleSplitStyle] =
-    Task(ModuleSplitStyle.SmallModulesFor(smallModulesFor()*))
-
   /** Flags passed to `wasm-opt` when minifying WASM output during `fullLinkJS`.
     *
     * The `-all` flag is mandatory — Scala.js emits WASM features that `wasm-opt` rejects unless all features are
