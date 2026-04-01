@@ -27,7 +27,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
-      - uses: taiki-e/install-action@just
       - uses: coursier/setup-action@main
         with:
           jvm: temurin@21
@@ -63,7 +62,6 @@ jobs:
         run: ./mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
 
       - name: Install Playwright
-        if: steps.cache-pw.outputs.cache-hit != 'true'
         run: ./mill PlaywrightSetup install --with-deps
 
       - name: compile

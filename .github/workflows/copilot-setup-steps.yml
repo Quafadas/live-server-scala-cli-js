@@ -41,9 +41,9 @@ jobs:
 
       - name: Setup Coursaier
         run: curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux.gz" | gzip -d > /usr/local/bin/cs && chmod +x /usr/local/bin/cs
-        
+
       - name: Install Playwright
-        run: cs launch com.microsoft.playwright:playwright:1.51.0 -M "com.microsoft.playwright.CLI" -- install --with-deps
+        run: cs launch com.microsoft.playwright:playwright:1.58.0 -M "com.microsoft.playwright.CLI" -- install --with-deps
 
       - name: Install binaryen
         run: sudo apt-get update && sudo apt-get install -y binaryen
