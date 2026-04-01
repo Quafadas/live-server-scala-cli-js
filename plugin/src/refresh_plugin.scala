@@ -41,7 +41,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     ).render
   }
 
-  def externalStylesheets = Task{Seq.empty[String]}
+  def externalStylesheets = Task(Seq.empty[String])
 
   def appRoot: String = "app"
 
