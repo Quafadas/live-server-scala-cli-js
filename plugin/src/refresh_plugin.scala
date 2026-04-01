@@ -169,13 +169,13 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     (Task.dest.toString(), linkReport.dest.path.toString())
   }
 
-  def siteGenFull = Task {
-    val path = fullLinkJS().dest.path
-    os.copy.over(indexHtml().path, Task.dest / "index.html")
-    if os.exists(assetsDir) then os.copy(assets().path, Task.dest, mergeFolders = true)
-    end if
-    (Task.dest.toString(), path.toString())
-  }
+  // def siteGenFull = Task {
+  //   val path = fullLinkJS().dest.path
+  //   os.copy.over(indexHtml().path, Task.dest / "index.html")
+  //   if os.exists(assetsDir) then os.copy(assets().path, Task.dest, mergeFolders = true)
+  //   end if
+  //   (Task.dest.toString(), path.toString())
+  // }
 
   def lcs = Task.Worker {
     val (site, js) = siteGen()

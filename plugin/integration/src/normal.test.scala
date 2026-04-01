@@ -28,10 +28,9 @@ object WebAppModuleTests extends TestSuite:
 
       UnitTester(build, resourceFolder / "simple").scoped {
         eval =>
-          val Right(result) = eval(build.siteGen).runtimeChecked
-          val (siteDirStr, jsDirStr) = result.value
+          val Right(result) = eval(build.assembleSite).runtimeChecked
+          val (siteDirStr, _) = result.value
           val siteDir = os.Path(siteDirStr)
-          val jsDir = os.Path(jsDirStr)
 
           // index.html must be present in the siteGen output directory
           assert(os.exists(siteDir / "index.html"))
@@ -47,13 +46,13 @@ object WebAppModuleTests extends TestSuite:
             throw new java.lang.AssertionError(s"No <script src=...> found in index.html:\n$html")
           end if
 
-          // 3. Every referenced JS file must exist in the fastLinkJS output directory
-          val jsOutputFiles = os.list(jsDir).map(_.last).toSet
+          // 3. Every referenced JS file must exist in the in-memory hashed output
+          val jsOutputFiles = scala.jdk.CollectionConverters.CollectionHasAsScala(build.hashedOutputFiles.keySet()).asScala.toSet
           scriptRefs.foreach {
             ref =>
               if !jsOutputFiles.contains(ref) then
                 throw new java.lang.AssertionError(
-                  s"HTML references '$ref' but it is not present in JS output: ${jsOutputFiles.mkString(", ")}"
+                  s"HTML references '$ref' but it is not present in hashed output: ${jsOutputFiles.mkString(", ")}"
                 )
           }
 
@@ -150,7 +149,7 @@ object WebAppModuleTests extends TestSuite:
       end try
     }
 
-    test("publish generates correct index.html referencing minified JS and omits SSE script") {
+    test("assembleSite generates correct index.html referencing minified JS and omits SSE script") {
       object build extends TestRootModule with ScalaJsWebAppModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
@@ -167,7 +166,7 @@ object WebAppModuleTests extends TestSuite:
 
       UnitTester(build, resourceFolder / "simple").scoped {
         eval =>
-          val Right(result) = eval(build.publish).runtimeChecked
+          val Right(result) = eval(build.assembleSite).runtimeChecked
           val siteDir = result.value.path
 
           // index.html must exist
@@ -176,14 +175,14 @@ object WebAppModuleTests extends TestSuite:
 
           // Must NOT contain the SSE live-reload script
           if html.contains("/refresh/v1/sse") then
-            throw new java.lang.AssertionError("publish index.html must not contain the SSE live-reload script")
+            throw new java.lang.AssertionError("assembleSite index.html must not contain the SSE live-reload script")
           end if
 
           // Extract all <script src="..."> references
           val scriptSrcPattern = """src="\./([^"]+\.js)"""".r
           val scriptRefs = scriptSrcPattern.findAllMatchIn(html).map(_.group(1)).toList
           if scriptRefs.isEmpty then
-            throw new java.lang.AssertionError(s"No <script src=...> found in publish index.html:\n$html")
+            throw new java.lang.AssertionError(s"No <script src=...> found in assembleSite index.html:\n$html")
           end if
 
           // Every referenced JS file must exist in Task.dest alongside index.html
@@ -192,7 +191,7 @@ object WebAppModuleTests extends TestSuite:
             ref =>
               if !outputFiles.contains(ref) then
                 throw new java.lang.AssertionError(
-                  s"HTML references '$ref' but it is not present in publish dest: ${outputFiles.mkString(", ")}"
+                  s"HTML references '$ref' but it is not present in assembleSite dest: ${outputFiles.mkString(", ")}"
                 )
           }
 
@@ -202,14 +201,14 @@ object WebAppModuleTests extends TestSuite:
               val parts = ref.stripSuffix(".js").split('.')
               if parts.length < 2 then
                 throw new java.lang.AssertionError(
-                  s"publish script reference '$ref' does not appear to be a content-hashed filename"
+                  s"assembleSite script reference '$ref' does not appear to be a content-hashed filename"
                 )
               end if
           }
       }
     }
 
-    test("publish succeeds without assets directory") {
+    test("assembleSite succeeds without assets directory") {
       object build extends TestRootModule with ScalaJsWebAppModule:
         override def scalaVersion: Simple[String] = "3.8.2"
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
@@ -226,13 +225,13 @@ object WebAppModuleTests extends TestSuite:
 
       UnitTester(build, resourceFolder / "simple").scoped {
         eval =>
-          val Right(result) = eval(build.publish).runtimeChecked
+          val Right(result) = eval(build.assembleSite).runtimeChecked
           val siteDir = result.value.path
           assert(os.exists(siteDir / "index.html"))
       }
     }
 
-    test("publish copies assets into publish directory when assets directory exists") {
+    test("assembleSite copies assets into output directory when assets directory exists") {
       val assetsTempDir = os.temp.dir()
       os.write(assetsTempDir / "logo.svg", "<svg/>")
       os.makeDir(assetsTempDir / "fonts")
@@ -257,14 +256,14 @@ object WebAppModuleTests extends TestSuite:
       try
         UnitTester(build, resourceFolder / "simple").scoped {
           eval =>
-            val Right(result) = eval(build.publish).runtimeChecked
+            val Right(result) = eval(build.assembleSite).runtimeChecked
             val siteDir = result.value.path
             assert(os.exists(siteDir / "index.html"))
             if !os.exists(siteDir / "logo.svg") then
-              throw new java.lang.AssertionError("logo.svg must be copied from assets into publish dest")
+              throw new java.lang.AssertionError("logo.svg must be copied from assets into assembleSite output")
             end if
             if !os.exists(siteDir / "fonts" / "font.woff2") then
-              throw new java.lang.AssertionError("nested font.woff2 must be copied from assets into publish dest")
+              throw new java.lang.AssertionError("nested font.woff2 must be copied from assets into assembleSite output")
             end if
         }
       finally os.remove.all(assetsTempDir)
