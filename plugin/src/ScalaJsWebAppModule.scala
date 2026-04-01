@@ -6,42 +6,42 @@ import mill.scalajslib.api.ModuleSplitStyle
 import mill.scalajslib.api.ESModuleImportMapping
 import mill.api.Task.Simple
 
-trait ScalaJsWebAppModule extends FileBasedContentHashScalaJSModule with ScalaJsRefreshModule:
+// trait ScalaJsWebAppModule extends FileBasedContentHashScalaJSModule with ScalaJsRefreshModule:
 
-  def smallModulesFor = Task(
-    Seq.empty[String]
-  )
+//   def smallModulesFor = Task(
+//     Seq.empty[String]
+//   )
 
-  def importMap: Task.Simple[Map[String, String]] = Task(Map.empty[String, String])
+//   def importMap: Task.Simple[Map[String, String]] = Task(Map.empty[String, String])
 
-  override def scalaJSImportMap: Simple[Seq[ESModuleImportMapping]] = Task {
-    importMap().map { case (importName, path) => ESModuleImportMapping.Prefix(importName, path) }.toSeq
-  }
+//   override def scalaJSImportMap: Simple[Seq[ESModuleImportMapping]] = Task {
+//     importMap().map { case (importName, path) => ESModuleImportMapping.Prefix(importName, path) }.toSeq
+//   }
 
-  override def moduleSplitStyle: Task.Simple[ModuleSplitStyle] =
-    Task(ModuleSplitStyle.SmallModulesFor(smallModulesFor()*))
+//   override def moduleSplitStyle: Task.Simple[ModuleSplitStyle] =
+//     Task(ModuleSplitStyle.SmallModulesFor(smallModulesFor()*))
 
-  def publish = Task {
-    val report = fullLinkJS()
-    val minifiedDir = report.dest.path
-    val doc = fullDocHtml(indexHtmlHead(), bodyHtmlFromReport(report))
+//   def publish = Task {
+//     val report = fullLinkJS()
+//     val minifiedDir = report.dest.path
+//     val doc = fullDocHtml(indexHtmlHead(), bodyHtmlFromReport(report))
 
-    os.write(Task.dest / "index.html", doc)
-    os.list(minifiedDir).foreach(f => os.copy(f, Task.dest / f.last, replaceExisting = true))
-    if os.exists(assetsDir) then os.copy(assets().path, Task.dest, mergeFolders = true)
-    end if
-    PathRef(Task.dest)
-  }
+//     os.write(Task.dest / "index.html", doc)
+//     os.list(minifiedDir).foreach(f => os.copy(f, Task.dest / f.last, replaceExisting = true))
+//     if os.exists(assetsDir) then os.copy(assets().path, Task.dest, mergeFolders = true)
+//     end if
+//     PathRef(Task.dest)
+//   }
 
-  /** mill show project.serveCommand will emit a string you can use to spin up a simple Java Server which will test the
-    * publishe site.
-    */
-  def serveCommand = Task {
-    val publishDir = publish().path
-    s"jwebserver -d  \"$publishDir\" -p 8080"
-  }
-end ScalaJsWebAppModule
-trait ScalaJsInMemWebAppModule extends InMemoryFastLinkHashScalaJSModule with ScalaJsRefreshModule:
+//   /** mill show project.serveCommand will emit a string you can use to spin up a simple Java Server which will test the
+//     * publishe site.
+//     */
+//   def serveCommand = Task {
+//     val publishDir = publish().path
+//     s"jwebserver -d  \"$publishDir\" -p 8080"
+//   }
+// end ScalaJsWebAppModule
+trait ScalaJsWebAppModule extends InMemoryFastLinkHashScalaJSModule with ScalaJsRefreshModule:
 
   override def lcs = Task.Worker {
     val (site, js) = siteGen()
@@ -64,7 +64,7 @@ trait ScalaJsInMemWebAppModule extends InMemoryFastLinkHashScalaJSModule with Sc
     )
   }
 
-  def publish = Task {
+  def assembleSite = Task {
     val report = fullLinkJS()
     val minifiedDir = report.dest.path
     val doc = fullDocHtml(indexHtmlHead(), bodyHtmlFromReport(report))
@@ -80,7 +80,7 @@ trait ScalaJsInMemWebAppModule extends InMemoryFastLinkHashScalaJSModule with Sc
     * publishe site.
     */
   def serveCommand = Task {
-    val publishDir = publish().path
+    val publishDir = assembleSite().path
     s"jwebserver -d  \"$publishDir\" -p 8080"
   }
-end ScalaJsInMemWebAppModule
+end ScalaJsWebAppModule
