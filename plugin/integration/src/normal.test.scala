@@ -47,7 +47,12 @@ object WebAppModuleTests extends TestSuite:
           end if
 
           // 3. Every referenced JS file must exist in the in-memory hashed output
-          val jsOutputFiles = scala.jdk.CollectionConverters.CollectionHasAsScala(build.hashedOutputFiles.keySet()).asScala.toSet
+          val jsOutputFiles = scala
+            .jdk
+            .CollectionConverters
+            .CollectionHasAsScala(build.hashedOutputFiles.keySet())
+            .asScala
+            .toSet
           scriptRefs.foreach {
             ref =>
               if !jsOutputFiles.contains(ref) then
@@ -263,7 +268,9 @@ object WebAppModuleTests extends TestSuite:
               throw new java.lang.AssertionError("logo.svg must be copied from assets into assembleSite output")
             end if
             if !os.exists(siteDir / "fonts" / "font.woff2") then
-              throw new java.lang.AssertionError("nested font.woff2 must be copied from assets into assembleSite output")
+              throw new java.lang.AssertionError(
+                "nested font.woff2 must be copied from assets into assembleSite output"
+              )
             end if
         }
       finally os.remove.all(assetsTempDir)

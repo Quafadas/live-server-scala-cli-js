@@ -15,11 +15,7 @@ object ContentHashScalaJSModule:
   end normaliseModuleNameSegment
 
   def sanitiseHashedBaseName(baseName: String): String =
-    baseName
-      .replace("-", "_")
-      .split('.')
-      .map(normaliseModuleNameSegment)
-      .mkString(".")
+    baseName.replace("-", "_").split('.').map(normaliseModuleNameSegment).mkString(".")
   end sanitiseHashedBaseName
 
   /** Post-process a `Report` by computing SHA-256 content hashes for every emitted `.js` file, renaming each file to
