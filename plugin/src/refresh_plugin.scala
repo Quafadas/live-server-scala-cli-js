@@ -17,6 +17,7 @@ import mill.scalajslib.api.ModuleKind
 import mill.scalajslib.api.Report
 import mill.scalajslib.config.ScalaJSConfigModule
 import mill.scalajslib.api.ESModuleImportMapping
+import mill.scalajslib.api.ModuleSplitStyle
 implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
 /** Base Mill plugin trait for Scala.js applications served by sjsls during development.
@@ -74,6 +75,11 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
       .toSeq
   end scalaJSImportMap
 
+  def smallModulesFor = Task(Seq.empty[String])
+
+  override def moduleSplitStyle: Simple[ModuleSplitStyle] = Task {
+    ModuleSplitStyle.SmallModulesFor(smallModulesFor()*)
+  }
   /** DOM id of the root node your application will mount into. */
   def appRoot: String = "app"
 
