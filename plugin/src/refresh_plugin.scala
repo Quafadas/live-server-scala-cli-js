@@ -16,6 +16,7 @@ import mill.scalajslib.*
 import mill.scalajslib.api.ModuleKind
 import mill.scalajslib.api.Report
 import mill.scalajslib.config.ScalaJSConfigModule
+import mill.scalajslib.api.ESModuleImportMapping
 implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
 /** Base Mill plugin trait for Scala.js applications served by sjsls during development.
@@ -62,6 +63,16 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
 
   /** Extra stylesheet URLs to include in the generated page head. */
   def externalStylesheets = Task(Seq.empty[String])
+
+  def importMap = Task(Map.empty[String, String])
+
+  override def scalaJSImportMap: Simple[Seq[ESModuleImportMapping]] =
+    importMap()
+      .map {
+        case (k, v) => ESModuleImportMapping.Prefix(k, v)
+      }
+      .toSeq
+  end scalaJSImportMap
 
   /** DOM id of the root node your application will mount into. */
   def appRoot: String = "app"
