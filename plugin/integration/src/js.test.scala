@@ -79,9 +79,8 @@ object SiteJsTests extends TestSuite:
       }
     }
 
-    /**
-     * YAML friendly overrides
-     */
+    /** YAML friendly overrides
+      */
     test("Import map and smallModulesFor populated from sub task") {
       object build extends TestRootModule with ScalaJsRefreshModule:
         override def scalaVersion: Simple[String] = "3.8.2"

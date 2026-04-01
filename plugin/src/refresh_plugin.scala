@@ -80,6 +80,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
   override def moduleSplitStyle: Simple[ModuleSplitStyle] = Task {
     ModuleSplitStyle.SmallModulesFor(smallModulesFor()*)
   }
+
   /** DOM id of the root node your application will mount into. */
   def appRoot: String = "app"
 
