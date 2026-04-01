@@ -8,6 +8,7 @@ import mill.util.TokenReaders.*
 import mill.javalib.DepSyntax
 import mill.scalajslib.ContentHashScalaJSModule
 import mill.scalajslib.api.ModuleSplitStyle
+import mill.scalajslib.api.ESModuleImportMapping
 import utest.*
 
 object SiteJsTests extends TestSuite:
@@ -76,6 +77,37 @@ object SiteJsTests extends TestSuite:
                   )
             }
       }
+    }
+
+    test("Import map populated from sub task") {
+      object build extends TestRootModule with ScalaJsRefreshModule:
+        override def scalaVersion: Simple[String] = "3.8.2"
+        override def moduleSplitStyle: Simple[ModuleSplitStyle] =
+          ModuleSplitStyle.SmallModulesFor("webapp")
+
+        override def mvnDeps = Seq(
+          mvn"com.raquo::laminar::17.0.0"
+        )
+
+        override def importMap = Map("@foo" -> "https://cdn.skypack.dev/foo/")
+
+        lazy val millDiscover = Discover[this.type]
+      end build
+
+      val resourceFolder = os.Path(sys.env("MILL_TEST_RESOURCE_DIR"))
+
+      UnitTester(build, resourceFolder / "simple").scoped {
+        eval =>
+          val Right(result) = eval(build.scalaJSImportMap).runtimeChecked
+          val report = result.value
+          assert(report.nonEmpty)
+          assert(report.exists {
+            case ESModuleImportMapping.Prefix(prefix, target) =>
+              prefix == "@foo" && target == "https://cdn.skypack.dev/foo/"
+            case _ => throw new java.lang.AssertionError(s"Unexpected import mapping type: $report")
+          })
+      }
+
     }
 
     test("Hashed JS files have correct cross-module references") {
