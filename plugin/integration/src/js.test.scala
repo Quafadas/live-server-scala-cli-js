@@ -79,12 +79,13 @@ object SiteJsTests extends TestSuite:
       }
     }
 
-    test("Import map populated from sub task") {
+    /** YAML friendly overrides
+      */
+    test("Import map and smallModulesFor populated from sub task") {
       object build extends TestRootModule with ScalaJsRefreshModule:
         override def scalaVersion: Simple[String] = "3.8.2"
-        override def moduleSplitStyle: Simple[ModuleSplitStyle] =
-          ModuleSplitStyle.SmallModulesFor("webapp")
 
+        override def smallModulesFor = Seq("webapp")
         override def mvnDeps = Seq(
           mvn"com.raquo::laminar::17.0.0"
         )
@@ -106,6 +107,10 @@ object SiteJsTests extends TestSuite:
               prefix == "@foo" && target == "https://cdn.skypack.dev/foo/"
             case _ => throw new java.lang.AssertionError(s"Unexpected import mapping type: $report")
           })
+
+          val Right(smallModulesResult) = eval(build.smallModulesFor).runtimeChecked
+          val smallModules = smallModulesResult.value
+          assert(smallModules.contains("webapp"))
       }
 
     }

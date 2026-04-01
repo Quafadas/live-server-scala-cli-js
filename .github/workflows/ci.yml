@@ -27,6 +27,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
+      - uses: taiki-e/install-action@just
+      - uses: coursier/cache-action@v8
       - uses: coursier/setup-action@main
         with:
           jvm: temurin@21
@@ -97,6 +99,7 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - uses: coursier/cache-action@v8
       - uses: coursier/setup-action@main
         with:
           jvm: temurin@21
@@ -130,6 +133,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: coursier/cache-action@v8
       - uses: coursier/setup-action@main
         with:
           jvm: temurin@21
