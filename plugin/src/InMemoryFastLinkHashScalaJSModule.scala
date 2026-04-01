@@ -15,7 +15,6 @@ import mill.scalajslib.api
 import mill.scalajslib.api.ModuleKind
 import mill.scalajslib.api.Report
 import mill.scalajslib.config.ScalaJSConfigModule
-import mill.api.BuildCtx
 
 /** A Mill module trait that adds content hashing to Scala.js linked output, using an in-memory linker output directory.
   *
@@ -207,8 +206,7 @@ trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModul
           val content = readStr(name)
           val rewrittenContent = C.rewriteJsReferences(content, jsHashMapping.toMap)
           val hash = C.computeContentHash(rewrittenContent.getBytes("UTF-8"))
-          // Replace "-" with "_" to avoid issues with terser external source maps.
-          val baseName = name.stripSuffix(".js").replace("-", "_")
+          val baseName = C.sanitiseHashedBaseName(name.stripSuffix(".js"))
           val hashedName = s"$baseName.$hash.js"
           jsHashMapping(name) = hashedName
 

@@ -12,7 +12,6 @@ import mill.api.Task.Simple
 import mill.api.TaskCtx
 import mill.scalajslib.api.*
 import mill.scalajslib.config.ScalaJSConfigModule
-import os.temp
 
 /** A Mill module trait that adds content hashing to Scala.js linked output.
   *
@@ -282,6 +281,8 @@ object FileBasedContentHashScalaJSModule:
     val srcDir = report.dest.path
     os.makeDir.all(destDir)
 
+    import mill.scalajslib.ContentHashScalaJSModule as C
+
     val jsFiles = os.list(srcDir).filter(p => os.isFile(p) && p.ext == "js")
     val jsFileNames = jsFiles.map(_.last).toSet
 
@@ -311,8 +312,7 @@ object FileBasedContentHashScalaJSModule:
 
         // Hash the rewritten content (so the filename hash reflects the final content).
         val hash = computeContentHash(rewrittenContent.getBytes("UTF-8"))
-        // Replace "-" with "_" in base name: terser struggles with hyphens in external source maps.
-        val hashedName = s"${f.baseName.replace("-", "_")}.$hash.${f.ext}"
+        val hashedName = s"${C.sanitiseHashedBaseName(f.baseName)}.$hash.${f.ext}"
         jsHashMapping(name) = hashedName
 
         // Also update the sourceMappingURL comment that points to this file's own map.

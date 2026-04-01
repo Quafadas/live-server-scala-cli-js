@@ -48,6 +48,14 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
     assertEquals(C.computeContentHash(input), expected)
   }
 
+  test("sanitiseHashedBaseName preserves ordinary underscores") {
+    assertEquals(C.sanitiseHashedBaseName("my_module.chunk"), "my_module.chunk")
+  }
+
+  test("sanitiseHashedBaseName collapses underscore-separated uppercase runs") {
+    assertEquals(C.sanitiseHashedBaseName("mathlify._B_I_N_A_R_Y$"), "mathlify.BINARY$")
+  }
+
   // --------------------------------------------------------------------------
   // rewriteJsReferences
   // --------------------------------------------------------------------------
@@ -473,6 +481,37 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
       val mainContent = os.read(destDir / hashedMain)
       assert(!mainContent.contains("my-chunk"), s"main.js should not reference hyphenated name:\n$mainContent")
       assert(mainContent.contains("my_chunk"), s"main.js should reference sanitised name:\n$mainContent")
+
+    finally
+      os.remove.all(srcDir)
+      os.remove.all(destDir)
+    end try
+  }
+
+  test("applyContentHash collapses underscore-separated uppercase module segments") {
+    val srcDir = os.temp.dir()
+    val destDir = os.temp.dir()
+
+    try
+      os.write(srcDir / "mathlify._B_I_N_A_R_Y$.js", "export const x = 1;\n")
+      os.write(srcDir / "main.js", """import * as binary from "./mathlify._B_I_N_A_R_Y$.js";""" + "\n")
+
+      val report = Report(
+        publicModules = Seq(Report.Module("main", "main.js", None, ModuleKind.ESModule)),
+        dest = PathRef(srcDir)
+      )
+
+      C.applyContentHash(report, destDir)
+      val files = os.list(destDir).map(_.last).toSet
+
+      assert(!files.exists(_.contains("_B_I_N_A_R_Y")), s"underscored uppercase run should be normalised: $files")
+
+      val binaryChunk = files.find(f => f.startsWith("mathlify.BINARY$.") && f.endsWith(".js")).orNull
+      assert(binaryChunk != null, s"normalised filename not found in: $files")
+
+      val hashedMain = files.find(f => f.startsWith("main.") && f.endsWith(".js")).get
+      val mainContent = os.read(destDir / hashedMain)
+      assert(mainContent.contains(binaryChunk), s"main.js should reference the normalised chunk name:\n$mainContent")
 
     finally
       os.remove.all(srcDir)

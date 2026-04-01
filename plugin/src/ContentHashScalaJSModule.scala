@@ -5,13 +5,22 @@ import java.security.MessageDigest
 import scala.collection.mutable
 
 import mill.*
-import mill.api.Result
-import mill.api.Task.Simple
-import mill.api.TaskCtx
 import mill.scalajslib.api.*
-import mill.scalajslib.worker.ScalaJSWorker
 
 object ContentHashScalaJSModule:
+
+  private def normaliseModuleNameSegment(segment: String): String =
+    if segment.matches("_?(?:[A-Z]_)+[A-Z]\\$?") then segment.replace("_", "")
+    else segment
+  end normaliseModuleNameSegment
+
+  def sanitiseHashedBaseName(baseName: String): String =
+    baseName
+      .replace("-", "_")
+      .split('.')
+      .map(normaliseModuleNameSegment)
+      .mkString(".")
+  end sanitiseHashedBaseName
 
   /** Post-process a `Report` by computing SHA-256 content hashes for every emitted `.js` file, renaming each file to
     * include the hash, rewriting all intra-bundle references, and returning an updated `Report`.
@@ -54,8 +63,7 @@ object ContentHashScalaJSModule:
 
         // Hash the rewritten content (so the filename hash reflects the final content).
         val hash = computeContentHash(rewrittenContent.getBytes("UTF-8"))
-        // Replace "-" with "_" in base name: terser struggles with hyphens in external source maps.
-        val hashedName = s"${f.baseName.replace("-", "_")}.$hash.${f.ext}"
+        val hashedName = s"${sanitiseHashedBaseName(f.baseName)}.$hash.${f.ext}"
         jsHashMapping(name) = hashedName
 
         // Also update the sourceMappingURL comment that points to this file's own map.
