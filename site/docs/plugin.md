@@ -39,10 +39,40 @@ object `package` extends ScalaJsWebAppModule:
   )
 end `package`
 ```
-This build encapsulate most of what I want when making a webapp in the following two commands:
+This build encapsulates the standard `ScalaJsWebAppModule` workflow:
 
 - `mill -w example.serve` - reload on change
-- `mill example.publish` - build site
+- `mill example.assembleSite` - build a self-contained static site directory
+- `mill show example.serveCommand` - print a simple command to smoke-test the assembled site
+
+## What `ScalaJsWebAppModule` provides
+
+`ScalaJsWebAppModule` combines the live-reload server from `ScalaJsRefreshModule` with the in-memory content hashing
+support from `InMemoryFastLinkHashScalaJSModule`.
+
+In practice that means:
+
+- development HTML is generated from the Scala.js linker report. `<script type="module">` tags point at the real hashed filenames.
+- Hashed files are served with immutable caching headers, so the browser can reuse them across edits when they don't change.
+- style changes hot reload
+- split-module output works without hard-coding `/main.js`
+- the dev server serves hashed linker output from memory for fast reload cycles
+- `assembleSite` emits a static directory containing `index.html`, the hashed JS artifacts, and any assets
+
+## Lower-level plugin: `ScalaJsRefreshModule`
+
+If you only want the development server and generated `index.html`, `ScalaJsRefreshModule` is the smaller building
+block.
+
+It provides:
+
+- `serve` for live development against `fastLinkJS`
+- generated HTML with `<script type="module">` tags derived from the linker report
+- the browser refresh script and SSE wiring
+- optional copying of an `assets` directory into the generated site
+
+`ScalaJsWebAppModule` builds on top of it by adding in-memory content hashing and `assembleSite` for a static output
+directory.
 
 ### Development Workflow
 
@@ -52,25 +82,24 @@ This build encapsulate most of what I want when making a webapp in the following
 - to the live server. Live server emits a server side event to the client.
 - Client has a js script in it's html listening for these events which triggers a page refresh
 - browser sends back it's page request and gets `index.html`
-- index.html contains a reference to a `main.<hash>.js` (or wasm) file.
+- index.html contains references to the hashed JS modules (or wasm companion files) reported by Scala.js.
 - Browser resolves the ESModule graph...
-    - Which has been processed in topological order and their import statements re-written to reference the content-hashed filenames.
-    - Many scala JS modules are not changed. They are emitted with `immutable, public` Cache-Control headers server side. The browser loads these out of memory instead of making a network request.
-    - In the example above, we reference a concrete version of webawesome (by rewriting the import to a CDN URL). This means that webawesome is also cached immutably and resolved out the browswer cache.
+- The output has already been processed so intra-module imports reference the content-hashed filenames.
+- Many Scala.js modules do not change between edits. They are served with immutable caching, so the browser can reuse them without re-downloading everything.
+- In the example above, we reference a concrete version of webawesome by rewriting the import to a CDN URL. That dependency is also cacheable independently of the local app bundle.
 
 Page reload is _very_ fast.
 
 ### Production Workflow
 
-The publish command
+The `assembleSite` command:
 - runs fullLinkJS
-- minifies the output
-    - using terser for JS
-    - uinng wasm-opt for wasm
-- generates an index.html with the correct content-hashed references to the minified JS files
-- copies the minified JS files into the publish destination directory
-- Copies index.html into the publish destination directory
-- copies asserts into the publish destination directory
+- generates an index.html with the correct content-hashed references to the linked JS files
+- copies the linked JS files into the task destination directory
+- copies index.html into the task destination directory
+- copies assets into the task destination directory when `assetsDir` exists
+
+You can then serve that output locally with the command printed by `mill show example.serveCommand`.
 
 
 

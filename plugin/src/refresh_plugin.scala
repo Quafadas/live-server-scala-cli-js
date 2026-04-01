@@ -18,6 +18,20 @@ import mill.scalajslib.api.Report
 import mill.scalajslib.config.ScalaJSConfigModule
 implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
+/** Base Mill plugin trait for Scala.js applications served by sjsls during development.
+  *
+  * Mix this into a `ScalaJSModule` to get:
+  *
+  * - an `index.html` generated from the Scala.js linker report
+  * - a live-reload SSE channel for page refreshes
+  * - optional stylesheet refresh notifications for copied CSS and LESS assets
+  * - a `serve` worker that runs the local development server
+  *
+  * This trait is intentionally development-oriented. It assumes `fastLinkJS` output, injects the browser refresh
+  * script into the generated HTML, and coordinates with the live server through `fs2.Topic` instances.
+  *
+  * Traits such as [[ScalaJsWebAppModule]] extend this base with content-hashed site assembly for deployment.
+  */
 trait ScalaJsRefreshModule extends ScalaJSConfigModule:
 
   lazy val updateServer = Topic[IO, Unit].unsafeRunSync()
@@ -25,6 +39,11 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
 
   override def moduleKind: Simple[ModuleKind] = ModuleKind.ESModule
 
+  /** Render the `<head>` section used by generated HTML.
+    *
+    * Override the smaller extension points such as [[titleString]] or [[externalStylesheets]] instead of replacing
+    * this whole task unless you need full control over the generated markup.
+    */
   def indexHtmlHead = Task {
     head(
       meta(charset := "utf-8"),
@@ -41,12 +60,20 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     ).render
   }
 
+  /** Extra stylesheet URLs to include in the generated page head. */
   def externalStylesheets = Task(Seq.empty[String])
 
+  /** DOM id of the root node your application will mount into. */
   def appRoot: String = "app"
 
+  /** `<title>` content for generated HTML. */
   def titleString: String = "App"
 
+  /** Build the HTML body from a Scala.js linker report.
+    *
+    * Every public module in `report` becomes a `<script type="module">` tag. `includeRefresh` controls whether the
+    * SSE live-reload client script is appended after the application root node.
+    */
   def bodyHtmlFromReport(report: Report, basePath: String = "./", includeRefresh: Boolean = false): String =
     val scriptTags = report.publicModules.map(m => script(src := s"$basePath${m.jsFileName}", `type` := "module"))
     body(
@@ -56,6 +83,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     ).render
   end bodyHtmlFromReport
 
+  /** Combine pre-rendered head and body fragments into a complete HTML document. */
   def fullDocHtml(headHtml: String, bodyHtml: String): String =
     "<!doctype html>\n" +
       html(
@@ -63,10 +91,16 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
         raw(bodyHtml)
       ).render
 
+  /** Development HTML body built from the current `fastLinkJS` report, including the refresh client script. */
   def indexHtmlBody = Task {
     bodyHtmlFromReport(fastLinkJS(), includeRefresh = true)
   }
 
+  /** Browser-side SSE client used by generated development HTML.
+    *
+    * `PageRefresh` triggers a full reload. `AssetRefresh` forces stylesheet cache-busting so CSS and LESS changes can
+    * be applied without navigating away from the page.
+    */
   def refreshScript: String =
     script(
       raw("""
@@ -97,37 +131,50 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
         |""".stripMargin)
     ).render
 
+  /** Materialise the generated `index.html` into this task's destination directory. */
   def indexHtml = Task {
     val doc = fullDocHtml(indexHtmlHead(), indexHtmlBody())
     os.write.over(Task.dest / "index.html", doc)
     PathRef(Task.dest / "index.html")
   }
 
+  /** Directory containing static assets to copy alongside generated HTML when present. */
   def assetsDir =
     super.moduleDir / "assets"
 
+  /** Whether style handling is enabled for this module.
+    *
+    * Reserved as a higher-level extension point for callers that want to disable the plugin's stylesheet behaviour.
+    */
   def withStyles = Task(true)
 
+  /** Whether LESS assets should auto-refresh in the browser without a full page reload. */
   def stylesAutoRefresh = Task(false)
 
+  /** Asset source rooted at [[assetsDir]]. */
   def assets = Task.Source {
     assetsDir
   }
 
+  /** True when `assets/index.less` exists and should be included in the generated page. */
   def hasLess = os.exists(assetsDir / "index.less")
 
+  /** Port used by the development server. */
   def port = Task {
     8080
   }
 
+  /** Whether the browser should be opened automatically when the server starts. */
   def openBrowser = Task {
     true
   }
 
+  /** Log verbosity passed through to the live server. */
   def logLevel = Task {
     "warn"
   }
 
+  /** Whether the server should attempt to clean up child processes on shutdown. */
   def dezombify = Task {
     true
   }
@@ -140,15 +187,23 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     None
   }
 
+  /** Stable workspace identifier exposed to Chrome DevTools workspace integration for the lifetime of Mill outputs. */
   def devToolsUuid = Task {
     java.util.UUID.randomUUID().toString
   }
 
+  /** Run `fastLinkJS` and notify connected browsers that a new build is available. */
   def pulseOnRefresh = Task {
     val report = fastLinkJS()
     updateServer.publish1(Task.log.debug("publish update")).unsafeRunSync()
     report
   }
+
+  /** Generate the development site directory.
+    *
+    * This task writes `index.html`, copies assets when available, publishes CSS/LESS asset refresh events, and returns
+    * a tuple of `(siteDir, jsOutputDir)` for consumption by [[lcs]].
+    */
   def siteGen = Task {
     val linkReport = pulseOnRefresh()
     os.copy.over(indexHtml().path, Task.dest / "index.html")
@@ -177,6 +232,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
   //   (Task.dest.toString(), path.toString())
   // }
 
+  /** Build the live-server configuration used by [[serve]]. */
   def lcs = Task.Worker {
     val (site, js) = siteGen()
     Task.log.info("Gen lsc")
@@ -198,6 +254,11 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     )
   }
 
+  /** Start the development server as a Mill worker.
+    *
+    * The returned worker is `AutoCloseable`, so Mill can shut the server down cleanly when the task is invalidated or
+    * re-run.
+    */
   def serve = Task.Worker {
 
     Task.log.info(lcs().toString)
@@ -207,6 +268,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     }
   }
 
+  /** Runtime wrapper around the allocated live server resource. */
   class RefreshServer(lcs: LiveServerConfig) extends AutoCloseable:
     // Allocate exactly once: run the IO and hold on to both the server and its
     // release action.  The original code stored the IO description and
