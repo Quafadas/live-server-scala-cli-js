@@ -43,7 +43,14 @@ import os.temp
   * `out/app/fastLinkJS.dest/main.a1b2c3d4.js`.
   */
 trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
-  override def moduleKind: Simple[ModuleKind] = ModuleKind.ESModule
+  override def moduleKind: Task.Simple[ModuleKind] = Task(ModuleKind.ESModule)
+
+  def smallModulesFor = Task(
+    Seq.empty[String]
+  )
+
+  override def moduleSplitStyle: Task.Simple[ModuleSplitStyle] =
+    Task(ModuleSplitStyle.SmallModulesFor(smallModulesFor()*))
 
   /** Flags passed to `wasm-opt` when minifying WASM output during `fullLinkJS`.
     *
