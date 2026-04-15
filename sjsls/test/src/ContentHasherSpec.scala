@@ -147,18 +147,20 @@ class ContentHasherSuite extends CatsEffectSuite:
       val hashedChunk = keys.find(k => k.startsWith("chunk.") && k.endsWith(".js") && k != "chunk.js")
       assert(hashedChunk.isDefined, s"Expected a hashed chunk.js in keys: $keys")
 
-      // main.js must be present with a hash too (no plain main.js)
+      // main.js must be present with a hash too
       val hashedMain = keys.find(k => k.startsWith("main.") && k.endsWith(".js") && k != "main.js")
       assert(hashedMain.isDefined, s"Expected a hashed main.js in keys: $keys")
+
+      // main.js must also be present under its original name (HTML references /main.js)
+      assert(keys.contains("main.js"), s"main.js should be present as an alias key: $keys")
 
       // The hashed main content must reference the hashed chunk name
       val mainBytes = result.get(hashedMain.get)
       val mainStr = new String(mainBytes, "UTF-8")
       assert(mainStr.contains(hashedChunk.get), s"main.js content should reference ${hashedChunk.get}: $mainStr")
 
-      // Original (unhashed) names must not be present as separate keys
+      // Original (unhashed) name must not be present for internal (non-entry) modules
       assert(!keys.contains("chunk.js"), s"chunk.js should not be a separate key: $keys")
-      assert(!keys.contains("main.js"), s"main.js should not be a separate key: $keys")
     finally os.remove.all(tempDir)
     end try
   }

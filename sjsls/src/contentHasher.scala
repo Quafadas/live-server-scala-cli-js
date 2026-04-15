@@ -154,7 +154,14 @@ object ContentHasher:
             "sourceMappingURL=" + name + ".map",
             "sourceMappingURL=" + hashedName + ".map"
           )
-          IO(result.put(hashedName, finalContent.getBytes("UTF-8"))) >>
+          val finalBytes = finalContent.getBytes("UTF-8")
+          // Store under the hashed name (served with immutable cache headers)
+          IO(result.put(hashedName, finalBytes)) >>
+            // Also keep the entry point accessible under its original name so the
+            // HTML template's <script src="/main.js" type="module"> still resolves.
+            // The unhashed key receives no-cache headers, ensuring stale content is
+            // never served after a rebuild.
+            IO.whenA(name == "main.js")(IO(result.put("main.js", finalBytes)).void) >>
             logger.debug(s"[ContentHasher] $name -> $hashedName")
       }
 
