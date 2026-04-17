@@ -9,7 +9,7 @@ import org.http4s.HttpRoutes
 import org.http4s.Response
 import org.http4s.Status
 import org.http4s.dsl.io.*
-// import org.http4s.scalatags.*
+import org.http4s.scalatags.*
 
 import fs2.io.file.Path
 

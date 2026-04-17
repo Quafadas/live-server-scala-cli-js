@@ -4,7 +4,7 @@ import java.time.ZonedDateTime
 import org.http4s.HttpRoutes
 import org.http4s.Response
 import org.http4s.dsl.io.*
-// import org.http4s.scalatags.*
+import org.http4s.scalatags.*
 
 import scribe.Scribe
 
