@@ -30,7 +30,7 @@ object V:
   val scalaTags = mvn"com.lihaoyi::scalatags::0.13.1"
   val millLibs = mvn"com.lihaoyi::mill-libs:$millVersion"
   val scribeVersion = "3.19.0"
-  val scalaNativeVersion = "0.5.10"
+  val scalaNativeVersion = "0.5.11"
   val decline = "2.6.2"
   val osLib = "0.11.8"
   val munit = "1.3.0"
