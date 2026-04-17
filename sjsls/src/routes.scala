@@ -57,7 +57,7 @@ def routes[F[_]: Files: MonadThrow](
       val lookup: String => Option[Array[Byte]] = name => Option(files.get(name))
       appRouteInMemory[IO](lookup)(using Async[IO], logger)
     case None =>
-      ETagMiddleware(appRoute[IO](stringPath), ref)(logger)
+      appRoute[IO](stringPath)
   val spaRoutes = clientRoutingPrefix.map(s => (s, buildSpaRoute(indexOpts, ref, zdt, injectPreloads)(logger)))
   val staticRoutes = Some(staticAssetRoutes(indexOpts, ref, zdt, injectPreloads)(logger))
 
