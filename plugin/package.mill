@@ -28,7 +28,7 @@ object `package` extends ScalaModule with FormatFixPublish:
       )
   }
 
-  def moduleDeps = Seq(build.sjsls)
+  def moduleDeps = Seq(build.sjsls.jvm)
 
   def artifactSuffix = s"${platformSuffix()}_${scalaArtefactVersion()}"
 
@@ -50,7 +50,7 @@ object `package` extends ScalaModule with FormatFixPublish:
 
   object test extends ScalaTests with TestModule.Munit:
     def mvnDeps = super.mvnDeps() ++ Seq(
-      mvn"org.scalameta::munit::1.1.0"
+      mvn"org.scalameta::munit::${V.munit}",
     )
   end test
 

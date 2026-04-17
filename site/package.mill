@@ -10,7 +10,7 @@ object `package` extends SiteModule:
 
   override def scalaVersion = build.V.scalaVersion
 
-  def moduleDeps = Seq(build.sjsls, build.routes)
+  def moduleDeps = Seq(build.sjsls.jvm, build.sjsls_routes)
 
   override def unidocTitle = "Scala JS Live Server API"
 
