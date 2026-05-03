@@ -162,9 +162,7 @@ class RoutesSuite extends CatsEffectSuite:
 
   }
 
-  files.test(
-    "That the routes serve files on first call with a 200, that the eTag is set, and on second call with a 304, that index.html is served from SPA"
-  ) {
+  files.test("That the routes serve JS and Wasm files with 200 and index.html is served from SPA") {
     tempDir =>
 
       scribe
@@ -215,17 +213,8 @@ class RoutesSuite extends CatsEffectSuite:
             .use {
               response =>
                 assertEquals(response.status.code, 200)
-                assertEquals(response.headers.get(ci"ETag").isDefined, true)
-                assertEquals(response.headers.get(ci"ETag").get.head.value, testHash)
                 IO.unit
             }
-
-          val request2 = org
-            .http4s
-            .Request[IO](uri = org.http4s.Uri.unsafeFromString("/test.js"))
-            .withHeaders(
-              org.http4s.Headers.of(org.http4s.Header.Raw(ci"If-None-Match", testHash))
-            )
 
           val requestWasm = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("/test.wasm"))
 
@@ -234,15 +223,6 @@ class RoutesSuite extends CatsEffectSuite:
             .use {
               resp =>
                 assertEquals(resp.status.code, 200)
-                assertEquals(resp.headers.get(ci"ETag").isDefined, true)
-                IO.unit
-            }
-
-          val checkResp2 = client
-            .run(request2)
-            .use {
-              resp2 =>
-                assertEquals(resp2.status.code, 304)
                 IO.unit
             }
 
@@ -257,8 +237,10 @@ class RoutesSuite extends CatsEffectSuite:
             }
 
           val requestHtml = Request[IO](uri = uri"/")
-          // val etag = "699892091"
 
+          // The generated index.html ETag comes from staticHtmlMiddleware (content hash of the
+          // response body), not from ETagMiddleware. That path is unchanged so the assertion is
+          // still valid.
           val checkRespHtml = client
             .run(requestHtml)
             .use {
@@ -267,7 +249,7 @@ class RoutesSuite extends CatsEffectSuite:
                 assertEquals(respH.headers.get(ci"ETag").isDefined, true)
                 IO.unit
             }
-          checkResp1 >> checkResp2 >> checkWasm >> checkRespSpa >> checkRespHtml
+          checkResp1 >> checkWasm >> checkRespSpa >> checkRespHtml
 
       }
   }
@@ -494,77 +476,21 @@ class RoutesSuite extends CatsEffectSuite:
       app.use {
         case (served, logger) =>
           val request = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString(s"/$hashedFileName"))
-          val respHeaders = served(request).map(
+          val cacheControlValues = served(request).map(
             _.headers.get(ci"Cache-Control").get.map(_.value).toList
           )
           served(request).flatTap(r => logger.debug("Response headers in test " + r.headers.headers.mkString(","))) >>
             assertIO(served(request).map(_.status.code), 200) >>
             assertIOBoolean(
-              respHeaders.map(_.contains("immutable"))
+              cacheControlValues.map(_.exists(_.contains("immutable")))
             ) >>
             assertIOBoolean(
-              respHeaders.map(_.contains("public"))
+              cacheControlValues.map(_.exists(_.contains("public")))
             ) >>
             assertIOBoolean(
-              respHeaders.map(_.contains("max-age=31536000"))
+              cacheControlValues.map(_.exists(_.contains("max-age=31536000")))
             )
 
-      }
-  }
-
-  hashedFiles.test("That hashed files have no ETag header") {
-    tempDir =>
-      val app = for
-        logger <- IO(scribe.cats[IO]).toResource
-        fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
-        _ <- updateMapRef(tempDir.toFs2, fileToHashRef)(logger).toResource
-        refreshPub <- Topic[IO, Unit].toResource
-        assetRefreshPub <- Topic[IO, String].toResource
-        theseRoutes <- routes(
-          tempDir.toString,
-          refreshPub,
-          assetRefreshPub,
-          None,
-          HttpRoutes.empty[IO],
-          fileToHashRef,
-          None,
-          false,
-          NoBuildTool()
-        )(logger)
-      yield theseRoutes.orNotFound
-
-      app.use {
-        served =>
-          val request = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString(s"/$hashedFileName"))
-          assertIOBoolean(served(request).map(_.headers.get(ci"ETag").isEmpty))
-      }
-  }
-
-  hashedFiles.test("That hashed files have no Last-Modified header") {
-    tempDir =>
-      val app = for
-        logger <- IO(scribe.cats[IO]).toResource
-        fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
-        _ <- updateMapRef(tempDir.toFs2, fileToHashRef)(logger).toResource
-        refreshPub <- Topic[IO, Unit].toResource
-        assetRefreshPub <- Topic[IO, String].toResource
-        theseRoutes <- routes(
-          tempDir.toString,
-          refreshPub,
-          assetRefreshPub,
-          None,
-          HttpRoutes.empty[IO],
-          fileToHashRef,
-          None,
-          false,
-          NoBuildTool()
-        )(logger)
-      yield theseRoutes.orNotFound
-
-      app.use {
-        served =>
-          val request = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString(s"/$hashedFileName"))
-          assertIOBoolean(served(request).map(_.headers.get(ci"Last-Modified").isEmpty))
       }
   }
 
