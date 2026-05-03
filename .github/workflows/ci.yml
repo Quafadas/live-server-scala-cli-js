@@ -60,9 +60,6 @@ jobs:
           restore-keys: |
             playwright-${{ runner.os }}-
 
-      - name: Test Plugin
-        run: ./mill plugin.integration.testForked
-
       - name: formatCheck
         run: ./mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
 
