@@ -16,6 +16,7 @@ object `package` extends ScalaModule with FormatFixPublish:
 
   override def artifactName = "sjsls_plugin"
 
+  // Something about this is sketchy, and needs to match mills internal versions to work.
   def mvnDeps = Task {
     super.mvnDeps() ++
       Seq(
