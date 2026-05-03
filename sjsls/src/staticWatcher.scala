@@ -115,14 +115,23 @@ private def fileWatcher(
     stringPath: fs2.io.file.Path,
     mr: Ref[IO, Map[String, String]],
     linkingTopic: Topic[IO, Unit],
-    refreshTopic: Topic[IO, Unit]
+    refreshTopic: Topic[IO, Unit],
+    inMemoryFiles: Option[ConcurrentHashMap[String, Array[Byte]]] = None
 )(logger: Scribe[IO]): ResourceIO[Unit] =
   linkingTopic
     .subscribe(10)
     .evalTap {
       _ =>
         logger.debug("[fileWatcher] linkingTopic fired — updating hash map then publishing to refreshTopic") >>
-          updateMapRef(stringPath, mr)(logger) >>
+          (inMemoryFiles match
+            case Some(files) =>
+              logger.debug("[fileWatcher] Rebuilding in-memory content-hashed files from disk") >>
+                ContentHasher
+                  .buildInMemoryHashedFiles(stringPath)(logger)
+                  .flatTap(newFiles => IO { files.clear(); files.putAll(newFiles) }) >>
+                updateMapRefFromMemory(files, mr)(logger)
+            case None =>
+              updateMapRef(stringPath, mr)(logger)) >>
           logger.debug("[fileWatcher] hash map updated — publishing to refreshTopic") >>
           refreshTopic.publish1(())
     }
