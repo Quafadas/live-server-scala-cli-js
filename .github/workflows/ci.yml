@@ -67,10 +67,13 @@ jobs:
         run: ./mill PlaywrightSetup install --with-deps
 
       - name: compile
-        run: ./mill __.compile
+        run: ./mill __.compile && ./mill sjsls.jvm.test.buildInfoMembers
 
       - name: scala-cli version
-        run: scala-cli compile -e "()" --platform js && scala-cli run -e "()"
+        run: |
+          SCALA_VERSION="$(jq -r '.value[] | select(.key == "scalaVersion") | .value' out/sjsls/test/buildInfoMembers.json)"
+          SCALA_JS_VERSION="$(jq -r '.value[] | select(.key == "scalaJsVersion") | .value' out/sjsls/test/buildInfoMembers.json)"
+          scala-cli compile -e "()" --platform js --scala "$SCALA_VERSION" --js-version "$SCALA_JS_VERSION" && scala-cli run -e "()" --platform js --scala "$SCALA_VERSION" --js-version "$SCALA_JS_VERSION"
 
       - name: Test
         run: ./mill __.test
