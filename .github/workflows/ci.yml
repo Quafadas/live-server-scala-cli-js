@@ -76,10 +76,10 @@ jobs:
           SCALA_JS_VERSION="$(printf '%s\n' "$BUILD_INFO_JSON" | jq -r '.[] | select(.key == "scalaJsVersion") | .value')"
           scala-cli compile -e "()" --platform js --scala "$SCALA_VERSION" --js-version "$SCALA_JS_VERSION" && scala-cli run -e "()" --platform js --scala "$SCALA_VERSION" --js-version "$SCALA_JS_VERSION"
 
-      - name: Test
+      - name: Test CLI
         run: ./mill __.test
 
-      - name: Test
+      - name: Test Plugin
         run: ./mill plugin.integration.testForked
 
       - name: Publish Test Report
