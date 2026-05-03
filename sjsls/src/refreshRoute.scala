@@ -38,7 +38,6 @@ def refreshRoutes(
 
   buildTool match
     case _: NoBuildTool =>
-
       case GET -> Root / "refresh" / "v1" / "sse" =>
         Ok(
           keepAlive

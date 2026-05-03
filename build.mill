@@ -16,6 +16,7 @@ import com.goyeau.mill.scalafix.ScalafixModule
 import java.text.Format
 import io.github.quafadas.millSite.SiteModule
 import mill.util.VcsVersion
+import mill.api.Task.Simple
 
 object V:
   val scalaLts = "3.3.6"
@@ -31,7 +32,10 @@ object V:
   val millLibs = mvn"com.lihaoyi::mill-libs:$millVersion"
 end V
 
-trait FormatFix extends ScalafmtModule with ScalafixModule with ScalaModule
+trait FormatFix extends ScalafmtModule with ScalafixModule with ScalaModule:
+  override def scalafixIvyDeps: Simple[Seq[Dep]] = Seq(
+    mvn"org.polyvariant::SlowInferenceChain:1.0.0"
+  )
 
 trait FormatFixPublish extends ScalaModule with FormatFix with PublishModule:
   override def scalaVersion = V.scalaVersion
