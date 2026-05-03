@@ -13,11 +13,11 @@ import mill.Task
 import mill.api.BuildCtx
 import mill.api.Task.Simple
 import mill.scalajslib.*
+import mill.scalajslib.api.ESModuleImportMapping
 import mill.scalajslib.api.ModuleKind
+import mill.scalajslib.api.ModuleSplitStyle
 import mill.scalajslib.api.Report
 import mill.scalajslib.config.ScalaJSConfigModule
-import mill.scalajslib.api.ESModuleImportMapping
-import mill.scalajslib.api.ModuleSplitStyle
 implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
 /** Base Mill plugin trait for Scala.js applications served by sjsls during development.
