@@ -206,7 +206,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     * ```override def logFile = Task { Some(PathRef(Task.dest / "sjsls.log")) }```
     */
   def logFile: Task.Simple[Option[PathRef]] = Task {
-    if (serverLog()) Some(PathRef(Task.dest / "sjsls.log")) else None
+    if serverLog() then Some(PathRef(Task.dest / "sjsls.log")) else None
   }
 
   /** Stable workspace identifier exposed to Chrome DevTools workspace integration for the lifetime of Mill outputs. */
