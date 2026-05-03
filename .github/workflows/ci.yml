@@ -22,7 +22,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         scala: [3]
-        java: [temurin@21]
+        java: [temurin@25]
         project: [jvm]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
@@ -31,7 +31,7 @@ jobs:
       - uses: coursier/cache-action@v8
       - uses: coursier/setup-action@main
         with:
-          jvm: temurin@21
+          jvm: temurin@25
           apps: scala-cli
       - name: Checkout current branch (full)
         uses: actions/checkout@main
@@ -106,7 +106,7 @@ jobs:
       - uses: coursier/cache-action@v8
       - uses: coursier/setup-action@main
         with:
-          jvm: temurin@21
+          jvm: temurin@25
           apps: scala-cli
 
       - name: Import GPG key
@@ -140,7 +140,7 @@ jobs:
       - uses: coursier/cache-action@v8
       - uses: coursier/setup-action@main
         with:
-          jvm: temurin@21
+          jvm: temurin@25
           apps: scala-cli
       - uses: actions/checkout@main
         with:
