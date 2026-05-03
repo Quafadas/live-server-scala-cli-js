@@ -1,5 +1,5 @@
 //| mill-version: 1.1.6
-//| mill-jvm-version: 21
+//| mill-jvm-version: 25
 //| mvnDeps:
 //| - com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION
 //| - com.goyeau::mill-scalafix::0.6.0
