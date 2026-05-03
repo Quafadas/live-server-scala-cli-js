@@ -71,8 +71,9 @@ jobs:
 
       - name: scala-cli version
         run: |
-          SCALA_VERSION="$(jq -r '.value[] | select(.key == "scalaVersion") | .value' out/sjsls/test/buildInfoMembers.json)"
-          SCALA_JS_VERSION="$(jq -r '.value[] | select(.key == "scalaJsVersion") | .value' out/sjsls/test/buildInfoMembers.json)"
+          BUILD_INFO_JSON="$(./mill show sjsls.jvm.test.buildInfoMembers | sed -n '/^\[$/,/^]$/p')"
+          SCALA_VERSION="$(printf '%s\n' "$BUILD_INFO_JSON" | jq -r '.[] | select(.key == "scalaVersion") | .value')"
+          SCALA_JS_VERSION="$(printf '%s\n' "$BUILD_INFO_JSON" | jq -r '.[] | select(.key == "scalaJsVersion") | .value')"
           scala-cli compile -e "()" --platform js --scala "$SCALA_VERSION" --js-version "$SCALA_JS_VERSION" && scala-cli run -e "()" --platform js --scala "$SCALA_VERSION" --js-version "$SCALA_JS_VERSION"
 
       - name: Test
