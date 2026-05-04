@@ -74,8 +74,7 @@ object PlaywrightSetup extends JavaModule:
 
   def mainClass = Some("com.microsoft.playwright.CLI")
 
-
-  def helloWorldCode = Task{
+  def helloWorldCode = Task {
     val code = s"""
   //> using scala ${V.scalaVersion}
   //> using platform js
@@ -119,7 +118,7 @@ object PlaywrightSetup extends JavaModule:
       )
     )
   """
-  os.write.over(Task.dest / "HelloWorld.scala", code)
-  Task.dest / "HelloWorld.scala"
+    os.write.over(Task.dest / "HelloWorld.scala", code)
+    Task.dest / "HelloWorld.scala"
   }
 end PlaywrightSetup
