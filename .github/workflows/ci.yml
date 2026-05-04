@@ -72,6 +72,12 @@ jobs:
       - name: scala-cli version
         run: scala-cli compile -e "()" --platform js && scala-cli run -e "()"
 
+      - name: scala-cli setup part deux
+        run: |
+          HELLO_WORLD_FILE=$(./mill show PlaywrightSetup.helloWorldCode | sed -n 's/^"\(.*\)"$/\1/p')
+          test -n "$HELLO_WORLD_FILE"
+          scala-cli package "$HELLO_WORLD_FILE" -o ${PWD}/tmp -f
+
       - name: Test
         run: ./mill __.test
 
