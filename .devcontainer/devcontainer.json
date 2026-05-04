@@ -34,7 +34,7 @@
   },
 
   // Try do do as much as possible in the image, so that the container starts up quickly
-  "onCreateCommand": "./mill __.prepareOffline && ./mill __.compiledClassesAndSemanticDbFiles"
+  // "onCreateCommand": "./mill __.prepareOffline && ./mill __.compiledClassesAndSemanticDbFiles"
 
   // // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
