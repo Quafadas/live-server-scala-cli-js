@@ -70,6 +70,9 @@ jobs:
       - name: Download deps
         run: ./mill __.prepareOffline
 
+      - name: Resolve ScalaJS worker
+        run: ./mill sjsls.cacheJsLibs.scalaJSWorkerClasspath
+
       - name: scala-cli version
         run: scala-cli compile -e "()" --platform js && scala-cli run -e "()"
 
