@@ -10,6 +10,8 @@ on:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   FORCE_COLOR: '1'
+  COURSIER_CACHE_ACTION_CACHE_VERSION: 1   # increment this value to invalidate the cache
+
 
 concurrency:
   group: ${{ github.workflow }} @ ${{ github.ref }}
