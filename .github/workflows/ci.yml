@@ -10,7 +10,7 @@ on:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   FORCE_COLOR: '1'
-  COURSIER_CACHE_ACTION_CACHE_VERSION: 4   # increment this value to invalidate the cache
+  COURSIER_CACHE_ACTION_CACHE_VERSION: 5   # increment this value to invalidate the cache
 
 concurrency:
   group: ${{ github.workflow }} @ ${{ github.ref }}
@@ -70,8 +70,10 @@ jobs:
       - name: Download deps
         run: ./mill __.prepareOffline
 
-      - name: Resolve ScalaJS worker
-        run: ./mill sjsls.cacheJsLibs.scalaJSWorkerClasspath
+      - name: Pre-fetch ScalaJS linker deps and integration test deps
+        run: |
+          ./mill sjsls.cacheJsLibs.fastLinkJS
+          cs fetch org.scala-js:scalajs-dom_sjs1_3:2.8.0 io.github.quafadas:vecxt_sjs1_3:0.0.38
 
       - name: scala-cli version
         run: scala-cli compile -e "()" --platform js && scala-cli run -e "()"
