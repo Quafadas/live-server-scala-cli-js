@@ -16,7 +16,7 @@ object MemWasmTests extends TestSuite:
         override def scalaJSExperimentalUseWebAssembly = true
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::17.2.1"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -60,7 +60,7 @@ object MemWasmTests extends TestSuite:
         override def scalaJSExperimentalUseWebAssembly = true
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::17.2.1"
         )
 
         lazy val millDiscover = Discover[this.type]

@@ -19,7 +19,7 @@ object MemJsTests extends TestSuite:
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::17.2.1"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -81,7 +81,7 @@ object MemJsTests extends TestSuite:
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::17.2.1"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -136,7 +136,7 @@ object MemJsTests extends TestSuite:
         override def scalaJSMinify = false
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::17.2.1"
         )
 
         lazy val millDiscover = Discover[this.type]
