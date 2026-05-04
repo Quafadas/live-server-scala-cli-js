@@ -130,6 +130,25 @@ trait PlaywrightTest extends CatsEffectSuite:
     .withShutdownTimeout(1.millis)
     .build
 
+    // Hopefully, this will download the dependencies and start the server before the live server test starts.
+    // Following tests will, we hope, use the dependancy cache...
+    ResourceFunFixture {
+			files.flatMap {
+				dir =>
+					val lsc = LiveServerConfig(
+						baseDir = Some(dir.toString),
+						stylesDir = Some(styleDir(dir).toString),
+						port = Port.fromInt(basePort).get,
+						openBrowserAt = "",
+						preventBrowserOpen = true
+					)
+					LiveServer.main(lsc).map((_, dir, lsc.port))
+			}
+		}.test("deps resolve") {
+			(_, testDir, port) =>
+				IO.sleep(1.second)
+		}
+
   ResourceFunFixture {
     files.flatMap {
       dir =>
