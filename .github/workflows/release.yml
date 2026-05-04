@@ -24,7 +24,7 @@ jobs:
       - uses: coursier/cache-action@v8
       - uses: coursier/setup-action@main
         with:
-          jvm: temurin@25
+          jvm: temurin@21
 
       - name: Build the binary
         run: mill jsls.native.nativeLink
@@ -51,7 +51,7 @@ jobs:
       - uses: coursier/cache-action@v8
       - uses: coursier/setup-action@main
         with:
-          jvm: temurin@25
+          jvm: temurin@21
 
 
       - name: Build the binary
@@ -88,7 +88,7 @@ jobs:
       - uses: coursier/cache-action@v8
       - uses: coursier/setup-action@main
         with:
-          jvm: temurin@25
+          jvm: temurin@21
 
       # See https://github.com/scala-native/scala-native/blob/master/.github/actions/windows-setup-env/action.yml#L14 SN_RELE
       # for details
