@@ -67,7 +67,7 @@ jobs:
         run: ./mill PlaywrightSetup install --with-deps
 
       - name: compile
-        run: ./mill __.compile
+        run: ./mill __.prepareOffline
 
       - name: scala-cli version
         run: scala-cli compile -e "()" --platform js && scala-cli run -e "()"
