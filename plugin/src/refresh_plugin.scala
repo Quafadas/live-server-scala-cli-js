@@ -197,12 +197,16 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     true
   }
 
+  def serverLog = Task {
+    false
+  }
+
   /** Path to write server logs to. When set, logs go to this file instead of the console — useful because Mill watch
     * mode captures stdout/stderr per-task, making background server output invisible between evaluations. Example
     * ```override def logFile = Task { Some(PathRef(Task.dest / "sjsls.log")) }```
     */
   def logFile: Task.Simple[Option[PathRef]] = Task {
-    None
+    if serverLog() then Some(PathRef(Task.dest / "sjsls.log")) else None
   }
 
   /** Stable workspace identifier exposed to Chrome DevTools workspace integration for the lifetime of Mill outputs. */

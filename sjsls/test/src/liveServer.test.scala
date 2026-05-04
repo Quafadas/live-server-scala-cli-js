@@ -9,6 +9,8 @@ import org.http4s.Uri
 import org.http4s.dsl.io.*
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.ember.server.EmberServerBuilder
+import scala.concurrent.duration.Duration
+import java.util.concurrent.TimeUnit
 
 import com.comcast.ip4s.Port
 import com.microsoft.playwright.*
@@ -67,6 +69,8 @@ class ChromeSuite extends PlaywrightTest:
 end ChromeSuite
 
 trait PlaywrightTest extends CatsEffectSuite:
+
+  override val munitTimeout = Duration(2, TimeUnit.MINUTES)
 
   var basePort: Int = uninitialized
   var backendPort: Int = uninitialized
@@ -327,6 +331,7 @@ def helloWorldCode(greet: String) = s"""
 //> using scala ${sjsls.BuildInfo.scalaVersion}
 //> using platform js
 //> using jsVersion ${sjsls.BuildInfo.scalaJsVersion}
+//> using jvm system
 
 //> using dep org.scala-js::scalajs-dom::${sjsls.BuildInfo.scalaJsDom}
 //> using dep com.raquo::laminar::${sjsls.BuildInfo.laminar}

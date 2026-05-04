@@ -1,0 +1,31 @@
+package build.sjsls_routes
+
+import build.*
+import mill.*
+import mill.scalalib.*
+import mill.scalanativelib.*
+import mill.scalalib.publish.*
+
+object `package` extends Module:
+
+  trait SharedRoutesModule extends FormatFixPublish with PlatformScalaModule:
+    def mvnDeps = super.mvnDeps() ++ Seq(
+      mvn"org.http4s::http4s-core:${V.http4sVersion}",
+      mvn"org.http4s::http4s-client:${V.http4sVersion}",
+      mvn"org.http4s::http4s-server:${V.http4sVersion}",
+      mvn"org.http4s::http4s-dsl::${V.http4sVersion}",
+      mvn"com.outr::scribe-cats::${V.scribeVersion}",
+      V.scalaTags
+    )
+    def scalaVersion: T[String] = V.scalaLts
+
+  object jvm extends SharedRoutesModule:
+    object test extends Testy with ScalaTests:
+      def mvnDeps = super.mvnDeps() ++ build.sjsls.jvm.mvnDeps()
+
+  object native extends SharedRoutesModule with ScalaNativeModule:
+    def scalaNativeVersion = build.V.scalaNativeVersion
+    object test extends Testy with ScalaTests with ScalaNativeTests:
+      def mvnDeps = super.mvnDeps() ++ build.sjsls.native.mvnDeps()
+
+end `package`

@@ -11,3 +11,5 @@ out
 .scalex
 .scalex/index.bin
 scripts/cellar
+mill.*
+!mill

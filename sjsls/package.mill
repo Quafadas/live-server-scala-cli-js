@@ -4,78 +4,106 @@ import build.*
 import mill.*
 import mill.scalalib.*
 import mill.scalajslib.*
+import mill.scalanativelib.*
 import mill.scalalib.publish.*
 import mill.contrib.buildinfo.BuildInfo
 import mill.api.Task.Simple
 import scala.util.Try
-object `package` extends FormatFixPublish:
 
-  override def scalaVersion = V.scalaLts
-
+trait SjslsPlatformModule extends PlatformScalaModule with FormatFixPublish:
   def mvnDeps = super.mvnDeps() ++ Seq(
     mvn"org.http4s::http4s-ember-server::${V.http4sVersion}",
     mvn"org.http4s::http4s-ember-client::${V.http4sVersion}",
-    mvn"org.http4s::http4s-scalatags::0.25.2",
+    mvn"org.http4s::http4s-scalatags::${V.http4sScalaTags}",
     mvn"io.circe::circe-core::${V.circeVersion}",
     mvn"io.circe::circe-generic::${V.circeVersion}",
     mvn"co.fs2::fs2-io::${V.fs2}",
     V.scalaTags,
-    mvn"com.monovore::decline::2.5.0",
-    mvn"com.monovore::decline-effect::2.5.0"
+    mvn"com.monovore::decline::${V.decline}",
+    mvn"com.monovore::decline-effect::${V.decline}"
   )
 
-  def moduleDeps = Seq(routes)
+  override def scalaVersion = V.scalaLts
 
-  def artifactName = "sjsls"
+object `package` extends Module:
 
-  object test extends Testy with ScalaTests with BuildInfo:
-    val name = "sjsls"
-    val buildInfoPackageName = "sjsls"
-    def buildInfoMembers = Seq(
-      BuildInfo.Value("laminar", V.laminar),
-      BuildInfo.Value("scalaJsDom", V.scalaJsDom),
-      BuildInfo.Value("scalaJsVersion", V.scalaJs),
-      BuildInfo.Value("scalaVersion", V.scalaLts)
-    )
-    def mvnDeps = super.mvnDeps() ++ sjsls.mvnDeps() ++ Seq(
-      mvn"com.microsoft.playwright:playwright:${V.pwV}",
-      mvn"com.microsoft.playwright:driver-bundle:${V.pwV}"
-    )
-    override def resources = super.resources()
+  object jvm extends SjslsPlatformModule:
+    def moduleDeps = Seq(sjsls_routes.jvm)
 
-    override def forkEnv: Simple[Map[String, String]] = Task {
-      squattyServer()
-      super.forkEnv()
-    }
+    def artifactName = "sjsls"
 
-    def squattyServer = Task.Worker {
-      println("Starting up a zombie server on port 6789")
-      Try {
-        os.write.over(Task.dest / "hi.md", "hi")
-        os.spawn(
-          cmd = ("jwebserver", "-p", "6789"),
-          cwd = Task.dest
-        )
+    object test extends Testy with ScalaTests with BuildInfo:
+      val name = "sjsls"
+      val buildInfoPackageName = "sjsls"
+      def buildInfoMembers = Seq(
+        BuildInfo.Value("laminar", V.laminar),
+        BuildInfo.Value("scalaJsDom", V.scalaJsDom),
+        BuildInfo.Value("scalaJsVersion", V.scalaJs),
+        BuildInfo.Value("scalaVersion", V.scalaLts)
+      )
+      def mvnDeps = super.mvnDeps() ++ sjsls.jvm.mvnDeps() ++ Seq(
+        mvn"com.microsoft.playwright:playwright:${V.pwV}",
+        mvn"com.microsoft.playwright:driver-bundle:${V.pwV}"
+      )
+      override def resources = super.resources()
+
+      override def forkEnv: Simple[Map[String, String]] = Task {
+        squattyServer()
+        super.forkEnv()
       }
-      Task.dest
-    }
 
-    override def runClasspath = Task {
-      sjsls.cacheJsLibs.resolvedMvnDeps()
-      super.runClasspath()
-    }
+      def squattyServer = Task.Worker {
+        println("Starting up a zombie server on port 6789")
+        Try {
+          os.write.over(Task.dest / "hi.md", "hi")
+          os.spawn(
+            cmd = ("jwebserver", "-p", "6789"),
+            cwd = Task.dest
+          )
+        }
+        Task.dest
+      }
 
-  end test
+      override def runClasspath = Task {
+        sjsls.jvm.cacheJsLibs.resolvedMvnDeps()
+        sjsls.jvm.cacheJsLibsLts.resolvedMvnDeps()
+        super.runClasspath()
+      }
 
-  object cacheJsLibs extends ScalaJSModule:
-    def scalaVersion = V.scalaVersion
-    def scalaJSVersion = V.scalaJs
-    def testFramework = "munit.Framework"
-    def mvnDeps = super.mvnDeps() ++ Seq(
-      mvn"org.scala-js::scalajs-dom::${V.scalaJsDom}",
-      mvn"com.raquo::laminar::${V.laminar}"
+    end test
+
+    object cacheJsLibs extends ScalaJSModule:
+      def scalaVersion = V.scalaVersion
+      def scalaJSVersion = V.scalaJs
+      def testFramework = "munit.Framework"
+      def mvnDeps = super.mvnDeps() ++ Seq(
+        mvn"org.scala-js::scalajs-dom::${V.scalaJsDom}",
+        mvn"com.raquo::laminar::${V.laminar}"
+      )
+    end cacheJsLibs
+
+    object cacheJsLibsLts extends ScalaJSModule:
+      def scalaVersion = V.scalaLts
+      def scalaJSVersion = V.scalaJs
+      def testFramework = "munit.Framework"
+      def mvnDeps = super.mvnDeps() ++ Seq(
+        mvn"org.scala-js::scalajs-dom::${V.scalaJsDom}",
+        mvn"com.raquo::laminar::${V.laminar}"
+      )
+    end cacheJsLibsLts
+
+  object native extends SjslsPlatformModule with ScalaNativeModule:
+    override def mvnDeps = super.mvnDeps() ++ Seq(
+      mvn"com.github.lolgab::scala-native-crypto::0.3.0"
     )
-  end cacheJsLibs
+    def nativeLinkingOptions = super.nativeLinkingOptions() ++ Seq(
+      // Homebrew OpenSSL: /opt/homebrew on Apple Silicon, /usr/local on Intel
+      "-L/opt/homebrew/opt/openssl@3/lib",
+      "-L/opt/homebrew/Cellar/s2n/1.7.2",
+      // "-L/usr/local/opt/openssl@3/lib"
+    )
+    override def scalaNativeVersion = V.scalaNativeVersion
+    def moduleDeps = Seq(sjsls_routes.native)
 
   // def scalaNativeVersion = "0.4.17" // aspirational :-)
 end `package`

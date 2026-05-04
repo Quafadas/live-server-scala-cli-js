@@ -16,6 +16,7 @@ object `package` extends ScalaModule with FormatFixPublish:
 
   override def artifactName = "sjsls_plugin"
 
+  // Something about this is sketchy, and needs to match mills internal versions to work.
   def mvnDeps = Task {
     super.mvnDeps() ++
       Seq(
@@ -23,12 +24,13 @@ object `package` extends ScalaModule with FormatFixPublish:
         mvn"com.lihaoyi::mill-libs-scalajslib-config-1:$millVersion",
         mvn"co.fs2:fs2-io_3:${V.fs2}",
         mvn"org.scala-js:scalajs-linker_2.13:${V.scalaJs}",
+        // mvn"org.scala-js:scalajs-js-envs_2.13:1.5.0", // this has to match the version bundled with this version of mill :-/
         mvn"org.scala-js:scalajs-js-envs_2.13:1.4.0",
         mvn"org.lz4:lz4-java:1.8.1"
       )
   }
 
-  def moduleDeps = Seq(build.sjsls)
+  def moduleDeps = Seq(build.sjsls.jvm)
 
   def artifactSuffix = s"${platformSuffix()}_${scalaArtefactVersion()}"
 
@@ -49,8 +51,13 @@ object `package` extends ScalaModule with FormatFixPublish:
   }
 
   object test extends ScalaTests with TestModule.Munit:
+    override def runClasspath = Task {
+      build.sjsls.jvm.cacheJsLibs.resolvedMvnDeps()
+      build.sjsls.jvm.cacheJsLibsLts.resolvedMvnDeps()
+      super.runClasspath()
+    }
     def mvnDeps = super.mvnDeps() ++ Seq(
-      mvn"org.scalameta::munit::1.1.0"
+      mvn"org.scalameta::munit::${V.munit}",
     )
   end test
 
