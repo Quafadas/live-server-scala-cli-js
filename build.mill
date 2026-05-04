@@ -1,4 +1,4 @@
-//| mill-version: 1.1.5
+//| mill-version: 1.1.4
 //| mill-jvm-version: 21
 //| mvnDeps:
 //| - com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION
@@ -18,7 +18,7 @@ import io.github.quafadas.millSite.SiteModule
 import mill.util.VcsVersion
 
 object V:
-  val scalaLts = "3.3.6"
+  val scalaLts = "3.3.7"
   val pwV = build.pwV
   val http4sVersion = "0.23.34"
   val circeVersion = "0.14.15"
