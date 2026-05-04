@@ -76,7 +76,7 @@ jobs:
         run: |
           HELLO_WORLD_FILE=$(./mill show PlaywrightSetup.helloWorldCode | sed -n 's/^"\(.*\)"$/\1/p')
           test -n "$HELLO_WORLD_FILE"
-          scala-cli package "$HELLO_WORLD_FILE" -o ${PWD}/tmp -f
+          scala-cli package "$HELLO_WORLD_FILE" -o ${PWD}/tmp -f --power
 
       - name: Test
         run: ./mill __.test
