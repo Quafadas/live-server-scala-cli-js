@@ -2,10 +2,10 @@
 set -e
 
 # Extract Mill version from build.mill
-MILL_VERSION=$(head -1 build.mill | grep -oP '(?<=mill-version:\s)\d+\.\d+\.\d+')
+MILL_VERSION=1.1.6
 
 # Extract Playwright version from playwrightVersion.mill
-PLAYWRIGHT_VERSION=$(head -1 playwrightVersion.mill | grep -oP '(?<=val version\s=\s")\d+\.\d+\.\d+')
+PLAYWRIGHT_VERSION=1.58.0
 
 # Put millw on the path, so we can call 'mill' from the command line.
 curl -L -o /usr/local/bin/mill https://repo1.maven.org/maven2/com/lihaoyi/mill-dist/${MILL_VERSION}/mill-dist-${MILL_VERSION}-mill.sh && chmod +x /usr/local/bin/mill
