@@ -15,12 +15,12 @@ object SiteJsTests extends TestSuite:
   def tests: Tests = Tests {
     test("fullLinkJS emits content-hashed files with correct cross-module references") {
       object build extends TestRootModule with FileBasedContentHashScalaJSModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.2.1"
+          mvn"com.raquo::laminar::${V2.laminarVersion}"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -83,11 +83,11 @@ object SiteJsTests extends TestSuite:
       */
     test("Import map and smallModulesFor populated from sub task") {
       object build extends TestRootModule with ScalaJsRefreshModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
 
         override def smallModulesFor = Seq("webapp")
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.2.1"
+          mvn"com.raquo::laminar::${V2.laminarVersion}"
         )
 
         override def importMap = Map("@foo" -> "https://cdn.skypack.dev/foo/")
@@ -117,12 +117,12 @@ object SiteJsTests extends TestSuite:
 
     test("Hashed JS files have correct cross-module references") {
       object build extends TestRootModule with FileBasedContentHashScalaJSModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.2.1"
+          mvn"com.raquo::laminar::${V2.laminarVersion}"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -180,20 +180,20 @@ object SiteJsTests extends TestSuite:
 
     test("fullLinkJS terser-minifies JS output when scalaJSMinify is true") {
       object buildMinify extends TestRootModule with FileBasedContentHashScalaJSModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def scalaJSMinify: Simple[Boolean] = true
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
-        override def mvnDeps = Seq(mvn"com.raquo::laminar::17.2.1")
+        override def mvnDeps = Seq(mvn"com.raquo::laminar::${V2.laminarVersion}")
         lazy val millDiscover = Discover[this.type]
       end buildMinify
 
       object buildNoMinify extends TestRootModule with FileBasedContentHashScalaJSModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def scalaJSMinify: Simple[Boolean] = false
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
-        override def mvnDeps = Seq(mvn"com.raquo::laminar::17.2.1")
+        override def mvnDeps = Seq(mvn"com.raquo::laminar::${V2.laminarVersion}")
         lazy val millDiscover = Discover[this.type]
       end buildNoMinify
 

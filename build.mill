@@ -1,4 +1,4 @@
-//| mill-version: 1.1.4
+//| mill-version: 1.1.6
 //| mill-jvm-version: system
 //| mvnDeps:
 //| - com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION
@@ -20,13 +20,13 @@ import mill.util.VcsVersion
 object V:
   val scalaLts = "3.3.7"
   val pwV = build.pwV
-  val http4sVersion = "0.23.34"
-  val circeVersion = "0.14.15"
+  val http4sVersion = "0.23.30"
+  val circeVersion = "0.14.10"
   val scalaVersion = "3.8.3"
   val laminar = "17.2.1"
   val scalaJsDom = "2.8.1"
   val scalaJs = "1.21.0"
-  val fs2 = "3.13.0"
+  val fs2 = "3.11.0"
   val scalaTags = mvn"com.lihaoyi::scalatags::0.13.1"
   val millLibs = mvn"com.lihaoyi::mill-libs:$millVersion"
   val scribeVersion = "3.19.0"
@@ -80,4 +80,52 @@ object PlaywrightSetup extends JavaModule:
   )
 
   def mainClass = Some("com.microsoft.playwright.CLI")
+
+  def helloWorldCode = Task {
+    val code = s"""
+  //> using scala ${V.scalaVersion}
+  //> using platform js
+  //> using jsVersion ${V.scalaJs}
+
+  //> using dep org.scala-js::scalajs-dom::${V.scalaJsDom}
+  //> using dep com.raquo::laminar::${V.laminar}
+
+  //> using jsModuleKind es
+  //> using jsModuleSplitStyleStr smallmodulesfor
+  //> using jsSmallModuleForPackage webapp
+
+  package webapp
+
+  import org.scalajs.dom
+  import org.scalajs.dom.document
+  import com.raquo.laminar.api.L.{*, given}
+
+  @main
+  def main: Unit =
+    renderOnDomContentLoaded(
+      dom.document.getElementById("app"),
+      interactiveApp
+    )
+
+  def interactiveApp =
+    val hiVar = Var("World")
+    div(
+      h1(
+        s"boo",
+        child.text <-- hiVar.signal
+      ),
+      p("This is a simple example of a Laminar app."),
+      // https://demo.laminar.dev/app/form/controlled-inputs
+      input(
+        typ := "text",
+        controlled(
+          value <-- hiVar.signal,
+          onInput.mapToValue --> hiVar.writer
+        )
+      )
+    )
+  """
+    os.write.over(Task.dest / "HelloWorld.scala", code)
+    Task.dest / "HelloWorld.scala"
+  }
 end PlaywrightSetup
