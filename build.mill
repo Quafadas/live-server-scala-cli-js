@@ -68,7 +68,7 @@ trait Testy extends TestModule.Munit with FormatFix:
   def mvnDeps = super.mvnDeps() ++ build.sjsls.jvm.mvnDeps() ++ Seq(
     mvn"org.typelevel::munit-cats-effect::${V.munitCatsEffect}",
     mvn"org.scalameta::munit::${V.munit}",
-    mvn"com.lihaoyi::os-lib:${V.osLib}"
+    mvn"com.lihaoyi::os-lib::${V.osLib}"
   )
 end Testy
 
