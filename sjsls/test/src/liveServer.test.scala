@@ -331,6 +331,7 @@ def helloWorldCode(greet: String) = s"""
 //> using scala ${sjsls.BuildInfo.scalaVersion}
 //> using platform js
 //> using jsVersion ${sjsls.BuildInfo.scalaJsVersion}
+//> using jvm system
 
 //> using dep org.scala-js::scalajs-dom::${sjsls.BuildInfo.scalaJsDom}
 //> using dep com.raquo::laminar::${sjsls.BuildInfo.laminar}
