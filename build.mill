@@ -18,7 +18,7 @@ import io.github.quafadas.millSite.SiteModule
 import mill.util.VcsVersion
 
 object V:
-  val scalaLts = "3.3.6"
+  val scalaLts = "3.3.7"
   val pwV = build.pwV
   val http4sVersion = "0.23.30"
   val circeVersion = "0.14.10"
