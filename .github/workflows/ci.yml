@@ -10,6 +10,7 @@ on:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   FORCE_COLOR: '1'
+  COURSIER_CACHE_ACTION_CACHE_VERSION: 5   # increment this value to invalidate the cache
 
 concurrency:
   group: ${{ github.workflow }} @ ${{ github.ref }}
@@ -66,11 +67,22 @@ jobs:
       - name: Install Playwright
         run: ./mill PlaywrightSetup install --with-deps
 
-      - name: compile
-        run: ./mill __.compile
+      - name: Download deps
+        run: ./mill __.prepareOffline
+
+      - name: Pre-fetch ScalaJS linker deps and integration test deps
+        run: |
+          ./mill sjsls.cacheJsLibs.fastLinkJS
+          cs fetch org.scala-js:scalajs-dom_sjs1_3:2.8.0 io.github.quafadas:vecxt_sjs1_3:0.0.38
 
       - name: scala-cli version
         run: scala-cli compile -e "()" --platform js && scala-cli run -e "()"
+
+      - name: scala-cli setup part deux
+        run: |
+          HELLO_WORLD_FILE=$(./mill show PlaywrightSetup.helloWorldCode | sed -n 's/^"\(.*\)"$/\1/p')
+          test -n "$HELLO_WORLD_FILE"
+          scala-cli package "$HELLO_WORLD_FILE" -o ${PWD}/tmp -f --power
 
       - name: Test
         run: ./mill __.test

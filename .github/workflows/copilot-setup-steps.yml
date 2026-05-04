@@ -49,6 +49,25 @@ jobs:
       - name: Install binaryen
         run: sudo apt-get update && sudo apt-get install -y binaryen
 
-      # This should resolve a JVM, download dependancies and leave mill ready for use.
+      # Bootstrap the Mill JVM so we can update its truststore before building.
+      # mill-jvm-version causes Mill to download its own Adoptium JVM into the coursier
+      # arc cache. That JVM has its own cacerts that may be missing proxy CA certificates.
+      - name: Bootstrap Mill JVM
+        run: ./mill --no-daemon version
+
+      # Import any proxy CA certificates (e.g. mkcert) into the Mill-managed JVM truststore.
+      # The Mill-managed JVM lives in the coursier arc cache and has its own cacerts file
+      # separate from the system JVM. This step is a no-op in environments without a proxy.
+      - name: Trust proxy CA in Mill JVM
+        run: |
+          for cert in /etc/ssl/certs/mkcert_development_CA_*.pem; do
+            [ -f "$cert" ] || continue
+            find "$HOME/.cache/coursier/arc" -name "cacerts" -type f | while read store; do
+              keytool -import -noprompt -alias mkcert-dev-ca \
+                -file "$cert" -keystore "$store" -storepass changeit 2>/dev/null || true
+            done
+          done
+
+      # This should resolve a JVM, download dependencies and leave mill ready for use.
       - name: setup mill
-        run: ./mill sjsls.compiledClassesAndSemanticDbFiles
+        run: ./mill __.compiledClassesAndSemanticDbFiles

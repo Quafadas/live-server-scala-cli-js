@@ -12,11 +12,11 @@ object SiteWasmTests extends TestSuite:
   def tests: Tests = Tests {
     test("fastLinkJS WASM output has a hashed wasm file") {
       object build extends TestRootModule with InMemoryFastLinkHashScalaJSModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def scalaJSExperimentalUseWebAssembly = true
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::${V2.laminarVersion}"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -57,11 +57,11 @@ object SiteWasmTests extends TestSuite:
 
     test("InMemoryFastLinkHashScalaJSModule fullLinkJS runs wasm-opt and hashes the optimised binary") {
       object build extends TestRootModule with InMemoryFastLinkHashScalaJSModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def scalaJSExperimentalUseWebAssembly = true
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::${V2.laminarVersion}"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -112,11 +112,11 @@ object SiteWasmTests extends TestSuite:
 
     test("FileBasedContentHashScalaJSModule fullLinkJS runs wasm-opt and hashes the optimised binary") {
       object build extends TestRootModule with FileBasedContentHashScalaJSModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def scalaJSExperimentalUseWebAssembly = true
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::${V2.laminarVersion}"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -164,11 +164,11 @@ object SiteWasmTests extends TestSuite:
 
     test("FileBasedContentHashScalaJSModule_minification_wasm") {
       object build extends TestRootModule with FileBasedContentHashScalaJSModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def scalaJSExperimentalUseWebAssembly = true
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::${V2.laminarVersion}"
         )
 
         lazy val millDiscover = Discover[this.type]
