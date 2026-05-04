@@ -19,7 +19,7 @@ object WebAppModuleTests extends TestSuite:
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::17.2.1"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -88,7 +88,7 @@ object WebAppModuleTests extends TestSuite:
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::17.2.1"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -121,7 +121,7 @@ object WebAppModuleTests extends TestSuite:
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::17.2.1"
         )
 
         override def assetsDir = assetsTempDir
@@ -156,7 +156,7 @@ object WebAppModuleTests extends TestSuite:
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::17.2.1"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -215,7 +215,7 @@ object WebAppModuleTests extends TestSuite:
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::17.2.1"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -243,7 +243,7 @@ object WebAppModuleTests extends TestSuite:
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::17.2.1"
         )
 
         override def assetsDir = assetsTempDir

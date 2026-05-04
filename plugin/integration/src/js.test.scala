@@ -20,7 +20,7 @@ object SiteJsTests extends TestSuite:
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::17.2.1"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -87,7 +87,7 @@ object SiteJsTests extends TestSuite:
 
         override def smallModulesFor = Seq("webapp")
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::17.2.1"
         )
 
         override def importMap = Map("@foo" -> "https://cdn.skypack.dev/foo/")
@@ -122,7 +122,7 @@ object SiteJsTests extends TestSuite:
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::17.2.1"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -184,7 +184,7 @@ object SiteJsTests extends TestSuite:
         override def scalaJSMinify: Simple[Boolean] = true
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
-        override def mvnDeps = Seq(mvn"com.raquo::laminar::17.0.0")
+        override def mvnDeps = Seq(mvn"com.raquo::laminar::17.2.1")
         lazy val millDiscover = Discover[this.type]
       end buildMinify
 
@@ -193,7 +193,7 @@ object SiteJsTests extends TestSuite:
         override def scalaJSMinify: Simple[Boolean] = false
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
-        override def mvnDeps = Seq(mvn"com.raquo::laminar::17.0.0")
+        override def mvnDeps = Seq(mvn"com.raquo::laminar::17.2.1")
         lazy val millDiscover = Discover[this.type]
       end buildNoMinify
 
