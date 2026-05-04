@@ -2,7 +2,7 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
 {
 
-  "image": "mcr.microsoft.com/devcontainers/base:jammy",
+  "image": "mcr.microsoft.com/devcontainers/base:noble",
 	"customizations": {
 		"vscode": {
 			"extensions": [
@@ -25,14 +25,14 @@
     "ghcr.io/devcontainers/features/java:1": {
       "version": 21
     },
-    "ghcr.io/devcontainers-contrib/features/scalacli-sdkman:2":{},
+    "ghcr.io/devcontainers-extra/features/scalacli-sdkman:2":{},
     "ghcr.io/guiyomh/features/just:0": {},
     "./features/mill": {}
   //   //, "ghcr.io/devcontainers-contrib/features/scalacli-sdkman:2": {}
   },
 
   // Try do do as much as possible in the image, so that the container starts up quickly
-  "onCreateCommand": "mill __.prepareOffline && mill __.compiledClassesAndSemanticDbFiles"
+  "onCreateCommand": "./mill __.prepareOffline && ./mill __.compiledClassesAndSemanticDbFiles"
 
   // // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
