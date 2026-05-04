@@ -14,12 +14,12 @@ object WebAppModuleTests extends TestSuite:
   def tests: Tests = Tests {
     test("ScalaJsWebAppModule siteGen generates HTML with hashed script references") {
       object build extends TestRootModule with ScalaJsWebAppModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.2.1"
+          mvn"com.raquo::laminar::${V2.laminarVersion}"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -83,12 +83,12 @@ object WebAppModuleTests extends TestSuite:
       // The 'simple' resource folder has no assets/ subdirectory, so assetsDir
       // resolves to a non-existent path — exercises the optional-assets guard.
       object build extends TestRootModule with ScalaJsWebAppModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.2.1"
+          mvn"com.raquo::laminar::${V2.laminarVersion}"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -121,7 +121,7 @@ object WebAppModuleTests extends TestSuite:
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.2.1"
+          mvn"com.raquo::laminar::${V2.laminarVersion}"
         )
 
         override def assetsDir = assetsTempDir
@@ -151,12 +151,12 @@ object WebAppModuleTests extends TestSuite:
 
     test("publish generates correct index.html referencing minified JS and omits SSE script") {
       object build extends TestRootModule with ScalaJsWebAppModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.2.1"
+          mvn"com.raquo::laminar::${V2.laminarVersion}"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -215,7 +215,7 @@ object WebAppModuleTests extends TestSuite:
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.2.1"
+          mvn"com.raquo::laminar::${V2.laminarVersion}"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -238,12 +238,12 @@ object WebAppModuleTests extends TestSuite:
       os.write(assetsTempDir / "fonts" / "font.woff2", "fake-font")
 
       object build extends TestRootModule with ScalaJsWebAppModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.2.1"
+          mvn"com.raquo::laminar::${V2.laminarVersion}"
         )
 
         override def assetsDir = assetsTempDir
