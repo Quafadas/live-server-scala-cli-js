@@ -29,8 +29,7 @@ jobs:
     steps:
       - uses: taiki-e/install-action@just
 
-      # - uses: coursier/cache-action@v8
-
+      - uses: coursier/cache-action@main
       - uses: coursier/setup-action@main
         with:
           jvm: temurin@21
