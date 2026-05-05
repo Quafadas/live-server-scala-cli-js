@@ -41,7 +41,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install required libraries
-        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libgraphene-1.0-dev libavif-dev s2n openssl
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libgraphene-1.0-dev libavif-dev
 
       - name: Install binaryen (wasm-opt)
         run: |
