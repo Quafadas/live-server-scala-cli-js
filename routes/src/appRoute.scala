@@ -10,15 +10,14 @@ import org.http4s.dsl.io.*
 import org.http4s.headers.`Content-Type`
 import org.http4s.server.staticcontent.FileService
 import org.http4s.server.staticcontent.fileService
-
 import org.typelevel.ci.CIStringSyntax
 
 import fs2.io.file.Files
 
+import scribe.Scribe
+
 import cats.effect.kernel.Async
 import cats.syntax.all.*
-
-import scribe.Scribe
 
 private val hashedPattern = ".*\\.[a-f0-9]{8,}\\..*".r
 
