@@ -18,12 +18,13 @@ object `package` extends Module:
       V.scalaTags
     )
     def scalaVersion: T[String] = V.scalaLts
+  end SharedRoutesModule
 
   object jvm extends SharedRoutesModule:
     object test extends Testy with ScalaTests:
     end test
   end jvm
-      // def mvnDeps = super.mvnDeps() ++ build.sjsls.mvnDeps()
+  // def mvnDeps = super.mvnDeps() ++ build.sjsls.mvnDeps()
 
   object native extends SharedRoutesModule with ScalaNativeModule:
     def scalaNativeVersion = build.V.scalaNativeVersion

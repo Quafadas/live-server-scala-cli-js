@@ -43,6 +43,7 @@ trait FormatFix extends ScalafmtModule with ScalafixModule with ScalaModule:
   override def scalafixIvyDeps: Simple[Seq[Dep]] = Seq(
     mvn"org.polyvariant::SlowInferenceChain:1.0.0"
   )
+end FormatFix
 
 trait FormatFixPublish extends ScalaModule with FormatFix with PublishModule:
   override def scalaVersion = V.scalaVersion
