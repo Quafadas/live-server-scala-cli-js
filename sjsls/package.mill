@@ -96,12 +96,6 @@ object `package` extends Module:
     override def mvnDeps = super.mvnDeps() ++ Seq(
       mvn"com.github.lolgab::scala-native-crypto::0.3.0"
     )
-    def nativeLinkingOptions = super.nativeLinkingOptions() ++ Seq(
-      // Homebrew OpenSSL: /opt/homebrew on Apple Silicon, /usr/local on Intel
-      "-L/opt/homebrew/opt/openssl@3/lib",
-      "-L/opt/homebrew/Cellar/s2n/1.7.2",
-      // "-L/usr/local/opt/openssl@3/lib"
-    )
     override def scalaNativeVersion = V.scalaNativeVersion
     def moduleDeps = Seq(sjsls_routes.native)
 
