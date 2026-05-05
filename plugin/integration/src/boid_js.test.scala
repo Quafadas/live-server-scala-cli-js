@@ -15,14 +15,14 @@ object BoidJsTests extends TestSuite:
   def tests: Tests = Tests {
     test("simple boid example emits content-hashed files with correct cross-module references") {
       object build extends TestRootModule with FileBasedContentHashScalaJSModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
 
         override def scalaJSExperimentalUseWebAssembly = true
 
         override def moduleSplitStyle: Simple[ModuleSplitStyle] = ModuleSplitStyle.FewestModules
 
         override def mvnDeps = Seq(
-          mvn"org.scala-js::scalajs-dom::2.8.1",
+          mvn"org.scala-js::scalajs-dom::${V2.domVersion}",
           mvn"io.github.quafadas::vecxt::0.0.38"
         )
 

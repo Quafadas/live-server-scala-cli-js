@@ -14,12 +14,12 @@ object MemJsTests extends TestSuite:
   def tests: Tests = Tests {
     test("Hashed JS files have correct cross-module references") {
       object build extends TestRootModule with InMemoryFastLinkHashScalaJSModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::${V2.laminarVersion}"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -76,12 +76,12 @@ object MemJsTests extends TestSuite:
 
     test("InMemoryHashScalaJSModule fullLinkJS with scalaJSMinify=true produces smaller JS than fastLinkJS") {
       object build extends TestRootModule with InMemoryFastLinkHashScalaJSModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::${V2.laminarVersion}"
         )
 
         lazy val millDiscover = Discover[this.type]
@@ -130,13 +130,13 @@ object MemJsTests extends TestSuite:
 
     test("InMemoryHashScalaJSModule fullLinkJS with scalaJSMinify=false writes hashed files without terser") {
       object build extends TestRootModule with InMemoryFastLinkHashScalaJSModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
         override def scalaJSMinify = false
 
         override def mvnDeps = Seq(
-          mvn"com.raquo::laminar::17.0.0"
+          mvn"com.raquo::laminar::${V2.laminarVersion}"
         )
 
         lazy val millDiscover = Discover[this.type]
