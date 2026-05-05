@@ -26,7 +26,7 @@ object V:
   val laminar = "17.2.1"
   val scalaJsDom = "2.8.1"
   val scalaJs = "1.21.0"
-  val fs2 = "3.11.0"
+  val fs2 = "3.13.0"
   val scalaTags = mvn"com.lihaoyi::scalatags::0.13.1"
   val millLibs = mvn"com.lihaoyi::mill-libs:$millVersion"
   val scribeVersion = "3.19.0"
