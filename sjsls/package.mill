@@ -98,6 +98,5 @@ object `package` extends Module:
     )
     override def scalaNativeVersion = V.scalaNativeVersion
     def moduleDeps = Seq(sjsls_routes.native)
-
-  // def scalaNativeVersion = "0.4.17" // aspirational :-)
+  end native
 end `package`
