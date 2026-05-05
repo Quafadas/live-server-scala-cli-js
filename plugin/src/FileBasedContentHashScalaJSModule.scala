@@ -3,7 +3,8 @@ package io.github.quafadas.sjsls
 import java.security.MessageDigest
 
 import scala.collection.mutable
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Await
+import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
 import mill.*
