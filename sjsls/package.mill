@@ -112,19 +112,12 @@ object `package` extends Module:
       else if isMac then Seq(
         "-lresolv",
         "-lssl",
-        "-lcrypto",
-        "-ls2n",
         "-L/opt/homebrew/opt/openssl@3/lib",
         "-L/opt/homebrew/opt/s2n/lib"
       )
       else if isLinux then Seq(
-        "-ldl",
-        "-lpthread",
         "-lssl",
-        "-lcrypto",
-        "-ls2n",
         "-lresolv",
-        "-lm",
         "-L/usr/local/lib"
       )
       else ???
