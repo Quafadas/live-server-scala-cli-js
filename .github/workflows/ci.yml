@@ -66,7 +66,7 @@ jobs:
             playwright-${{ runner.os }}-
 
       - name: Install Playwright (browsers + system deps)
-        run: ./mill PlaywrightSetup install --with-deps chrome chromium-headless-shell
+        run: ./mill PlaywrightSetup install --with-deps chromium-headless-shell
 
       - name: formatCheck
         run: ./mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
