@@ -66,12 +66,7 @@ jobs:
             playwright-${{ runner.os }}-
 
       - name: Install Playwright (browsers + system deps)
-        if: steps.cache-pw.outputs.cache-hit != 'true'
         run: ./mill PlaywrightSetup install --with-deps chrome chrome-headless-shell
-
-      - name: Install Playwright system deps (browsers already cached)
-        if: steps.cache-pw.outputs.cache-hit == 'true'
-        run: ./mill PlaywrightSetup install-deps
 
       - name: formatCheck
         run: ./mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
