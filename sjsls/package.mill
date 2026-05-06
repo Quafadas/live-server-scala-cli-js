@@ -81,13 +81,43 @@ object `package` extends Module:
 
   // Can't test playwright stuff here...
   object native extends SjslsPlatformModule with ScalaNativeModule:
+    def isWindows: Boolean =
+      sys.props("os.name").toLowerCase.contains("win")
+
+    def isMac: Boolean =
+      sys.props("os.name").toLowerCase.contains("mac")
+
+    def isLinux: Boolean =
+      sys.props("os.name").toLowerCase.contains("nix") ||
+        sys.props("os.name").toLowerCase.contains("nux")
+
+    def useStaticLinux = sys.env.get("LINUX_STATIC").contains("1")
+
     override def mvnDeps = super.mvnDeps() ++ Seq(
       mvn"com.github.lolgab::scala-native-crypto::0.3.0"
     )
     override def scalaNativeVersion = V.scalaNativeVersion
     def releaseMode = Task{ReleaseMode.ReleaseSize}
     def moduleDeps = Seq(sjsls_routes.native)
-
+    def nativeLinkingOptions =
+      if isWindows then Seq(
+        "-lws2_32"
+      )
+      else if isMac then Seq(
+        "-lresolv",
+        "-L/opt/homebrew/opt/openssl@3/lib",
+        "-L/opt/homebrew/opt/s2n/lib"
+      )
+      else if isLinux then Seq(
+        "-ldl",
+        "-lpthread"
+      )
+      else ???
+    override def nativeLTO: Simple[LTO] =
+      if isWindows then LTO.Full
+      else if isMac then LTO.Full
+      else if isLinux then LTO.Thin
+      else ???
   end native
 
   object cacheJsLibs extends ScalaJSModule:
@@ -98,6 +128,8 @@ object `package` extends Module:
       mvn"org.scala-js::scalajs-dom::${V.scalaJsDom}",
       mvn"com.raquo::laminar::${V.laminar}"
     )
+
+
   end cacheJsLibs
 
   // def scalaNativeVersion = "0.4.17" // aspirational :-)
