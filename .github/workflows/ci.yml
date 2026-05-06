@@ -11,6 +11,7 @@ env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   FORCE_COLOR: '1'
   COURSIER_CACHE_ACTION_CACHE_VERSION: 5   # increment this value to invalidate the cache
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
 concurrency:
   group: ${{ github.workflow }} @ ${{ github.ref }}
@@ -66,7 +67,7 @@ jobs:
 
       - name: Install Playwright (browsers + system deps)
         if: steps.cache-pw.outputs.cache-hit != 'true'
-        run: ./mill PlaywrightSetup install --with-deps
+        run: ./mill PlaywrightSetup install --with-deps chrome chrome-headless-shell
 
       - name: Install Playwright system deps (browsers already cached)
         if: steps.cache-pw.outputs.cache-hit == 'true'
