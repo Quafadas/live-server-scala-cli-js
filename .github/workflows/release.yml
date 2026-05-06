@@ -57,7 +57,7 @@ jobs:
           jvm: temurin@21
 
       - name: Build the binary
-        run: mill jsls.native.nativeLink
+        run: ./mill sjsls.native.nativeLink
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -88,12 +88,12 @@ jobs:
 
 
       - name: Build the binary
-        run: sbt buildBinaryPlatformRelease
+        run: ./mill sjsls.native.nativeLink
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          path: out/release/*
+          path: out/sjsls/native/nativeLink.dest/*
           name: ${{ matrix.os }}-linux-binaries
           if-no-files-found: error
 
@@ -145,13 +145,13 @@ jobs:
           clang --version
 
       - name: Build binary (windows)
-        run: sbt buildBinaryPlatformRelease
+        run: ./mill sjsls.native.nativeLink
         shell: cmd
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          path: out/release/*
+          path: out/sjsls/native/nativeLink.dest/*
           name: windows-binaries
           if-no-files-found: error
 

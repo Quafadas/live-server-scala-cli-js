@@ -8,6 +8,9 @@ import mill.scalalib.publish.*
 import mill.contrib.buildinfo.BuildInfo
 import mill.api.Task.Simple
 import scala.util.Try
+import mill.scalanativelib.*
+import scalanativelib.api.*
+
 object `package` extends Module:
 
   trait SjslsPlatformModule extends PlatformScalaModule with FormatFixPublish:
@@ -27,10 +30,10 @@ object `package` extends Module:
     )
 
     def artifactName = "sjsls"
+  end SjslsPlatformModule
 
   object jvm extends SjslsPlatformModule:
     def moduleDeps = Seq(build.sjsls_routes.jvm)
-
     object test extends Testy with ScalaTests with BuildInfo:
       val name = "sjsls"
       val buildInfoPackageName = "sjsls"
@@ -46,9 +49,9 @@ object `package` extends Module:
       )
       override def resources = super.resources()
 
-      /**
-       * Starts a server which squats on the port we want to test with, and busts mill's cache to ensure it's always started in advance...
-       */
+      /** Starts a server which squats on the port we want to test with, and busts mill's cache to ensure it's always
+        * started in advance...
+        */
       override def forkEnv: Simple[Map[String, String]] = Task {
         squattyServer()
         super.forkEnv() ++ Map(
@@ -75,6 +78,17 @@ object `package` extends Module:
 
     end test
   end jvm
+
+  // Can't test playwright stuff here...
+  object native extends SjslsPlatformModule with ScalaNativeModule:
+    override def mvnDeps = super.mvnDeps() ++ Seq(
+      mvn"com.github.lolgab::scala-native-crypto::0.3.0"
+    )
+    override def scalaNativeVersion = V.scalaNativeVersion
+    def releaseMode = Task{ReleaseMode.ReleaseSize}
+    def moduleDeps = Seq(sjsls_routes.native)
+
+  end native
 
   object cacheJsLibs extends ScalaJSModule:
     def scalaVersion = V.scalaVersion

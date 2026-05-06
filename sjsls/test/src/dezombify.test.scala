@@ -9,7 +9,7 @@ import munit.CatsEffectSuite
 class DezombieTest extends CatsEffectSuite:
 
   test("That we kill off a zombie server") {
-    val portInt = 6789
+    val portInt = 6789 // Build server starts a zombie server on this port, so we can test dezombification
     val port = Port.fromInt(portInt).get
 
     val lsc = LiveServerConfig(

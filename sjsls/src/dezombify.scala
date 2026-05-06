@@ -103,7 +103,7 @@ private def killProcessesOnPort(port: Port): IO[Unit] =
   else
     // macOS/Linux: use lsof if available, fallback to fuser
     // Exclude the current JVM PID to prevent accidentally killing ourselves.
-    val currentPid = ProcessHandle.current().pid()
+    val currentPid = currentProcessPid()
     val sh = s"""
     |current_pid=$currentPid
     |if command -v lsof >/dev/null 2>&1; then
