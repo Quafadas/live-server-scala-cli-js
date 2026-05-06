@@ -176,7 +176,7 @@ jobs:
         shell: pwsh
 
       - name: Build binary (windows)
-        run: ./mill.bat sjsls.native.nativeLink
+        run: .\mill.bat sjsls.native.nativeLink
         shell: cmd
 
       - name: Upload artifacts
