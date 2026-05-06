@@ -27,9 +27,8 @@ cs launch com.microsoft.playwright:playwright:1.59.0 -M "com.microsoft.playwrigh
 before this test, to make sure that the driver bundles are downloaded. This is done automatically in CI
  */
 
-/**
- * Note: these browsers are _assumed_ to work until I'm told otherwise. Dsiabled due to long CI times.
- */
+/** Note: these browsers are _assumed_ to work until I'm told otherwise. Dsiabled due to long CI times.
+  */
 // class FirefoxSuite extends PlaywrightTest:
 
 //   override def beforeAll(): Unit =
