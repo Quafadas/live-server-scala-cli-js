@@ -101,44 +101,44 @@ jobs:
           require_tests: false
           report_paths: 'out/**/test-report.xml'
 
-  publish:
-    if: github.repository == 'Quafadas/live-server-scala-cli-js' && contains(github.ref, 'refs/tags/')
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@main
-        with:
-          fetch-depth: 0
-          fetch-tags: true
+  # publish:
+  #   if: github.repository == 'Quafadas/live-server-scala-cli-js' && contains(github.ref, 'refs/tags/')
+  #   needs: build
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@main
+  #       with:
+  #         fetch-depth: 0
+  #         fetch-tags: true
 
-      - uses: coursier/cache-action@v8
-      - uses: coursier/setup-action@main
-        with:
-          jvm: temurin@21
-          apps: scala-cli
+  #     - uses: coursier/cache-action@v8
+  #     - uses: coursier/setup-action@main
+  #       with:
+  #         jvm: temurin@21
+  #         apps: scala-cli
 
-      - name: Import GPG key
-        uses: crazy-max/ghaction-import-gpg@v6
-        with:
-          gpg_private_key: ${{ secrets.PGP_SECRET }}
-          passphrase: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
-          git_config_global: true
+  #     - name: Import GPG key
+  #       uses: crazy-max/ghaction-import-gpg@v6
+  #       with:
+  #         gpg_private_key: ${{ secrets.PGP_SECRET }}
+  #         passphrase: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
+  #         git_config_global: true
 
-      - name: Prepare GPG
-        run: |
-          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
-          gpgconf --reload gpg-agent
+  #     - name: Prepare GPG
+  #       run: |
+  #         echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+  #         gpgconf --reload gpg-agent
 
-      - name: List keys
-        run: gpg -K
+  #     - name: List keys
+  #       run: gpg -K
 
-      - name: Publish to Maven Central
-        run: ./mill mill.javalib.SonatypeCentralPublishModule/publishAll --publishArtifacts __.publishArtifacts
-        env:
-          MILL_PGP_PASSPHRASE: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
-          MILL_PGP_SECRET_BASE64: ${{ secrets.PGP_SECRET }}
-          MILL_SONATYPE_PASSWORD: ${{ secrets.PUBLISH_PASSWORD }}
-          MILL_SONATYPE_USERNAME: ${{ secrets.PUBLISH_USER }}
+  #     - name: Publish to Maven Central
+  #       run: ./mill mill.javalib.SonatypeCentralPublishModule/publishAll --publishArtifacts __.publishArtifacts
+  #       env:
+  #         MILL_PGP_PASSPHRASE: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
+  #         MILL_PGP_SECRET_BASE64: ${{ secrets.PGP_SECRET }}
+  #         MILL_SONATYPE_PASSWORD: ${{ secrets.PUBLISH_PASSWORD }}
+  #         MILL_SONATYPE_USERNAME: ${{ secrets.PUBLISH_USER }}
 
   site:
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
