@@ -10,7 +10,8 @@ on:
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   FORCE_COLOR: '1'
-  COURSIER_CACHE_ACTION_CACHE_VERSION: 5   # increment this value to invalidate the cache
+  COURSIER_CACHE_ACTION_CACHE_VERSION: 6   # increment this value to invalidate the cache
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: 1
 
 concurrency:
   group: ${{ github.workflow }} @ ${{ github.ref }}
@@ -52,6 +53,9 @@ jobs:
       - name: Install terser
         run: npm install -g terser
 
+      - name: Download deps
+        run: ./mill __.prepareOffline
+
       - name: Cache Playwright dependencies
         id: cache-pw
         uses: actions/cache@v4
@@ -61,15 +65,11 @@ jobs:
           restore-keys: |
             playwright-${{ runner.os }}-
 
+      - name: Install Playwright (browsers + system deps)
+        run: ./mill PlaywrightSetup install --with-deps chromium-headless-shell
+
       - name: formatCheck
         run: ./mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
-
-      - name: Install Playwright
-        run: ./mill PlaywrightSetup install --with-deps
-
-      - name: Download deps
-        run: ./mill __.prepareOffline
-
       - name: Pre-fetch ScalaJS linker deps and integration test deps
         run: |
           ./mill sjsls.cacheJsLibs.fastLinkJS
@@ -84,10 +84,10 @@ jobs:
           test -n "$HELLO_WORLD_FILE"
           scala-cli package "$HELLO_WORLD_FILE" -o ${PWD}/tmp -f --power
 
-      - name: Test
+      - name: Test CLI
         run: ./mill __.test
 
-      - name: Test
+      - name: Test Plugin
         run: ./mill plugin.integration.testForked
 
       - name: Publish Test Report

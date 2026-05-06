@@ -2,7 +2,7 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
 {
 
-  "image": "mcr.microsoft.com/devcontainers/base:jammy",
+  "image": "mcr.microsoft.com/devcontainers/base:noble",
 	"customizations": {
 		"vscode": {
 			"extensions": [
@@ -32,7 +32,7 @@
   },
 
   // Try do do as much as possible in the image, so that the container starts up quickly
-  "onCreateCommand": "mill __.prepareOffline && mill __.compiledClassesAndSemanticDbFiles"
+  "onCreateCommand": "./mill __.prepareOffline"
 
   // // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],

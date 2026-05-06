@@ -17,6 +17,8 @@ test:
 checkOpts:
   ./mill {{projectName}}.run --help
 
+updates:
+  ./mill mill.javalib.Dependency/showUpdates
 
 jvmServe:
   ./mill -w {{projectName}}.runBackground --build-tool scala-cli --project-dir /Users/simon/Code/indigoLite --log-level info --browse-on-open-at / --path-to-index-html /Users/simon/Code/indigoLite/static

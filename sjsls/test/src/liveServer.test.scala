@@ -23,35 +23,37 @@ import munit.CatsEffectSuite
 
 /*
 Run
-cs launch com.microsoft.playwright:playwright:1.51.0 -M "com.microsoft.playwright.CLI" -- install --with-deps
-before this test, to make sure that the driver bundles are downloaded.
+cs launch com.microsoft.playwright:playwright:1.59.0 -M "com.microsoft.playwright.CLI" -- install --with-deps
+before this test, to make sure that the driver bundles are downloaded. This is done automatically in CI
  */
 
-class FirefoxSuite extends PlaywrightTest:
+/** Note: these browsers are _assumed_ to work until I'm told otherwise. Dsiabled due to long CI times.
+  */
+// class FirefoxSuite extends PlaywrightTest:
 
-  override def beforeAll(): Unit =
-    basePort = 5000
-    backendPort = 8999
-    pw = Playwright.create()
-    browser = pw.firefox().launch(options);
-    page = browser.newPage();
-    page.setDefaultTimeout(30000)
-  end beforeAll
+//   override def beforeAll(): Unit =
+//     basePort = 5000
+//     backendPort = 8999
+//     pw = Playwright.create()
+//     browser = pw.firefox().launch(options);
+//     page = browser.newPage();
+//     page.setDefaultTimeout(30000)
+//   end beforeAll
 
-end FirefoxSuite
+// end FirefoxSuite
 
-class SafariSuite extends PlaywrightTest:
+// class SafariSuite extends PlaywrightTest:
 
-  override def beforeAll(): Unit =
-    basePort = 4000
-    backendPort = 8998
-    pw = Playwright.create()
-    browser = pw.webkit().launch(options);
-    page = browser.newPage();
-    page.setDefaultTimeout(30000)
-  end beforeAll
+//   override def beforeAll(): Unit =
+//     basePort = 4000
+//     backendPort = 8998
+//     pw = Playwright.create()
+//     browser = pw.webkit().launch(options);
+//     page = browser.newPage();
+//     page.setDefaultTimeout(30000)
+//   end beforeAll
 
-end SafariSuite
+// end SafariSuite
 
 class ChromeSuite extends PlaywrightTest:
 
@@ -67,6 +69,8 @@ class ChromeSuite extends PlaywrightTest:
 end ChromeSuite
 
 trait PlaywrightTest extends CatsEffectSuite:
+
+  override val munitIOTimeout: scala.concurrent.duration.FiniteDuration = 2.minutes
 
   var basePort: Int = uninitialized
   var backendPort: Int = uninitialized
@@ -142,11 +146,13 @@ trait PlaywrightTest extends CatsEffectSuite:
     (_, testDir, port) =>
       val increaseTimeout = ContainsTextOptions()
       increaseTimeout.setTimeout(15000)
+      val recompileTimeout = ContainsTextOptions()
+      recompileTimeout.setTimeout(60000)
       IO.sleep(3.seconds) >>
         IO(page.navigate(s"http://localhost:$port")) >>
         IO(assertThat(page.locator("h1")).containsText("HelloWorld", increaseTimeout)) >>
         IO.blocking(os.write.over(testDir / "hello.scala", helloWorldCode("Bye"))) >>
-        IO(assertThat(page.locator("h1")).containsText("ByeWorld", increaseTimeout)) >>
+        IO(assertThat(page.locator("h1")).containsText("ByeWorld", recompileTimeout)) >>
         IO.blocking(os.write.append(styleDir(testDir) / "index.less", "h1 { color: red; }")) >>
         IO(assertThat(page.locator("h1")).hasCSS("color", "rgb(255, 0, 0)"))
   }

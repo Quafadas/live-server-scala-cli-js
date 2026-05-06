@@ -43,6 +43,16 @@ jobs:
       - name: Setup Coursier
         run: curl -fL "https://github.com/coursier/launchers/raw/master/cs-x86_64-pc-linux.gz" | gzip -d > /usr/local/bin/cs && chmod +x /usr/local/bin/cs
 
+
+      - name: Cache Playwright dependencies
+        id: cache-pw
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.mill') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
+
       - name: Install Playwright
         run: cs launch com.microsoft.playwright:playwright:1.59.0 -M "com.microsoft.playwright.CLI" -- install --with-deps
 
