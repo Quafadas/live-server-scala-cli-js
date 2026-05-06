@@ -101,16 +101,31 @@ object `package` extends Module:
     def moduleDeps = Seq(sjsls_routes.native)
     def nativeLinkingOptions =
       if isWindows then Seq(
-        "-lws2_32"
+        "-lws2_32",
+        "-lcrypt32",
+        "-ladvapi32",
+        "-lsecur32",
+        "-lssl",
+        "-lcrypto",
+        "-lbcrypt"
       )
       else if isMac then Seq(
         "-lresolv",
+        "-lssl",
+        "-lcrypto",
+        "-ls2n",
         "-L/opt/homebrew/opt/openssl@3/lib",
         "-L/opt/homebrew/opt/s2n/lib"
       )
       else if isLinux then Seq(
         "-ldl",
-        "-lpthread"
+        "-lpthread",
+        "-lssl",
+        "-lcrypto",
+        "-ls2n",
+        "-lresolv",
+        "-lm",
+        "-L/usr/local/lib"
       )
       else ???
     override def nativeLTO: Simple[LTO] =

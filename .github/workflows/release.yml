@@ -56,7 +56,13 @@ jobs:
         with:
           jvm: temurin@21
 
-      - run: brew install openssl s2n
+      - name: Install OpenSSL and s2n-tls
+        run: brew install openssl s2n
+
+      - name: Add Homebrew lib paths to linker env
+        run: |
+          echo "LIBRARY_PATH=$(brew --prefix openssl)/lib:$(brew --prefix s2n)/lib:$LIBRARY_PATH" >> $GITHUB_ENV
+
       - name: Build the binary
         run: ./mill sjsls.native.nativeLink
 
@@ -64,7 +70,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: out/sjsls/native/nativeLink.dest/*
-          name: ${{ matrix.os }}-binaries
+          name: ${{ matrix.OS }}-binaries
           if-no-files-found: error
 
   linux_build:
@@ -87,17 +93,20 @@ jobs:
         with:
           jvm: temurin@21
 
-      - name: "ssl install"
+      - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libssl-dev
+          sudo apt-get install -y libssl-dev cmake build-essential
 
-      - name: s2n install
+      - name: Build and install s2n-tls
         run: |
           git clone https://github.com/aws/s2n-tls.git
           cd s2n-tls
-          make -j
-          sudo make install
+          cmake . -Bbuild -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+          cmake --build build -j$(nproc)
+          sudo cmake --install build
+          sudo ldconfig
+
       - name: Build the binary
         run: ./mill sjsls.native.nativeLink
 
@@ -105,7 +114,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: out/sjsls/native/nativeLink.dest/*
-          name: ${{ matrix.os }}-linux-binaries
+          name: ${{ matrix.OS }}-linux-binaries
           if-no-files-found: error
 
   windows_build:
@@ -148,16 +157,23 @@ jobs:
       - run: clang -v
         shell: cmd
 
-      - name: Install clang and SBT
+      - name: Install clang and OpenSSL
         shell: pwsh
         run: |
           choco install llvm --version="$Env:LLVM_VERSION" --allow-downgrade
-          vcpkg install openssl:x64-windows
+          vcpkg install openssl:x64-windows-static
           clang --version
 
-      - run: echo "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\bin" >> $env:GITHUB_PATH
-      - run: echo "LIB=$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\lib;$env:LIB" >> $env:GITHUB_ENV
-      - run: echo "INCLUDE=$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\include;$env:INCLUDE" >> $env:GITHUB_ENV
+      - name: Add upgraded LLVM to PATH
+        shell: pwsh
+        run: echo "C:\Program Files\LLVM\bin" >> $env:GITHUB_PATH
+
+      - run: echo "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static\bin" >> $env:GITHUB_PATH
+        shell: pwsh
+      - run: echo "LIB=$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static\lib\;$env:LIB" >> $env:GITHUB_ENV
+        shell: pwsh
+      - run: echo "INCLUDE=$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static\include\;$env:INCLUDE" >> $env:GITHUB_ENV
+        shell: pwsh
 
       - name: Build binary (windows)
         run: ./mill.bat sjsls.native.nativeLink
