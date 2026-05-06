@@ -1,0 +1,182 @@
+name: Release
+on:
+  workflow_run:
+    workflows: ["Continuous Integration"]
+    types: [completed]
+
+concurrency:
+  group: release-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Verify Successful CI On Release Tag
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.find_tag.outputs.release_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Find release tag on CI commit
+        id: find_tag
+        run: |
+          tag=$(git tag --points-at "${{ github.event.workflow_run.head_sha }}" | grep -E '^v' | head -n1 || true)
+          echo "release_tag=$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Log decision
+        run: |
+          if [ -z "${{ steps.find_tag.outputs.release_tag }}" ]; then
+            echo "No v* tag found on ${{ github.event.workflow_run.head_sha }}. Skipping release workflow jobs."
+          else
+            echo "Release tag detected: ${{ steps.find_tag.outputs.release_tag }}"
+          fi
+
+  macos_build:
+    needs: guard
+    if: needs.guard.outputs.release_tag != ''
+    name: MacOS (${{ matrix.OS }})
+    strategy:
+      fail-fast: true
+      matrix:
+        OS: ["macos-15"]
+    runs-on: ${{ matrix.OS }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.guard.outputs.release_tag }}
+
+      - uses: coursier/cache-action@v8
+      - uses: coursier/setup-action@main
+        with:
+          jvm: temurin@21
+
+      - name: Build the binary
+        run: mill jsls.native.nativeLink
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: out/sjsls/native/nativeLink.dest/*
+          name: ${{ matrix.os }}-binaries
+          if-no-files-found: error
+
+  linux_build:
+    needs: guard
+    if: needs.guard.outputs.release_tag != ''
+    name: Linux (${{ matrix.OS }})
+    strategy:
+      fail-fast: true
+      matrix:
+        OS: ["ubuntu-22.04", "ubuntu-22.04-arm"]
+    runs-on: ${{ matrix.OS }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.guard.outputs.release_tag }}
+
+      - uses: coursier/cache-action@v8
+      - uses: coursier/setup-action@main
+        with:
+          jvm: temurin@21
+
+
+      - name: Build the binary
+        run: sbt buildBinaryPlatformRelease
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: out/release/*
+          name: ${{ matrix.os }}-linux-binaries
+          if-no-files-found: error
+
+  windows_build:
+    needs: guard
+    if: needs.guard.outputs.release_tag != ''
+    name: Windows
+    strategy:
+      fail-fast: false
+      matrix:
+          OS: ["windows-2022"]
+    runs-on: ${{ matrix.OS }}
+    env:
+      LLVM_BIN: 'C:\Program Files\LLVM\bin'
+      LLVM_VERSION: "20.1.8"
+    steps:
+      # This step is important to make sure scalafmt
+      # checks don't fail
+      - name: Setup git config
+        run: git config --global core.autocrlf false
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.guard.outputs.release_tag }}
+
+
+      - uses: coursier/cache-action@v8
+      - uses: coursier/setup-action@main
+        with:
+          jvm: temurin@21
+
+      # See https://github.com/scala-native/scala-native/blob/master/.github/actions/windows-setup-env/action.yml#L14 SN_RELE
+      # for details
+      - name: Configure Pagefile
+        uses: al-cheb/configure-pagefile-action@v1.2
+        with:
+          minimum-size: 4GB
+          maximum-size: 16GB
+
+      - run: clang -v
+        shell: cmd
+
+      - name: Install clang and SBT
+        shell: pwsh
+        run: |
+          choco install llvm --version="$Env:LLVM_VERSION" --allow-downgrade
+          choco install sbt --version=1.12.8
+          clang --version
+
+      - name: Build binary (windows)
+        run: sbt buildBinaryPlatformRelease
+        shell: cmd
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: out/release/*
+          name: windows-binaries
+          if-no-files-found: error
+
+  release:
+    needs: [guard, linux_build, windows_build, macos_build]
+    if: needs.guard.outputs.release_tag != ''
+    name: Upload binaries to release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.guard.outputs.release_tag }}
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        id: download
+        with:
+          path: binaries
+
+      - name: List downloaded binaries
+        run: ls -R binaries
+
+      - name: Upload release binaries
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.guard.outputs.release_tag }}
+          files: "${{steps.download.outputs.download-path}}/**/*"

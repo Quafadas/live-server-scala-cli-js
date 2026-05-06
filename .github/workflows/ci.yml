@@ -84,10 +84,10 @@ jobs:
           test -n "$HELLO_WORLD_FILE"
           scala-cli package "$HELLO_WORLD_FILE" -o ${PWD}/tmp -f --power
 
-      - name: Test
+      - name: Test CLI
         run: ./mill __.test
 
-      - name: Test
+      - name: Test Plugin
         run: ./mill plugin.integration.testForked
 
       - name: Publish Test Report
