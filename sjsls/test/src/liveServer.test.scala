@@ -24,34 +24,37 @@ import munit.CatsEffectSuite
 /*
 Run
 cs launch com.microsoft.playwright:playwright:1.59.0 -M "com.microsoft.playwright.CLI" -- install --with-deps
-before this test, to make sure that the driver bundles are downloaded.
+before this test, to make sure that the driver bundles are downloaded. This is done automatically in CI
  */
 
-class FirefoxSuite extends PlaywrightTest:
+/**
+ * Note: these browsers are _assumed_ to work until I'm told otherwise. Dsiabled due to long CI times.
+ */
+// class FirefoxSuite extends PlaywrightTest:
 
-  override def beforeAll(): Unit =
-    basePort = 5000
-    backendPort = 8999
-    pw = Playwright.create()
-    browser = pw.firefox().launch(options);
-    page = browser.newPage();
-    page.setDefaultTimeout(30000)
-  end beforeAll
+//   override def beforeAll(): Unit =
+//     basePort = 5000
+//     backendPort = 8999
+//     pw = Playwright.create()
+//     browser = pw.firefox().launch(options);
+//     page = browser.newPage();
+//     page.setDefaultTimeout(30000)
+//   end beforeAll
 
-end FirefoxSuite
+// end FirefoxSuite
 
-class SafariSuite extends PlaywrightTest:
+// class SafariSuite extends PlaywrightTest:
 
-  override def beforeAll(): Unit =
-    basePort = 4000
-    backendPort = 8998
-    pw = Playwright.create()
-    browser = pw.webkit().launch(options);
-    page = browser.newPage();
-    page.setDefaultTimeout(30000)
-  end beforeAll
+//   override def beforeAll(): Unit =
+//     basePort = 4000
+//     backendPort = 8998
+//     pw = Playwright.create()
+//     browser = pw.webkit().launch(options);
+//     page = browser.newPage();
+//     page.setDefaultTimeout(30000)
+//   end beforeAll
 
-end SafariSuite
+// end SafariSuite
 
 class ChromeSuite extends PlaywrightTest:
 

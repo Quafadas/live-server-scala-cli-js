@@ -43,9 +43,14 @@ object `package` extends FormatFixPublish:
     )
     override def resources = super.resources()
 
+    /**
+     * Starts a server which squats on the port we want to test with, and busts mill's cache to ensure it's always started in advance...
+     */
     override def forkEnv: Simple[Map[String, String]] = Task {
       squattyServer()
-      super.forkEnv()
+      super.forkEnv() ++ Map(
+        "CACHE_BUST" -> scala.util.Random.nextString(10)
+       )
     }
 
     def squattyServer = Task.Worker {
