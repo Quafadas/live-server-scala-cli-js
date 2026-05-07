@@ -97,7 +97,9 @@ object `package` extends Module:
       mvn"com.github.lolgab::scala-native-crypto::0.3.0"
     )
     override def scalaNativeVersion = V.scalaNativeVersion
-    def releaseMode = Task{ReleaseMode.ReleaseSize}
+    def releaseMode = Task{
+      if(isWindows) then ReleaseMode.ReleaseFast else ReleaseMode.ReleaseSize
+    }
     def moduleDeps = Seq(sjsls_routes.native)
     def nativeLinkingOptions =
       if isWindows then Seq(
@@ -122,8 +124,8 @@ object `package` extends Module:
       )
       else ???
     override def nativeLTO: Simple[LTO] =
-      if isWindows then LTO.Full
-      else if isMac then LTO.Full
+      if isWindows then LTO.Thin
+      else if isMac then LTO.Full // TODO: Ask - LTO.thin is unstable on MacOS, it can lead to compilation errors. Consider using LTO.full (legacy, slower) or LTO.none (disabled)
       else if isLinux then LTO.Thin
       else ???
   end native
