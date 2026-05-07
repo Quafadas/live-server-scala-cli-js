@@ -391,9 +391,13 @@ trait PlaywrightTest extends CatsEffectSuite:
         Ok
       ) >>
         assertIOBoolean(
-          httpClient.expect[String](
-            s"http://localhost:$basePort/.well-known/appspecific/com.chrome.devtools.json"
-          ).map(_.contains(s"""{"workspace":{"root":"$dirStr","uuid":"""")) // Just check that the default workspace root is included, since the uuid is random
+          httpClient
+            .expect[String](
+              s"http://localhost:$basePort/.well-known/appspecific/com.chrome.devtools.json"
+            )
+            .map(
+              _.contains(s"""{"workspace":{"root":"$dirStr","uuid":"""")
+            ) // Just check that the default workspace root is included, since the uuid is random
         )
 
   }
