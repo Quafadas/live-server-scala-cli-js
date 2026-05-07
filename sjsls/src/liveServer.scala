@@ -155,6 +155,7 @@ object LiveServer extends IOApp:
             _ <- IO.raiseUnless(indexLessIsFile || indexCssIsFile)(
               CliValidationError(s"Neither index.less nor index.css exists as a regular file in $styles")
             )
+            // index.less takes precedence over index.css when both are present
             styleFile = if indexLessIsFile then "index.less" else "index.css"
           yield IndexHtmlConfig.StylesOnly(styles, styleFile).some).toResource
         case (None, None) =>

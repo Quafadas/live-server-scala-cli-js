@@ -441,7 +441,7 @@ class RoutesSuite extends CatsEffectSuite:
                   .map {
                     body =>
                       body.contains("""<link rel="stylesheet" href="/index.css" />""") &&
-                      !body.contains("less")
+                      !body.contains("""stylesheet/less""")
                   }
               )
         }
