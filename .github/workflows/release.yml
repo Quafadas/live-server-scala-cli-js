@@ -117,111 +117,111 @@ jobs:
           name: ${{ matrix.OS }}-linux-binaries
           if-no-files-found: error
 
-  windows_build:
-    needs: guard
-    if: needs.guard.outputs.release_tag != ''
-    name: Windows
-    strategy:
-      fail-fast: false
-      matrix:
-          OS: ["windows-2022"]
-    runs-on: ${{ matrix.OS }}
-    env:
-      LLVM_BIN: 'C:\Program Files\LLVM\bin'
-      LLVM_VERSION: "20.1.8"
-    steps:
-      # This step is important to make sure scalafmt
-      # checks don't fail
-      - name: Setup git config
-        run: git config --global core.autocrlf false
+  # windows_build:
+  #   needs: guard
+  #   if: needs.guard.outputs.release_tag != ''
+  #   name: Windows
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #         OS: ["windows-2022"]
+  #   runs-on: ${{ matrix.OS }}
+  #   env:
+  #     LLVM_BIN: 'C:\Program Files\LLVM\bin'
+  #     LLVM_VERSION: "20.1.8"
+  #   steps:
+  #     # This step is important to make sure scalafmt
+  #     # checks don't fail
+  #     - name: Setup git config
+  #       run: git config --global core.autocrlf false
 
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ needs.guard.outputs.release_tag }}
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #         ref: ${{ needs.guard.outputs.release_tag }}
 
 
-      - uses: coursier/cache-action@v8
-      - uses: coursier/setup-action@main
-        with:
-          jvm: temurin@21
+  #     - uses: coursier/cache-action@v8
+  #     - uses: coursier/setup-action@main
+  #       with:
+  #         jvm: temurin@21
 
-      # See https://github.com/scala-native/scala-native/blob/master/.github/actions/windows-setup-env/action.yml#L14 SN_RELE
-      # for details
-      - name: Configure Pagefile
-        uses: al-cheb/configure-pagefile-action@v1.2
-        with:
-          minimum-size: 4GB
-          maximum-size: 16GB
+  #     # See https://github.com/scala-native/scala-native/blob/master/.github/actions/windows-setup-env/action.yml#L14 SN_RELE
+  #     # for details
+  #     - name: Configure Pagefile
+  #       uses: al-cheb/configure-pagefile-action@v1.2
+  #       with:
+  #         minimum-size: 4GB
+  #         maximum-size: 16GB
 
-      - name: Download deps
-        run: .\mill.bat --no-server __.native.prepareOffline
-        shell: cmd
+  #     - name: Download deps
+  #       run: .\mill.bat --no-server __.native.prepareOffline
+  #       shell: cmd
 
-      - run: clang -v
-        shell: cmd
+  #     - run: clang -v
+  #       shell: cmd
 
-      - name: Activate MSVC developer environment
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
+  #     - name: Activate MSVC developer environment
+  #       uses: ilammy/msvc-dev-cmd@v1
+  #       with:
+  #         arch: x64
 
-      - name: Install clang and OpenSSL
-        shell: pwsh
-        run: |
-          choco install llvm --version="$Env:LLVM_VERSION" --allow-downgrade
-          vcpkg install openssl:x64-windows-static
-          # vcpkg static OpenSSL creates libssl.lib/libcrypto.lib, but lld-link
-          # looks for ssl.lib/crypto.lib when given -lssl/-lcrypto
-          $vcpkgLib = Join-Path $env:VCPKG_INSTALLATION_ROOT "installed\x64-windows-static\lib"
-          Copy-Item "$vcpkgLib\libssl.lib"    "$vcpkgLib\ssl.lib"    -Force
-          Copy-Item "$vcpkgLib\libcrypto.lib" "$vcpkgLib\crypto.lib" -Force
-          clang --version
+  #     - name: Install clang and OpenSSL
+  #       shell: pwsh
+  #       run: |
+  #         choco install llvm --version="$Env:LLVM_VERSION" --allow-downgrade
+  #         vcpkg install openssl:x64-windows-static
+  #         # vcpkg static OpenSSL creates libssl.lib/libcrypto.lib, but lld-link
+  #         # looks for ssl.lib/crypto.lib when given -lssl/-lcrypto
+  #         $vcpkgLib = Join-Path $env:VCPKG_INSTALLATION_ROOT "installed\x64-windows-static\lib"
+  #         Copy-Item "$vcpkgLib\libssl.lib"    "$vcpkgLib\ssl.lib"    -Force
+  #         Copy-Item "$vcpkgLib\libcrypto.lib" "$vcpkgLib\crypto.lib" -Force
+  #         clang --version
 
-      - name: Build and install s2n-tls
-        shell: pwsh
-        run: |
-          # s2n is pulled in via @link annotation from scala-native-crypto / http4s-ember.
-          # s2n added Windows support in 2024; build it from source the same way the Linux job does.
-          $openssl = Join-Path $env:VCPKG_INSTALLATION_ROOT "installed\x64-windows-static"
-          git clone --depth 1 https://github.com/aws/s2n-tls.git
-          Push-Location s2n-tls
-          cmake . -Bbuild `
-            -DCMAKE_BUILD_TYPE=Release `
-            -DBUILD_SHARED_LIBS=OFF `
-            -DBUILD_TESTING=OFF `
-            -DCMAKE_INSTALL_PREFIX="C:\s2n" `
-            -DOPENSSL_ROOT_DIR="$openssl" `
-            -DS2N_NO_PQ=ON `
-            -DUNSAFE_TREAT_WARNINGS_AS_ERRORS=OFF
-          cmake --build build --config Release
-          cmake --install build --config Release
-          Pop-Location
+  #     - name: Build and install s2n-tls
+  #       shell: pwsh
+  #       run: |
+  #         # s2n is pulled in via @link annotation from scala-native-crypto / http4s-ember.
+  #         # s2n added Windows support in 2024; build it from source the same way the Linux job does.
+  #         $openssl = Join-Path $env:VCPKG_INSTALLATION_ROOT "installed\x64-windows-static"
+  #         git clone --depth 1 https://github.com/aws/s2n-tls.git
+  #         Push-Location s2n-tls
+  #         cmake . -Bbuild `
+  #           -DCMAKE_BUILD_TYPE=Release `
+  #           -DBUILD_SHARED_LIBS=OFF `
+  #           -DBUILD_TESTING=OFF `
+  #           -DCMAKE_INSTALL_PREFIX="C:\s2n" `
+  #           -DOPENSSL_ROOT_DIR="$openssl" `
+  #           -DS2N_NO_PQ=ON `
+  #           -DUNSAFE_TREAT_WARNINGS_AS_ERRORS=OFF
+  #         cmake --build build --config Release
+  #         cmake --install build --config Release
+  #         Pop-Location
 
-      - name: Add upgraded LLVM to PATH
-        shell: pwsh
-        run: echo "C:\Program Files\LLVM\bin" >> $env:GITHUB_PATH
+  #     - name: Add upgraded LLVM to PATH
+  #       shell: pwsh
+  #       run: echo "C:\Program Files\LLVM\bin" >> $env:GITHUB_PATH
 
-      - run: echo "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static\bin" >> $env:GITHUB_PATH
-        shell: pwsh
-      - run: echo "LIB=C:\s2n\lib;$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static\lib\;$env:LIB" >> $env:GITHUB_ENV
-        shell: pwsh
-      - run: echo "INCLUDE=C:\s2n\include;$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static\include\;$env:INCLUDE" >> $env:GITHUB_ENV
-        shell: pwsh
+  #     - run: echo "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static\bin" >> $env:GITHUB_PATH
+  #       shell: pwsh
+  #     - run: echo "LIB=C:\s2n\lib;$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static\lib\;$env:LIB" >> $env:GITHUB_ENV
+  #       shell: pwsh
+  #     - run: echo "INCLUDE=C:\s2n\include;$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static\include\;$env:INCLUDE" >> $env:GITHUB_ENV
+  #       shell: pwsh
 
-      - name: Build binary (windows)
-        run: .\mill.bat sjsls.native.nativeLink
-        shell: cmd
+  #     - name: Build binary (windows)
+  #       run: .\mill.bat sjsls.native.nativeLink
+  #       shell: cmd
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          path: out/sjsls/native/nativeLink.dest/*
-          name: windows-binaries
-          if-no-files-found: error
+  #     - name: Upload artifacts
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         path: out/sjsls/native/nativeLink.dest/*
+  #         name: windows-binaries
+  #         if-no-files-found: error
 
   release:
-    needs: [guard, linux_build, windows_build, macos_build]
+    needs: [guard, linux_build, macos_build]
     if: needs.guard.outputs.release_tag != ''
     name: Upload binaries to release
     runs-on: ubuntu-latest

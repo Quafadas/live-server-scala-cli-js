@@ -40,148 +40,148 @@ jobs:
         with:
           fetch-depth: 0
 
-      # - name: Install required libraries
-      #   run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libgraphene-1.0-dev libavif-dev
+      - name: Install required libraries
+        run: sudo apt-get update && sudo apt-get install -y libgtk-4-dev libgraphene-1.0-dev libavif-dev
 
-      # - name: Install binaryen (wasm-opt)
-      #   run: |
-      #     BINARYEN_VERSION=$(curl -s https://api.github.com/repos/WebAssembly/binaryen/releases/latest | jq -r .tag_name)
-      #     curl -L "https://github.com/WebAssembly/binaryen/releases/download/${BINARYEN_VERSION}/binaryen-${BINARYEN_VERSION}-x86_64-linux.tar.gz" | tar xz
-      #     sudo cp binaryen-${BINARYEN_VERSION}/bin/wasm-opt /usr/local/bin/
-      #     wasm-opt --version
+      - name: Install binaryen (wasm-opt)
+        run: |
+          BINARYEN_VERSION=$(curl -s https://api.github.com/repos/WebAssembly/binaryen/releases/latest | jq -r .tag_name)
+          curl -L "https://github.com/WebAssembly/binaryen/releases/download/${BINARYEN_VERSION}/binaryen-${BINARYEN_VERSION}-x86_64-linux.tar.gz" | tar xz
+          sudo cp binaryen-${BINARYEN_VERSION}/bin/wasm-opt /usr/local/bin/
+          wasm-opt --version
 
-      # - name: Install terser
-      #   run: npm install -g terser
+      - name: Install terser
+        run: npm install -g terser
 
-      # - name: Download deps
-      #   run: ./mill __.prepareOffline
+      - name: Download deps
+        run: ./mill __.prepareOffline
 
-      # - name: Cache Playwright dependencies
-      #   id: cache-pw
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: ~/.cache/ms-playwright
-      #     key: playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.mill') }}
-      #     restore-keys: |
-      #       playwright-${{ runner.os }}-
+      - name: Cache Playwright dependencies
+        id: cache-pw
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('playwrightVersion.mill') }}
+          restore-keys: |
+            playwright-${{ runner.os }}-
 
-      # - name: Install Playwright (browsers + system deps)
-      #   run: ./mill PlaywrightSetup install --with-deps chromium-headless-shell
+      - name: Install Playwright (browsers + system deps)
+        run: ./mill PlaywrightSetup install --with-deps chromium-headless-shell
 
-      # - name: formatCheck
-      #   run: ./mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
-      # - name: Pre-fetch ScalaJS linker deps and integration test deps
-      #   run: |
-      #     ./mill sjsls.cacheJsLibs.fastLinkJS
-      #     cs fetch org.scala-js:scalajs-dom_sjs1_3:2.8.0 io.github.quafadas:vecxt_sjs1_3:0.0.38
+      - name: formatCheck
+        run: ./mill mill.scalalib.scalafmt.ScalafmtModule/checkFormatAll __.sources
+      - name: Pre-fetch ScalaJS linker deps and integration test deps
+        run: |
+          ./mill sjsls.cacheJsLibs.fastLinkJS
+          cs fetch org.scala-js:scalajs-dom_sjs1_3:2.8.0 io.github.quafadas:vecxt_sjs1_3:0.0.38
 
-      # - name: scala-cli version
-      #   run: scala-cli compile -e "()" --platform js && scala-cli run -e "()"
+      - name: scala-cli version
+        run: scala-cli compile -e "()" --platform js && scala-cli run -e "()"
 
-      # - name: scala-cli setup part deux
-      #   run: |
-      #     HELLO_WORLD_FILE=$(./mill show PlaywrightSetup.helloWorldCode | sed -n 's/^"\(.*\)"$/\1/p')
-      #     test -n "$HELLO_WORLD_FILE"
-      #     scala-cli package "$HELLO_WORLD_FILE" -o ${PWD}/tmp -f --power
+      - name: scala-cli setup part deux
+        run: |
+          HELLO_WORLD_FILE=$(./mill show PlaywrightSetup.helloWorldCode | sed -n 's/^"\(.*\)"$/\1/p')
+          test -n "$HELLO_WORLD_FILE"
+          scala-cli package "$HELLO_WORLD_FILE" -o ${PWD}/tmp -f --power
 
-      # - name: Test CLI
-      #   run: ./mill __.test
+      - name: Test CLI
+        run: ./mill __.test
 
-      # - name: Test Plugin
-      #   run: ./mill plugin.integration.testForked
+      - name: Test Plugin
+        run: ./mill plugin.integration.testForked
 
-      # - name: Publish Test Report
-      #   uses: mikepenz/action-junit-report@v5
-      #   if: always()
-      #   with:
-      #     fail_on_failure: false
-      #     include_passed: false
-      #     detailed_summary: true
-      #     annotate_only: true
-      #     require_tests: false
-      #     report_paths: 'out/**/test-report.xml'
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v5
+        if: always()
+        with:
+          fail_on_failure: false
+          include_passed: false
+          detailed_summary: true
+          annotate_only: true
+          require_tests: false
+          report_paths: 'out/**/test-report.xml'
 
-  # publish:
-  #   if: github.repository == 'Quafadas/live-server-scala-cli-js' && contains(github.ref, 'refs/tags/')
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@main
-  #       with:
-  #         fetch-depth: 0
-  #         fetch-tags: true
+  publish:
+    if: github.repository == 'Quafadas/live-server-scala-cli-js' && contains(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
-  #     - uses: coursier/cache-action@v8
-  #     - uses: coursier/setup-action@main
-  #       with:
-  #         jvm: temurin@21
-  #         apps: scala-cli
+      - uses: coursier/cache-action@v8
+      - uses: coursier/setup-action@main
+        with:
+          jvm: temurin@21
+          apps: scala-cli
 
-  #     - name: Import GPG key
-  #       uses: crazy-max/ghaction-import-gpg@v6
-  #       with:
-  #         gpg_private_key: ${{ secrets.PGP_SECRET }}
-  #         passphrase: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
-  #         git_config_global: true
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.PGP_SECRET }}
+          passphrase: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
+          git_config_global: true
 
-  #     - name: Prepare GPG
-  #       run: |
-  #         echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
-  #         gpgconf --reload gpg-agent
+      - name: Prepare GPG
+        run: |
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          gpgconf --reload gpg-agent
 
-  #     - name: List keys
-  #       run: gpg -K
+      - name: List keys
+        run: gpg -K
 
-  #     - name: Publish to Maven Central
-  #       run: ./mill mill.javalib.SonatypeCentralPublishModule/publishAll --publishArtifacts __.publishArtifacts
-  #       env:
-  #         MILL_PGP_PASSPHRASE: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
-  #         MILL_PGP_SECRET_BASE64: ${{ secrets.PGP_SECRET }}
-  #         MILL_SONATYPE_PASSWORD: ${{ secrets.PUBLISH_PASSWORD }}
-  #         MILL_SONATYPE_USERNAME: ${{ secrets.PUBLISH_USER }}
+      - name: Publish to Maven Central
+        run: ./mill mill.javalib.SonatypeCentralPublishModule/publishAll --publishArtifacts __.publishArtifacts
+        env:
+          MILL_PGP_PASSPHRASE: ${{ secrets.PUBLISH_SECRET_KEY_PASSWORD }}
+          MILL_PGP_SECRET_BASE64: ${{ secrets.PGP_SECRET }}
+          MILL_SONATYPE_PASSWORD: ${{ secrets.PUBLISH_PASSWORD }}
+          MILL_SONATYPE_USERNAME: ${{ secrets.PUBLISH_USER }}
 
-  # site:
-  #   if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-  #   needs: build
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: coursier/cache-action@v8
-  #     - uses: coursier/setup-action@main
-  #       with:
-  #         jvm: temurin@21
-  #         apps: scala-cli
-  #     - uses: actions/checkout@main
-  #       with:
-  #         fetch-depth: 0
-  #         fetch-tags: true
-  #     - run: ./mill site.siteGen
-  #     - name: Setup Pages
-  #       uses: actions/configure-pages@main
-  #     - uses: actions/upload-artifact@main
-  #       with:
-  #         name: page
-  #         path: out/site/laika/generateSite.dest
-  #         if-no-files-found: error
+  site:
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: coursier/cache-action@v8
+      - uses: coursier/setup-action@main
+        with:
+          jvm: temurin@21
+          apps: scala-cli
+      - uses: actions/checkout@main
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - run: ./mill site.siteGen
+      - name: Setup Pages
+        uses: actions/configure-pages@main
+      - uses: actions/upload-artifact@main
+        with:
+          name: page
+          path: out/site/laika/generateSite.dest
+          if-no-files-found: error
 
-  # deploy:
-  #   if: github.ref == 'refs/heads/main'
-  #   needs: site
-  #   permissions:
-  #     pages: write
-  #     id-token: write
-  #   environment:
-  #     name: github-pages
-  #     url: ${{ steps.deployment.outputs.page_url }}
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - uses: actions/download-artifact@main
-  #     with:
-  #       name: page
-  #       path: .
-  #   - uses: actions/configure-pages@main
-  #   - uses: actions/upload-pages-artifact@main
-  #     with:
-  #       path: .
-  #   - name: Deploy to GitHub Pages
-  #     id: deployment
-  #     uses: actions/deploy-pages@main
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: site
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@main
+      with:
+        name: page
+        path: .
+    - uses: actions/configure-pages@main
+    - uses: actions/upload-pages-artifact@main
+      with:
+        path: .
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@main
