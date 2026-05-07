@@ -108,6 +108,15 @@ class RoutesSuite extends CatsEffectSuite:
       os.remove.all(tempDir)
   )
 
+  val externalCssStyles = FunFixture[os.Path](
+    setup = test =>
+      val tempDir = os.temp.dir()
+      os.write(tempDir / "index.css", simpleCss)
+      tempDir
+    ,
+    teardown = tempDir => os.remove.all(tempDir)
+  )
+
   override def beforeAll(): Unit =
     scribe
       .Logger
@@ -389,6 +398,52 @@ class RoutesSuite extends CatsEffectSuite:
             val responseLess = served(requestLess)
             assertIO(responseLess.map(_.status.code), 200) >>
               assertIO(responseLess.flatMap(_.bodyText.compile.string), simpleCss)
+        }
+    }
+
+  FunFixture
+    .map2(files, externalCssStyles)
+    .test("That index.html and index.css is served with CSS style config") {
+      (appDir, styleDir) =>
+        val app = for
+          logger <- IO(scribe.cats[IO]).toResource
+          fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+          fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
+          refreshPub <- Topic[IO, Unit].toResource
+          assetRefreshPub <- Topic[IO, String].toResource
+          theseRoutes <- routes(
+            appDir.toString,
+            refreshPub,
+            assetRefreshPub,
+            Some(IndexHtmlConfig.StylesOnly(styleDir.toFs2, "index.css")),
+            HttpRoutes.empty[IO],
+            fileToHashRef,
+            None,
+            false,
+            ScalaCli()
+          )(logger)
+        yield theseRoutes.orNotFound
+
+        app.use {
+          served =>
+            val requestHtml = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("/index.html"))
+            val requestCss = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("/index.css"))
+
+            val responseHtml = served(requestHtml)
+            val responseCss = served(requestCss)
+
+            assertIO(responseHtml.map(_.status.code), 200) >>
+              assertIO(responseCss.map(_.status.code), 200) >>
+              assertIO(responseCss.flatMap(_.bodyText.compile.string), simpleCss) >>
+              assertIOBoolean(
+                responseHtml
+                  .flatMap(_.bodyText.compile.string)
+                  .map {
+                    body =>
+                      body.contains("""<link rel="stylesheet" href="/index.css" />""") &&
+                      !body.contains("""stylesheet/less""")
+                  }
+              )
         }
     }
 

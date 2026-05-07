@@ -4,5 +4,5 @@ import fs2.io.file.Path
 
 enum IndexHtmlConfig:
   case IndexHtmlPath(path: Path)
-  case StylesOnly(path: Path)
+  case StylesOnly(path: Path, styleFile: String = "index.less")
 end IndexHtmlConfig

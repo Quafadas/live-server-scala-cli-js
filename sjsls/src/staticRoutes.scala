@@ -28,7 +28,7 @@ def staticAssetRoutes(
     injectPreloads: Boolean
 )(logger: Scribe[IO]): HttpRoutes[IO] =
   indexOpts match
-    case None => generatedIndexHtml(injectStyles = false, modules, zdt, injectPreloads)(logger)
+    case None => generatedIndexHtml(injectStyles = false, injectCssFile = None, modules, zdt, injectPreloads)(logger)
 
     case Some(IndexHtmlConfig.IndexHtmlPath(path)) =>
       HttpRoutes
@@ -45,12 +45,21 @@ def staticAssetRoutes(
           )(logger)
         )
 
-    case Some(IndexHtmlConfig.StylesOnly(stylesPath)) =>
+    case Some(IndexHtmlConfig.StylesOnly(stylesPath, styleFile)) =>
+      val isLess = styleFile.endsWith(".less")
       NoCacheMiddlware(
         Router(
           "" -> fileService[IO](FileService.Config(stylesPath.toString()))
         )
-      )(logger).combineK(generatedIndexHtml(injectStyles = true, modules, zdt, injectPreloads)(logger))
+      )(logger).combineK(
+        generatedIndexHtml(
+          injectStyles = isLess,
+          injectCssFile = if isLess then None else Some(s"/$styleFile"),
+          modules,
+          zdt,
+          injectPreloads
+        )(logger)
+      )
 
 def serveIndexHtml(from: fs2.io.file.Path, modules: Ref[IO, Map[String, String]], injectPreloads: Boolean) =
   StaticFile
