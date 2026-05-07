@@ -13,3 +13,4 @@ out
 scripts/cellar
 mill.*
 !mill
+!mill.bat
