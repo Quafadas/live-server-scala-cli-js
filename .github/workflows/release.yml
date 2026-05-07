@@ -171,7 +171,32 @@ jobs:
         run: |
           choco install llvm --version="$Env:LLVM_VERSION" --allow-downgrade
           vcpkg install openssl:x64-windows-static
+          # vcpkg static OpenSSL creates libssl.lib/libcrypto.lib, but lld-link
+          # looks for ssl.lib/crypto.lib when given -lssl/-lcrypto
+          $vcpkgLib = Join-Path $env:VCPKG_INSTALLATION_ROOT "installed\x64-windows-static\lib"
+          Copy-Item "$vcpkgLib\libssl.lib"    "$vcpkgLib\ssl.lib"    -Force
+          Copy-Item "$vcpkgLib\libcrypto.lib" "$vcpkgLib\crypto.lib" -Force
           clang --version
+
+      - name: Build and install s2n-tls
+        shell: pwsh
+        run: |
+          # s2n is pulled in via @link annotation from scala-native-crypto / http4s-ember.
+          # s2n added Windows support in 2024; build it from source the same way the Linux job does.
+          $openssl = Join-Path $env:VCPKG_INSTALLATION_ROOT "installed\x64-windows-static"
+          git clone --depth 1 https://github.com/aws/s2n-tls.git
+          Push-Location s2n-tls
+          cmake . -Bbuild `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DBUILD_SHARED_LIBS=OFF `
+            -DBUILD_TESTING=OFF `
+            -DCMAKE_INSTALL_PREFIX="C:\s2n" `
+            -DOPENSSL_ROOT_DIR="$openssl" `
+            -DS2N_NO_PQ=ON `
+            -DUNSAFE_TREAT_WARNINGS_AS_ERRORS=OFF
+          cmake --build build --config Release
+          cmake --install build --config Release
+          Pop-Location
 
       - name: Add upgraded LLVM to PATH
         shell: pwsh
@@ -179,9 +204,9 @@ jobs:
 
       - run: echo "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static\bin" >> $env:GITHUB_PATH
         shell: pwsh
-      - run: echo "LIB=$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static\lib\;$env:LIB" >> $env:GITHUB_ENV
+      - run: echo "LIB=C:\s2n\lib;$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static\lib\;$env:LIB" >> $env:GITHUB_ENV
         shell: pwsh
-      - run: echo "INCLUDE=$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static\include\;$env:INCLUDE" >> $env:GITHUB_ENV
+      - run: echo "INCLUDE=C:\s2n\include;$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static\include\;$env:INCLUDE" >> $env:GITHUB_ENV
         shell: pwsh
 
       - name: Build binary (windows)
