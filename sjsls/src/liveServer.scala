@@ -264,7 +264,7 @@ object LiveServer extends IOApp:
     val finalOpts = versionFlag
       .as(IO.println(version).as(ExitCode.Success))
       .orElse(
-        initOpt.map(scaffoldProject)
+        initOpt.map(scaffoldProject(_))
       )
       .orElse(
         runServerHandleErrors

@@ -147,9 +147,9 @@ private[sjsls] val indexLess: String =
      |}
      |""".stripMargin
 
-private[sjsls] def scaffoldProject(projectName: String): IO[ExitCode] =
+private[sjsls] def scaffoldProject(projectName: String, baseDir: Option[Path] = None): IO[ExitCode] =
   given filesInstance: Files[IO] = Files.forAsync[IO]
-  val cwd = Path(System.getProperty("user.dir"))
+  val cwd = baseDir.getOrElse(Path(System.getProperty("user.dir")))
   val projDir = cwd / projectName
   val assetsDir = projDir / "assets"
 
