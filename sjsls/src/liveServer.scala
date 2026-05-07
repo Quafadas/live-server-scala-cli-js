@@ -264,6 +264,9 @@ object LiveServer extends IOApp:
     val finalOpts = versionFlag
       .as(IO.println(version).as(ExitCode.Success))
       .orElse(
+        initOpt.map(scaffoldProject)
+      )
+      .orElse(
         runServerHandleErrors
       )
     Command(name = "LiveServer", header = "Scala JS live server", helpFlag = true)(finalOpts)
