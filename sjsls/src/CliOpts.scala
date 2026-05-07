@@ -4,6 +4,8 @@ import com.comcast.ip4s.Port
 import com.monovore.decline.Opts
 
 private[sjsls] object CliOps:
+  val defaultWorkspaceRoot: String = sys.props.getOrElse("user.dir", ".")
+
   val logLevelOpt: Opts[String] = Opts
     .option[String]("log-level", help = "The log level. info, debug, error, trace)")
     .withDefault("info")
@@ -146,9 +148,9 @@ private[sjsls] object CliOps:
   val workspaceRootOpt: Opts[String] = Opts
     .option[String](
       "workspace-root",
-      "Absolute path to the project source root for Chrome DevTools automatic workspace folder integration. Defaults to the current working directory. Serves `/.well-known/appspecific/com.chrome.devtools.json`."
+      "Absolute path to the project source root for Chrome DevTools automatic workspace folder integration. Defaults to the current working directory when it contains at least one `.scala` file. Pass `none` to disable."
     )
-    .withDefault(sys.props.getOrElse("user.dir", "."))
+    .withDefault(defaultWorkspaceRoot)
 
   val workspaceUuidOpt: Opts[Option[String]] = Opts
     .option[String](

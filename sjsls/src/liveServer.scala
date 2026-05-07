@@ -62,7 +62,18 @@ object LiveServer extends IOApp:
     (workspaceRootOpt, workspaceUuidOpt).mapN {
       (root, uuidOpt) =>
         val uuid = uuidOpt.getOrElse(sessionUuid)
-        Some((root, uuid))
+        root match
+          case "none"                                    => None
+          case cwd if cwd == CliOps.defaultWorkspaceRoot =>
+            // Default: only activate if the cwd looks like a Scala project
+            val dir = java.io.File(cwd)
+            val entries = if dir.isDirectory then dir.listFiles() else null
+            if entries != null && entries.exists(f => f.isFile && f.getName.endsWith(".scala"))
+            then Some((cwd, uuid))
+            else None
+            end if
+          case explicit => Some((explicit, uuid))
+        end match
     },
     None.pure[Opts]
   ).mapN(LiveServerConfig.apply)
