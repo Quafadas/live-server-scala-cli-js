@@ -21,6 +21,7 @@ import cats.syntax.all.*
 
 private def generatedIndexHtml(
     injectStyles: Boolean,
+    injectCssFile: Option[String],
     modules: Ref[IO, Map[String, String]],
     zdt: ZonedDateTime,
     attemptPreload: Boolean
@@ -35,9 +36,9 @@ private def generatedIndexHtml(
             injectStyles,
             modules,
             attemptPreload,
-            true,
+            injectStyles,
             Some("/main.js"),
-            None
+            injectCssFile
           ).flatMap: html =>
             userBrowserCacheHeaders(Response[IO]().withEntity(html).withStatus(Status.Ok), zdt, injectStyles)
 
@@ -48,8 +49,8 @@ private def generatedIndexHtml(
     StaticHtmlMiddleware(
       HttpRoutes.of[IO] {
         case GET -> Root / "index.html" =>
-          vanillaTemplate(injectStyles, modules, attemptPreload, true, Some("/main.js"), None).flatMap: html =>
-            userBrowserCacheHeaders(Response[IO]().withEntity(html).withStatus(Status.Ok), zdt, injectStyles)
+          vanillaTemplate(injectStyles, modules, attemptPreload, injectStyles, Some("/main.js"), injectCssFile).flatMap:
+            html => userBrowserCacheHeaders(Response[IO]().withEntity(html).withStatus(Status.Ok), zdt, injectStyles)
 
       },
       injectStyles,

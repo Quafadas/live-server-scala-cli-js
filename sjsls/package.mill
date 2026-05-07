@@ -97,7 +97,7 @@ object `package` extends Module:
           sys.props("os.arch").toLowerCase
         )
 
-    override def nativeBaseName: Simple[String] = Task{
+    override def nativeBaseName: Simple[String] = Task {
       if isWindows then "sjsls_win"
       else if isMac then "sjsls_mac"
       else if isLinuxArm then "sjsls_linux_arm"
@@ -109,35 +109,40 @@ object `package` extends Module:
       mvn"com.github.lolgab::scala-native-crypto::0.3.0"
     )
     override def scalaNativeVersion = V.scalaNativeVersion
-    def releaseMode = Task{
-      if(isWindows) then ReleaseMode.ReleaseFast else ReleaseMode.ReleaseSize
+    def releaseMode = Task {
+      if isWindows then ReleaseMode.ReleaseFast else ReleaseMode.ReleaseSize
     }
     def moduleDeps = Seq(sjsls_routes.native)
     def nativeLinkingOptions =
-      if isWindows then Seq(
-        "-lws2_32",
-        "-lcrypt32",
-        "-ladvapi32",
-        "-lsecur32",
-        "-lssl",
-        "-lcrypto",
-        "-lbcrypt"
-      )
-      else if isMac then Seq(
-        "-lresolv",
-        "-lssl",
-        "-L/opt/homebrew/opt/openssl@3/lib",
-        "-L/opt/homebrew/opt/s2n/lib"
-      )
-      else if isLinux then Seq(
-        "-lssl",
-        "-lresolv",
-        "-L/usr/local/lib"
-      )
+      if isWindows then
+        Seq(
+          "-lws2_32",
+          "-lcrypt32",
+          "-ladvapi32",
+          "-lsecur32",
+          "-lssl",
+          "-lcrypto",
+          "-lbcrypt"
+        )
+      else if isMac then
+        Seq(
+          "-lresolv",
+          "-lssl",
+          "-L/opt/homebrew/opt/openssl@3/lib",
+          "-L/opt/homebrew/opt/s2n/lib"
+        )
+      else if isLinux then
+        Seq(
+          "-lssl",
+          "-lresolv",
+          "-L/usr/local/lib"
+        )
       else ???
     override def nativeLTO: Simple[LTO] =
       if isWindows then LTO.Thin
-      else if isMac then LTO.Full // TODO: Ask - LTO.thin is unstable on MacOS, it can lead to compilation errors. Consider using LTO.full (legacy, slower) or LTO.none (disabled)
+      else if isMac then
+        LTO
+          .Full // TODO: Ask - LTO.thin is unstable on MacOS, it can lead to compilation errors. Consider using LTO.full (legacy, slower) or LTO.none (disabled)
       else if isLinux then LTO.Thin
       else ???
   end native
@@ -150,7 +155,6 @@ object `package` extends Module:
       mvn"org.scala-js::scalajs-dom::${V.scalaJsDom}",
       mvn"com.raquo::laminar::${V.laminar}"
     )
-
 
   end cacheJsLibs
 

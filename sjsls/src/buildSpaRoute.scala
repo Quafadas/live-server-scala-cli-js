@@ -44,14 +44,22 @@ def buildSpaRoute(
         zdt
       )(logger)
 
-    case Some(IndexHtmlConfig.StylesOnly(dir)) =>
+    case Some(IndexHtmlConfig.StylesOnly(dir, styleFile)) =>
+      val isLess = styleFile.endsWith(".less")
       StaticHtmlMiddleware(
         HttpRoutes.of[IO] {
           case GET -> _ =>
-            vanillaTemplate(true, modules, injectPreloads, true, Some("/main.js"), Some("index.less")).map: html =>
+            vanillaTemplate(
+              isLess,
+              modules,
+              injectPreloads,
+              isLess,
+              Some("/main.js"),
+              if isLess then None else Some(s"/$styleFile")
+            ).map: html =>
               Response[IO]().withEntity(html)
         },
-        true,
+        isLess,
         zdt
       )(logger)
 
