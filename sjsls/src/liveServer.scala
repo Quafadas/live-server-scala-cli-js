@@ -150,15 +150,12 @@ object LiveServer extends IOApp:
           val indexLessFile = styles / "index.less"
           val indexCssFile = styles / "index.css"
           (for
-            indexLessExists <- Files[IO].exists(indexLessFile)
-            indexCssExists <- Files[IO].exists(indexCssFile)
-            _ <- IO.raiseUnless(indexLessExists || indexCssExists)(
-              CliValidationError(s"Neither index.less nor index.css exists in $styles")
+            indexLessIsFile <- Files[IO].isRegularFile(indexLessFile)
+            indexCssIsFile <- Files[IO].isRegularFile(indexCssFile)
+            _ <- IO.raiseUnless(indexLessIsFile || indexCssIsFile)(
+              CliValidationError(s"Neither index.less nor index.css exists as a regular file in $styles")
             )
-            styleFile = if indexLessExists then "index.less" else "index.css"
-            styleFilePath = styles / styleFile
-            isAFile <- Files[IO].isRegularFile(styleFilePath)
-            _ <- IO.raiseUnless(isAFile)(CliValidationError(s"$styleFilePath is not a file"))
+            styleFile = if indexLessIsFile then "index.less" else "index.css"
           yield IndexHtmlConfig.StylesOnly(styles, styleFile).some).toResource
         case (None, None) =>
           Resource.pure(Option.empty[IndexHtmlConfig])
