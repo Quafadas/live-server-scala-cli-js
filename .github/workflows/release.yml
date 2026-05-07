@@ -154,7 +154,7 @@ jobs:
           minimum-size: 4GB
           maximum-size: 16GB
 
-      - name: Build binary (windows)
+      - name: Download deps
         run: .\mill.bat --no-server __.native.prepareOffline
         shell: cmd
 
