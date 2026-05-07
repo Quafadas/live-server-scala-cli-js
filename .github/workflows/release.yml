@@ -187,8 +187,6 @@ jobs:
       - name: Build binary (windows)
         run: .\mill.bat sjsls.native.nativeLink
         shell: cmd
-        env:
-          JAVA_OPTS: "-Xmx6g"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
