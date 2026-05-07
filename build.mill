@@ -81,8 +81,7 @@ end Testy
 object PlaywrightSetup extends JavaModule:
 
   def mvnDeps = Seq(
-    mvn"com.microsoft.playwright:playwright:${build.pwV}",
-    mvn"com.microsoft.playwright:driver-bundle:${build.pwV}"
+    mvn"com.microsoft.playwright:playwright:${build.pwV}"
   )
 
   def mainClass = Some("com.microsoft.playwright.CLI")
