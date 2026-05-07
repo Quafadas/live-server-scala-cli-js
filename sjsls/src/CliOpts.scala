@@ -143,17 +143,17 @@ private[sjsls] object CliOps:
     )
     .orNone
 
-  val workspaceRootOpt: Opts[Option[String]] = Opts
+  val workspaceRootOpt: Opts[String] = Opts
     .option[String](
       "workspace-root",
-      "Absolute path to the project source root for Chrome DevTools automatic workspace folder integration. When provided, serves `/.well-known/appspecific/com.chrome.devtools.json`."
+      "Absolute path to the project source root for Chrome DevTools automatic workspace folder integration. Defaults to the current working directory. Serves `/.well-known/appspecific/com.chrome.devtools.json`."
     )
-    .orNone
+    .withDefault(sys.props.getOrElse("user.dir", "."))
 
   val workspaceUuidOpt: Opts[Option[String]] = Opts
     .option[String](
       "workspace-uuid",
-      "UUID to use in the Chrome DevTools workspace descriptor. If omitted a random UUID is generated. Only used when --workspace-root is also supplied."
+      "UUID to use in the Chrome DevTools workspace descriptor. If omitted a random UUID is generated at startup and reused for the lifetime of this CLI session."
     )
     .orNone
 end CliOps

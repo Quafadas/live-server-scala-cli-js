@@ -27,6 +27,8 @@ object LiveServer extends IOApp:
 
   import CliOps.*
 
+  private val sessionUuid: String = java.util.UUID.randomUUID().toString
+
   private def buildServer(httpApp: HttpApp[IO], port: Port) = EmberServerBuilder
     .default[IO]
     .withHttp2
@@ -58,10 +60,9 @@ object LiveServer extends IOApp:
     None.pure[Opts],
     None.pure[Opts],
     (workspaceRootOpt, workspaceUuidOpt).mapN {
-      case (Some(root), uuidOpt) =>
-        val uuid = uuidOpt.getOrElse(java.util.UUID.randomUUID().toString)
+      (root, uuidOpt) =>
+        val uuid = uuidOpt.getOrElse(sessionUuid)
         Some((root, uuid))
-      case _ => None
     },
     None.pure[Opts]
   ).mapN(LiveServerConfig.apply)
