@@ -156,4 +156,9 @@ private[sjsls] object CliOps:
       "UUID to use in the Chrome DevTools workspace descriptor. If omitted a random UUID is generated. Only used when --workspace-root is also supplied."
     )
     .orNone
+
+  val initOpt: Opts[String] = Opts.option[String](
+    "init",
+    "Scaffold a new ScalaJS starter project in a subfolder with the given name, then exit."
+  )
 end CliOps
