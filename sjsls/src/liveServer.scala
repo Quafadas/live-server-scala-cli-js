@@ -59,24 +59,58 @@ object LiveServer extends IOApp:
     logFileOpt,
     None.pure[Opts],
     None.pure[Opts],
-    (workspaceRootOpt, workspaceUuidOpt).mapN {
-      (root, uuidOpt) =>
-        val uuid = uuidOpt.getOrElse(sessionUuid)
-        root match
-          case "none"                                    => None
-          case cwd if cwd == CliOps.defaultWorkspaceRoot =>
-            // Default: only activate if the cwd looks like a Scala project
-            val dir = java.io.File(cwd)
-            val entries = if dir.isDirectory then dir.listFiles() else null
-            if entries != null && entries.exists(f => f.isFile && f.getName.endsWith(".scala"))
-            then Some((cwd, uuid))
-            else None
-            end if
-          case explicit => Some((explicit, uuid))
-        end match
-    },
-    None.pure[Opts]
-  ).mapN(LiveServerConfig.apply)
+    workspaceRootOpt,
+    workspaceUuidOpt
+  ).mapN {
+    (
+        baseDir,
+        outDir,
+        port,
+        proxyPortTarget,
+        proxyPathMatchPrefix,
+        clientRoutingPrefix,
+        logLevel,
+        buildTool,
+        openBrowserAt,
+        preventBrowserOpen,
+        extraBuildArgs,
+        millModuleName,
+        stylesDir,
+        indexHtmlTemplate,
+        buildToolInvocation,
+        injectPreloads,
+        dezombify,
+        logFile,
+        customRefresh,
+        customAssetRefresh,
+        workspaceRoot,
+        workspaceUuid
+    ) =>
+      LiveServerConfig(
+        baseDir,
+        outDir,
+        port,
+        proxyPortTarget,
+        proxyPathMatchPrefix,
+        clientRoutingPrefix,
+        logLevel,
+        buildTool,
+        openBrowserAt,
+        preventBrowserOpen,
+        extraBuildArgs,
+        millModuleName,
+        stylesDir,
+        indexHtmlTemplate,
+        buildToolInvocation,
+        injectPreloads,
+        dezombify,
+        logFile,
+        customRefresh,
+        customAssetRefresh,
+        workspaceRoot,
+        workspaceUuid
+      )
+  }
 
   def main(lsc: LiveServerConfig): Resource[IO, Server] =
 
@@ -94,26 +128,22 @@ object LiveServer extends IOApp:
       .replace()
 
     val server = for
-      _ <- logger
-        .debug(
-          lsc.toString()
-        )
-        .toResource
+      _ <- logger.debug("[liveServer] Starting with configuration: " + lsc.toString).toResource
 
       _ <- Resource
         .pure[IO, Boolean](lsc.dezombify)
         .flatMap(
           if _ then
-            Resource.eval(IO.println(s"Attempt to kill off process on port ${lsc.port}")) >>
+            scribe.cats[IO].info(s"[dezombify] Attempt to kill off process on port ${lsc.port}").toResource >>
               dezombify(lsc.port)
-          else scribe.cats[IO].debug(s"Assuming port ${lsc.port} is free").toResource
+          else scribe.cats[IO].debug(s"[dezombify] Assuming port ${lsc.port} is free").toResource
         )
       fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
       refreshTopic <- lsc
         .customRefresh
         .fold(Topic[IO, Unit])(
           t =>
-            scribe.cats[IO].debug("Custom refresh topic supplied — wrapping with debug tap") >>
+            scribe.cats[IO].debug("[refreshTopic] Custom refresh topic supplied — wrapping with debug tap") >>
               IO(t)
         )
         .toResource
@@ -200,6 +230,27 @@ object LiveServer extends IOApp:
       // Plugin-provided inMemoryFiles take priority; CLI-created is the fallback.
       effectiveInMemoryFiles = lsc.inMemoryFiles.orElse(cliInMemoryFiles)
 
+      // Resolve the effective devtools workspace.
+      // None      → default to baseDir (the project root passed in config)
+      // Some("none") → caller explicitly opted out
+      // Some(root)   → use the supplied path verbatim
+      effectiveDevToolsWorkspace <- lsc.devToolsWorkspaceRoot match
+        case Some("none") =>
+          logger.debug("[devtools] workspace-root=none — workspace integration explicitly disabled").toResource >>
+            Resource.pure[IO, Option[(String, String)]](Option.empty[(String, String)])
+
+        case Some(root) =>
+          val uuid = lsc.devToolsWorkspaceUuid.getOrElse(sessionUuid)
+          logger.debug(s"[devtools] Explicit workspace-root supplied. root=$root uuid=$uuid").toResource >>
+            Resource.pure[IO, Option[(String, String)]](Some((root, uuid)))
+        case None =>
+          val root = baseDirPath.toString
+          val uuid = lsc.devToolsWorkspaceUuid.getOrElse(sessionUuid)
+          logger
+            .debug(s"[devtools] No workspace-root supplied; defaulting to baseDir. root=$root uuid=$uuid")
+            .toResource >>
+            Resource.pure[IO, Option[(String, String)]](Some((root, uuid)))
+
       app <- routes(
         outDirString,
         refreshTopic,
@@ -210,7 +261,7 @@ object LiveServer extends IOApp:
         lsc.clientRoutingPrefix,
         lsc.injectPreloads,
         lsc.buildTool,
-        lsc.devToolsWorkspace,
+        effectiveDevToolsWorkspace,
         effectiveInMemoryFiles
       )(logger)
 
@@ -238,7 +289,7 @@ object LiveServer extends IOApp:
         case _ => Resource.unit[IO]
 
       // _ <- stylesDir.fold(Resource.unit[IO])(sd => fileWatcher(fs2.io.file.Path(sd), mr))
-      _ <- logger.info(s"Start dev server on http://localhost:${lsc.port}").toResource
+      _ <- logger.info(s"[liveServer] Start dev server on http://localhost:${lsc.port}").toResource
       server <- buildServer(app.orNotFound, lsc.port)
 
       _ <- IO.whenA(!lsc.preventBrowserOpen)(openBrowser(Some(lsc.openBrowserAt), lsc.port)(logger)).toResource

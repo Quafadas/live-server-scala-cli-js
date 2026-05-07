@@ -145,12 +145,12 @@ private[sjsls] object CliOps:
     )
     .orNone
 
-  val workspaceRootOpt: Opts[String] = Opts
+  val workspaceRootOpt: Opts[Option[String]] = Opts
     .option[String](
       "workspace-root",
       "Absolute path to the project source root for Chrome DevTools automatic workspace folder integration. Defaults to the current working directory when it contains at least one `.scala` file. Pass `none` to disable."
     )
-    .withDefault(defaultWorkspaceRoot)
+    .orNone
 
   val workspaceUuidOpt: Opts[Option[String]] = Opts
     .option[String](

@@ -55,7 +55,8 @@ trait ScalaJsWebAppModule extends InMemoryFastLinkHashScalaJSModule with ScalaJs
       logLevel = logLevel(),
       logFile = logFile().fold[Option[String]](None)(p => Some(p.path.toString)),
       customRefresh = Some(updateServer),
-      devToolsWorkspace = Some((moduleDir.toString(), devToolsUuid())),
+      devToolsWorkspaceRoot = Some(moduleDir.toString()),
+      devToolsWorkspaceUuid = Some(devToolsUuid()),
       inMemoryFiles = Some(hashedOutputFiles)
     )
   }
