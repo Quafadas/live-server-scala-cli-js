@@ -35,7 +35,7 @@ private def devToolsRoute(workspace: Option[(String, String)]): HttpRoutes[IO] =
           Ok(json, `Content-Type`(MediaType.application.json))
       }
 
-def routes[F[_]: Files: MonadThrow](
+def routes[F[_]: MonadThrow](
     stringPath: String,
     refreshTopic: Topic[IO, Unit],
     assetRefreshTopic: Topic[IO, String],
