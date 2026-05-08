@@ -9,11 +9,31 @@ scala-cli --version && \
 cs version && \
 git clone https://github.com/Quafadas/viteless.git && \
 cd viteless && \
-cs launch io.github.quafadas::sjsls:latest.release
+cs launch io.github.quafadas::sjsls:@VERSION@
 ```
 
 Note that to work, you need cs and scala-cli to be on your path.
 
+## Homebrew
+
+If you have homebrew, you can install those tools with:
+
+```sh
+brew install quafadas/homebrew-sjsls/sjsls
+```
+This "tap" will download a scala-native compiled binary (zero startup time!) of the latest release of sjsls, and put it on your path as `sjsls`. You can also find it on [github](https://github.com/Quafadas/live-server-scala-cli-js/releases)
+
+```sh
+sjsls --init test2
+cd test2
+code .
+sjsls --styles-dir assets
+```
+If you're into vibe coding,
+
+> build a clock using scala laminar that rotates as the time changes
+
+And watch the browser at https://localhost:3000 :-)...
 
 ## It worked... okay... I have 20 more seconds
 

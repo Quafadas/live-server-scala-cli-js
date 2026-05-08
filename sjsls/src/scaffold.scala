@@ -16,12 +16,12 @@ private[sjsls] val importMapJson: String =
      |""".stripMargin
 
 private[sjsls] val projectScala: String =
-  """|//> using scala 3.7.1
+  """|//> using scala 3.8.3
      |//> using platform js
      |
-     |//> using jsVersion 1.19.0
+     |//> using jsVersion 1.21.0
      |
-     |//> using dep org.scala-js::scalajs-dom::2.8.0
+     |//> using dep org.scala-js::scalajs-dom::2.8.1
      |//> using dep com.raquo::laminar::17.2.1
      |
      |//> using jsModuleKind es

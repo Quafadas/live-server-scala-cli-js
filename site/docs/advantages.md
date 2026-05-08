@@ -6,6 +6,10 @@ Here are the key advantages of this approach:
 
 - There is no bundling misdirection, so source maps work. You can [debug scalaJS straight out of VSCode](https://code.visualstudio.com/docs/nodejs/browser-debugging) by following the standard VSSCode debugging instructions.
 
+- Setup "/.well-known/appspecific/com.chrome.devtools.json" by default for chrome dev tools workspace integration. This means you can edit your frontend code in VSCode, and have the dev tools open on the right file and line when you refresh the page.
+
+
+
 - Because there's no seperate ecosystem or NPM to configure, configuring build and CI is a lot easier. No `node_modules` to worry about. I found that this simplicity infected everything around it.
 
 - In terms of performance; NPM dependancies are loaded out the CDN. This is slow the first time, but check the network browser tools when you refresh the page. The second time they are all served out of browser cache - it takes 0ms. Even better, that cache _survives application redeployment!_.
