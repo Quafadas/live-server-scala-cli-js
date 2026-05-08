@@ -128,9 +128,7 @@ object LiveServer extends IOApp:
       .replace()
 
     val server = for
-      _ <- logger
-        .debug("[liveServer] Starting with configuration: " + lsc.toString)
-        .toResource
+      _ <- logger.debug("[liveServer] Starting with configuration: " + lsc.toString).toResource
 
       _ <- Resource
         .pure[IO, Boolean](lsc.dezombify)
@@ -238,20 +236,19 @@ object LiveServer extends IOApp:
       // Some(root)   → use the supplied path verbatim
       effectiveDevToolsWorkspace <- lsc.devToolsWorkspaceRoot match
         case Some("none") =>
-          logger
-            .debug("[devtools] workspace-root=none — workspace integration explicitly disabled").toResource >>
+          logger.debug("[devtools] workspace-root=none — workspace integration explicitly disabled").toResource >>
             Resource.pure[IO, Option[(String, String)]](Option.empty[(String, String)])
 
         case Some(root) =>
           val uuid = lsc.devToolsWorkspaceUuid.getOrElse(sessionUuid)
-          logger
-            .debug(s"[devtools] Explicit workspace-root supplied. root=$root uuid=$uuid").toResource >>
+          logger.debug(s"[devtools] Explicit workspace-root supplied. root=$root uuid=$uuid").toResource >>
             Resource.pure[IO, Option[(String, String)]](Some((root, uuid)))
         case None =>
           val root = baseDirPath.toString
           val uuid = lsc.devToolsWorkspaceUuid.getOrElse(sessionUuid)
           logger
-            .debug(s"[devtools] No workspace-root supplied; defaulting to baseDir. root=$root uuid=$uuid").toResource >>
+            .debug(s"[devtools] No workspace-root supplied; defaulting to baseDir. root=$root uuid=$uuid")
+            .toResource >>
             Resource.pure[IO, Option[(String, String)]](Some((root, uuid)))
 
       app <- routes(
