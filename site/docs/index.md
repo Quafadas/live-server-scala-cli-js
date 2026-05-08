@@ -16,7 +16,7 @@ Note that to work, you need cs and scala-cli to be on your path.
 
 ## Homebrew
 
-If you have homebrew, you can install those tools with:
+It _should_ (my first time at this, so be gentle) install via homebrew:
 
 ```sh
 brew install quafadas/homebrew-sjsls/sjsls
