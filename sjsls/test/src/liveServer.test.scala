@@ -322,6 +322,86 @@ trait PlaywrightTest extends CatsEffectSuite:
         )
   }
 
+  ResourceFunFixture {
+    files
+      .both(client)
+      .flatMap {
+        (dir, httpClient) =>
+          val lsc = LiveServerConfig(
+            baseDir = Some(dir.toString),
+            port = Port.fromInt(basePort).get,
+            openBrowserAt = "",
+            preventBrowserOpen = true,
+            buildTool = NoBuildTool(),
+            devToolsWorkspaceRoot = Some("/test/workspace"),
+            devToolsWorkspaceUuid = Some("test-devtools-uuid")
+          )
+          LiveServer.main(lsc).map(_ => httpClient)
+      }
+  }.test("devtools well-known URL is served when devToolsWorkspace is configured") {
+    httpClient =>
+      assertIO(
+        httpClient.status(
+          org
+            .http4s
+            .Request[IO](
+              Method.GET,
+              Uri.unsafeFromString(
+                s"http://localhost:$basePort/.well-known/appspecific/com.chrome.devtools.json"
+              )
+            )
+        ),
+        Ok
+      ) >>
+        assertIO(
+          httpClient.expect[String](
+            s"http://localhost:$basePort/.well-known/appspecific/com.chrome.devtools.json"
+          ),
+          """{"workspace":{"root":"/test/workspace","uuid":"test-devtools-uuid"}}"""
+        )
+  }
+
+  ResourceFunFixture {
+    files
+      .both(client)
+      .flatMap {
+        (dir, httpClient) =>
+          val lsc = LiveServerConfig(
+            baseDir = Some(dir.toString),
+            port = Port.fromInt(basePort).get,
+            openBrowserAt = "",
+            preventBrowserOpen = true,
+            buildTool = NoBuildTool()
+          )
+          LiveServer.main(lsc).map(_ => (dir.toString, httpClient))
+      }
+  }.test("devtools well-known URL is served by default") {
+    (dirStr, httpClient) =>
+      assertIO(
+        httpClient.status(
+          org
+            .http4s
+            .Request[IO](
+              Method.GET,
+              Uri.unsafeFromString(
+                s"http://localhost:$basePort/.well-known/appspecific/com.chrome.devtools.json"
+              )
+            )
+        ),
+        Ok
+      ) >>
+        assertIOBoolean(
+          httpClient
+            .expect[String](
+              s"http://localhost:$basePort/.well-known/appspecific/com.chrome.devtools.json"
+            )
+            .map(
+              _.contains(s"""{"workspace":{"root":"$dirStr","uuid":"""")
+            ) // Just check that the default workspace root is included, since the uuid is random
+        )
+
+  }
+
   override def afterAll(): Unit =
     super.afterAll()
     pw.close()

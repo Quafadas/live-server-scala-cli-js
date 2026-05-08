@@ -9,8 +9,6 @@
 - Auto-open browser on startup
 - Support for Scala CLI, Mill, and no-build-tool modes
 
-ToDo: Content hashing
-
 ## Build System: Mill
 
 This project uses **Mill** (version 1.0.5) as its build tool. The Mill wrapper script (`./mill`) is checked in. JVM 21 is required.
@@ -86,9 +84,11 @@ live-server-scala-cli-js/
 
 ## Technology Stack
 
-The typelevel stack -
+The typelevel stack.
 
 ## Testing
+
+_AWLAYS_ add tests for each change.
 
 Tests use **Munit** with **Cats Effect** and **Playwright** for browser integration tests.
 

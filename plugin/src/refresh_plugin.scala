@@ -272,7 +272,8 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
       logFile = logFile().fold[Option[String]](None)(p => Some(p.path.toString)),
       customRefresh = Some(updateServer),
       customAssetRefresh = Some(updateAsset),
-      devToolsWorkspace = Some((moduleDir.toString(), devToolsUuid()))
+      devToolsWorkspaceRoot = Some(moduleDir.toString()),
+      devToolsWorkspaceUuid = Some(devToolsUuid())
     )
   }
 
