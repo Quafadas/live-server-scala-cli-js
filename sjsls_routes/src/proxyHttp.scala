@@ -98,7 +98,11 @@ object HttpProxy:
       .map {
         servers =>
           HttpRoutes.of[F] {
-            case req @ _ if req.headers.get[org.http4s.headers.Upgrade].exists(_.values.exists(_.name.toString.toLowerCase == "websocket")) =>
+            case req @ _
+                if req
+                  .headers
+                  .get[org.http4s.headers.Upgrade]
+                  .exists(_.values.exists(_.name.toString.toLowerCase == "websocket")) =>
               val pathRendered = pathPrefix + req.uri.path.renderString
               val host = req.headers.get[Host].map(_.host).getOrElse("")
               val newServers = servers.filter(_.serverNames.contains(host))
@@ -138,25 +142,29 @@ object HttpProxy:
                       // Allocate the upstream connection without immediately releasing it.
                       // The release is woven into the send stream via onFinalize so that the
                       // upstream connection stays open for the full duration of the WS session.
-                      wsClient.connectHighLevel(WSRequest(wsUri)).allocated.flatMap {
-                        (conn, release) =>
-                          // Map client WSDataFrame → server WebSocketFrame for the send stream
-                          val send: Stream[F, WebSocketFrame] = conn.receiveStream
-                            .map {
-                              case WSFrame.Text(text, last)    => WebSocketFrame.Text(text, last)
-                              case WSFrame.Binary(bytes, last) => WebSocketFrame.Binary(bytes, last)
-                            }
-                            .onFinalize(release)
-                          // Map server WebSocketFrame → client WSFrame for the receive pipe
-                          val receive: fs2.Pipe[F, WebSocketFrame, Unit] = incoming =>
-                            incoming
-                              .collect {
-                                case WebSocketFrame.Text(text, last)    => WSFrame.Text(text, last)
-                                case WebSocketFrame.Binary(bytes, last)  => WSFrame.Binary(bytes, last)
+                      wsClient
+                        .connectHighLevel(WSRequest(wsUri))
+                        .allocated
+                        .flatMap {
+                          (conn, release) =>
+                            // Map client WSDataFrame → server WebSocketFrame for the send stream
+                            val send: Stream[F, WebSocketFrame] = conn
+                              .receiveStream
+                              .map {
+                                case WSFrame.Text(text, last)    => WebSocketFrame.Text(text, last)
+                                case WSFrame.Binary(bytes, last) => WebSocketFrame.Binary(bytes, last)
                               }
-                              .through(conn.sendPipe)
-                          wsb.build(send, receive)
-                      }
+                              .onFinalize(release)
+                            // Map server WebSocketFrame → client WSFrame for the receive pipe
+                            val receive: fs2.Pipe[F, WebSocketFrame, Unit] = incoming =>
+                              incoming
+                                .collect {
+                                  case WebSocketFrame.Text(text, last)    => WSFrame.Text(text, last)
+                                  case WebSocketFrame.Binary(bytes, last) => WSFrame.Binary(bytes, last)
+                                }
+                                .through(conn.sendPipe)
+                            wsb.build(send, receive)
+                        }
                   }
               }
           }

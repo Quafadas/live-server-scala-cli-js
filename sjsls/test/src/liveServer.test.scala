@@ -452,9 +452,7 @@ trait PlaywrightTest extends CatsEffectSuite:
           Ok
         ) >>
         assertIOBoolean(
-          httpClient
-            .expect[String](s"http://localhost:$port/main.js")
-            .map(_.contains("Hello from plain JS"))
+          httpClient.expect[String](s"http://localhost:$port/main.js").map(_.contains("Hello from plain JS"))
         )
   }
 
@@ -475,25 +473,24 @@ trait PlaywrightTest extends CatsEffectSuite:
       .build
 
   ResourceFunFixture {
-    plainJsSpa
-      .flatMap {
-        dir =>
-          val wsBackendPort = backendPort + 10
-          wsEchoBackend(wsBackendPort).flatMap {
-            _ =>
-              val lsc = LiveServerConfig(
-                baseDir = Some(dir.toString),
-                indexHtmlTemplate = Some(dir.toString),
-                port = Port.fromInt(basePort + 1).get,
-                openBrowserAt = "",
-                preventBrowserOpen = true,
-                buildTool = NoBuildTool(),
-                proxyPortTarget = Port.fromInt(wsBackendPort),
-                proxyPathMatchPrefix = Some("/ws")
-              )
-              LiveServer.main(lsc).map(_ => lsc.port)
-          }
-      }
+    plainJsSpa.flatMap {
+      dir =>
+        val wsBackendPort = backendPort + 10
+        wsEchoBackend(wsBackendPort).flatMap {
+          _ =>
+            val lsc = LiveServerConfig(
+              baseDir = Some(dir.toString),
+              indexHtmlTemplate = Some(dir.toString),
+              port = Port.fromInt(basePort + 1).get,
+              openBrowserAt = "",
+              preventBrowserOpen = true,
+              buildTool = NoBuildTool(),
+              proxyPortTarget = Port.fromInt(wsBackendPort),
+              proxyPathMatchPrefix = Some("/ws")
+            )
+            LiveServer.main(lsc).map(_ => lsc.port)
+        }
+    }
   }.test("WebSocket proxy forwards frames to upstream echo server") {
     port =>
       JdkWSClient
@@ -505,11 +502,7 @@ trait PlaywrightTest extends CatsEffectSuite:
               .use {
                 conn =>
                   conn.sendText("ping") >>
-                    conn
-                      .receiveStream
-                      .collectFirst { case WSFrame.Text(text, _) => text }
-                      .compile
-                      .lastOrError
+                    conn.receiveStream.collectFirst { case WSFrame.Text(text, _) => text }.compile.lastOrError
               }
         }
         .assertEquals("ping")
