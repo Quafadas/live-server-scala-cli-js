@@ -6,9 +6,12 @@ import scala.concurrent.duration.*
 import org.http4s.HttpRoutes
 import org.http4s.Method
 import org.http4s.Uri
+import org.http4s.client.websocket.WSFrame
+import org.http4s.client.websocket.WSRequest
 import org.http4s.dsl.io.*
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.ember.server.EmberServerBuilder
+import org.http4s.jdkhttpclient.JdkWSClient
 
 import com.comcast.ip4s.Port
 import com.microsoft.playwright.*
@@ -400,6 +403,109 @@ trait PlaywrightTest extends CatsEffectSuite:
             ) // Just check that the default workspace root is included, since the uuid is random
         )
 
+  }
+
+  val plainJsSpa = IO {
+    val tempDir = os.temp.dir()
+    val html = """<!DOCTYPE html>
+<html>
+  <head><title>Plain JS SPA</title></head>
+  <body>
+    <div id="app"></div>
+    <script src="main.js"></script>
+  </body>
+</html>"""
+    val js = """document.getElementById('app').textContent = 'Hello from plain JS';"""
+    os.write.over(tempDir / "index.html", html)
+    os.write.over(tempDir / "main.js", js)
+    tempDir
+  }.toResource
+
+  ResourceFunFixture {
+    plainJsSpa
+      .both(client)
+      .flatMap {
+        (dir, httpClient) =>
+          val lsc = LiveServerConfig(
+            baseDir = Some(dir.toString),
+            indexHtmlTemplate = Some(dir.toString),
+            port = Port.fromInt(basePort).get,
+            openBrowserAt = "",
+            preventBrowserOpen = true,
+            buildTool = NoBuildTool()
+          )
+          LiveServer.main(lsc).map(_ => (lsc.port, httpClient))
+      }
+  }.test("serves a plain JS SPA with no build tool") {
+    (port, httpClient) =>
+      assertIO(
+        httpClient.status(org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port"))),
+        Ok
+      ) >>
+        assertIOBoolean(
+          httpClient.expect[String](s"http://localhost:$port").map(_.contains("<div id=\"app\">"))
+        ) >>
+        assertIO(
+          httpClient.status(
+            org.http4s.Request[IO](Method.GET, Uri.unsafeFromString(s"http://localhost:$port/main.js"))
+          ),
+          Ok
+        ) >>
+        assertIOBoolean(
+          httpClient.expect[String](s"http://localhost:$port/main.js").map(_.contains("Hello from plain JS"))
+        )
+  }
+
+  def wsEchoBackend(port: Int) =
+    EmberServerBuilder
+      .default[IO]
+      .withPort(Port.fromInt(port).get)
+      .withShutdownTimeout(1.millis)
+      .withHttpWebSocketApp {
+        wsb =>
+          HttpRoutes
+            .of[IO] {
+              case GET -> Root / "ws" / "echo" =>
+                wsb.build(sendReceive = identity)
+            }
+            .orNotFound
+      }
+      .build
+
+  ResourceFunFixture {
+    plainJsSpa.flatMap {
+      dir =>
+        val wsBackendPort = backendPort + 10
+        wsEchoBackend(wsBackendPort).flatMap {
+          _ =>
+            val lsc = LiveServerConfig(
+              baseDir = Some(dir.toString),
+              indexHtmlTemplate = Some(dir.toString),
+              port = Port.fromInt(basePort + 1).get,
+              openBrowserAt = "",
+              preventBrowserOpen = true,
+              buildTool = NoBuildTool(),
+              proxyPortTarget = Port.fromInt(wsBackendPort),
+              proxyPathMatchPrefix = Some("/ws")
+            )
+            LiveServer.main(lsc).map(_ => lsc.port)
+        }
+    }
+  }.test("WebSocket proxy forwards frames to upstream echo server") {
+    port =>
+      JdkWSClient
+        .simple[IO]
+        .flatMap {
+          wsClient =>
+            wsClient
+              .connectHighLevel(WSRequest(Uri.unsafeFromString(s"ws://localhost:$port/ws/echo")))
+              .use {
+                conn =>
+                  conn.sendText("ping") >>
+                    conn.receiveStream.collectFirst { case WSFrame.Text(text, _) => text }.compile.lastOrError
+              }
+        }
+        .assertEquals("ping")
   }
 
   override def afterAll(): Unit =

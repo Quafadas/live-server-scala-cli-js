@@ -2,8 +2,13 @@ package io.github.quafadas.sjsls
 
 import org.http4s.*
 import org.http4s.client.Client
+import org.http4s.client.websocket.WSClient
+import org.http4s.client.websocket.WSFrame
+import org.http4s.client.websocket.WSRequest
 import org.http4s.headers.Host
 import org.http4s.headers.`X-Forwarded-For`
+import org.http4s.server.websocket.WebSocketBuilder2
+import org.http4s.websocket.WebSocketFrame
 
 import com.comcast.ip4s.Port
 
@@ -12,6 +17,8 @@ import cats.data.*
 import cats.effect.kernel.*
 import cats.effect.std.Random
 import cats.syntax.all.*
+
+import fs2.Stream
 
 import io.github.quafadas.sjsls.ProxyConfig.Location
 
@@ -78,6 +85,91 @@ object HttpProxy:
           xForwardedMiddleware(routes)
       }
   end servers
+
+  def wsRoutes[F[_]: Async: Random](
+      c: ProxyConfig.Equilibrium,
+      wsClient: WSClient[F],
+      pathPrefix: String
+  )(wsb: WebSocketBuilder2[F]): NonEmptyMap[Port, HttpRoutes[F]] =
+    val upstreams = c.http.upstreams.groupMapReduce(_.name)(_.servers) { case (a, b) => a.concatNel(b) }
+    c.http
+      .servers
+      .groupByNem(server => server.listen)
+      .map {
+        servers =>
+          HttpRoutes.of[F] {
+            case req @ _
+                if req
+                  .headers
+                  .get[org.http4s.headers.Upgrade]
+                  .exists(_.values.exists(_.name.toString.toLowerCase == "websocket")) =>
+              val pathRendered = pathPrefix + req.uri.path.renderString
+              val host = req.headers.get[Host].map(_.host).getOrElse("")
+              val newServers = servers.filter(_.serverNames.contains(host))
+
+              val exact =
+                newServers
+                  .flatMap(_.locations)
+                  .collect {
+                    case Location(out: ProxyConfig.LocationMatcher.Exact, proxy) =>
+                      (out, proxy)
+                  }
+
+              val proxy = exact
+                .collectFirst { case (e, p) if e.value === pathRendered => p }
+                .orElse {
+                  val prefix =
+                    newServers
+                      .flatMap(_.locations)
+                      .collect {
+                        case Location(out: ProxyConfig.LocationMatcher.Prefix, proxy) =>
+                          (out, proxy)
+                      }
+                  prefix
+                    .collect { case (e, p) if pathRendered.startsWith(e.value) => (e, p) }
+                    .sortBy { case (p, _) => p.value.length() }
+                    .headOption
+                    .map(_._2)
+                }
+
+              proxy.fold(Response[F](Status.NotFound).withEntity("No WS Route Found").pure[F]) {
+                proxyPass =>
+                  proxyThrough[F](proxyPass, upstreams).flatMap {
+                    upstreamUri =>
+                      val wsUri = upstreamUri
+                        .copy(scheme = Some(Uri.Scheme.unsafeFromString("ws")))
+                        .addPath(pathRendered)
+                      // Allocate the upstream connection without immediately releasing it.
+                      // The release is woven into the send stream via onFinalize so that the
+                      // upstream connection stays open for the full duration of the WS session.
+                      wsClient
+                        .connectHighLevel(WSRequest(wsUri))
+                        .allocated
+                        .flatMap {
+                          (conn, release) =>
+                            // Map client WSDataFrame → server WebSocketFrame for the send stream
+                            val send: Stream[F, WebSocketFrame] = conn
+                              .receiveStream
+                              .map {
+                                case WSFrame.Text(text, last)    => WebSocketFrame.Text(text, last)
+                                case WSFrame.Binary(bytes, last) => WebSocketFrame.Binary(bytes, last)
+                              }
+                              .onFinalize(release)
+                            // Map server WebSocketFrame → client WSFrame for the receive pipe
+                            val receive: fs2.Pipe[F, WebSocketFrame, Unit] = incoming =>
+                              incoming
+                                .collect {
+                                  case WebSocketFrame.Text(text, last)    => WSFrame.Text(text, last)
+                                  case WebSocketFrame.Binary(bytes, last) => WSFrame.Binary(bytes, last)
+                                }
+                                .through(conn.sendPipe)
+                            wsb.build(send, receive)
+                        }
+                  }
+              }
+          }
+      }
+  end wsRoutes
 
   private def proxyThrough[F[_]: Random: MonadThrow](
       proxyPass: String,

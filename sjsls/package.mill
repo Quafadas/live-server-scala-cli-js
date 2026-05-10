@@ -34,6 +34,9 @@ object `package` extends Module:
 
   object jvm extends SjslsPlatformModule:
     def moduleDeps = Seq(build.sjsls_routes.jvm)
+    override def mvnDeps = super.mvnDeps() ++ Seq(
+      mvn"org.http4s::http4s-jdk-http-client::0.9.2"
+    )
     object test extends Testy with ScalaTests with BuildInfo:
       val name = "sjsls"
       val buildInfoPackageName = "sjsls"

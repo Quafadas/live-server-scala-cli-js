@@ -3,9 +3,12 @@ package io.github.quafadas.sjsls
 import scala.concurrent.duration.*
 
 import org.http4s.*
+import org.http4s.client.websocket.WSClient
 import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.ember.server.EmberServerBuilder
+import org.http4s.jdkhttpclient.JdkWSClient
 import org.http4s.server.Server
+import org.http4s.server.websocket.WebSocketBuilder2
 
 import com.comcast.ip4s.Port
 import com.comcast.ip4s.host
@@ -29,12 +32,12 @@ object LiveServer extends IOApp:
 
   private val sessionUuid: String = java.util.UUID.randomUUID().toString
 
-  private def buildServer(httpApp: HttpApp[IO], port: Port) = EmberServerBuilder
+  private def buildServer(httpApp: WebSocketBuilder2[IO] => HttpApp[IO], port: Port) = EmberServerBuilder
     .default[IO]
     .withHttp2
     .withHost(host"localhost")
     .withPort(port)
-    .withHttpApp(httpApp)
+    .withHttpWebSocketApp(wsb => httpApp(wsb))
     .withShutdownTimeout(Duration.Zero)
     .build
 
@@ -165,6 +168,7 @@ object LiveServer extends IOApp:
         .toResource
       linkingTopic <- Topic[IO, Unit].toResource
       client <- EmberClientBuilder.default[IO].build
+      wsClient <- JdkWSClient.simple[IO].toResource
       baseDirPath <- lsc.baseDir.fold(Files[IO].currentWorkingDirectory.toResource)(toDirectoryPath)
       outDirPath <- lsc
         .outDir
@@ -208,7 +212,8 @@ object LiveServer extends IOApp:
           )
 
       proxyConf2 <- proxyConf(lsc.proxyPortTarget, lsc.proxyPathMatchPrefix)
-      proxyRoutes: HttpRoutes[IO] = makeProxyRoutes(client, proxyConf2)(logger)
+      proxyRoutes = makeProxyRoutes(client, proxyConf2)(logger)
+      wsProxyRoutes = makeWsProxyRoutes(proxyConf2, wsClient)(logger)
 
       _ <- buildRunner(
         lsc.buildTool,
@@ -294,7 +299,7 @@ object LiveServer extends IOApp:
 
       // _ <- stylesDir.fold(Resource.unit[IO])(sd => fileWatcher(fs2.io.file.Path(sd), mr))
       _ <- logger.info(s"[liveServer] Start dev server on http://localhost:${lsc.port}").toResource
-      server <- buildServer(app.orNotFound, lsc.port)
+      server <- buildServer(wsb => wsProxyRoutes(wsb).combineK(app).orNotFound, lsc.port)
 
       _ <- IO.whenA(!lsc.preventBrowserOpen)(openBrowser(Some(lsc.openBrowserAt), lsc.port)(logger)).toResource
     yield server
