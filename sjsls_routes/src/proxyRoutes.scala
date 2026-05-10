@@ -2,8 +2,10 @@ package io.github.quafadas.sjsls
 
 import org.http4s.HttpRoutes
 import org.http4s.client.Client
+import org.http4s.client.websocket.WSClient
 import org.http4s.server.Router
 import org.http4s.server.middleware.Logger
+import org.http4s.server.websocket.WebSocketBuilder2
 
 import com.comcast.ip4s.Host
 import com.comcast.ip4s.Port
@@ -42,6 +44,30 @@ def makeProxyRoutes(
       HttpRoutes.empty[IO]
 
 end makeProxyRoutes
+
+def makeWsProxyRoutes(
+    proxyConfig: Option[(Equilibrium, String)],
+    wsClient: WSClient[IO]
+)(logger: Scribe[IO]): WebSocketBuilder2[IO] => HttpRoutes[IO] =
+  wsb =>
+    proxyConfig match
+      case Some((pc, pathPrefix)) =>
+        given R: Random[IO] = Random.javaUtilConcurrentThreadLocalRandom[IO]
+        Logger.httpRoutes[IO](
+          logHeaders = true,
+          logBody = false,
+          redactHeadersWhen = _ => false,
+          logAction = Some((msg: String) => logger.trace(msg))
+        )(
+          Router(
+            pathPrefix -> HttpProxy.wsRoutes[IO](pc, wsClient, pathPrefix)(wsb).head._2
+          )
+        )
+
+      case None =>
+        HttpRoutes.empty[IO]
+
+end makeWsProxyRoutes
 
 def proxyConf(proxyTarget: Option[Port], pathPrefix: Option[String]): Resource[IO, Option[(Equilibrium, String)]] =
   proxyTarget
