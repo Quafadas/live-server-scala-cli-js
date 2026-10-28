@@ -22,7 +22,8 @@ jobs:
     name: Build and Test
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        # Pinned until Playwright supports the newer ubuntu-latest image
+        os: [ubuntu-24.04]
         scala: [3]
         java: [temurin@21]
         project: [jvm]
