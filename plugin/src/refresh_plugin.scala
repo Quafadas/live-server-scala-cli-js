@@ -94,7 +94,14 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     */
   def bodyHtmlFromReport(report: Report, basePath: String = "./", includeRefresh: Boolean = false): String =
     val scriptTags = report.publicModules.map(m => script(src := s"$basePath${m.jsFileName}", `type` := "module"))
+    // Present when the output was hashed module-by-module; it must come before the module scripts.
+    val importMapPath = report.dest.path / InMemoryFastLinkHashScalaJSModule.importMapFile
+    val importMap =
+      if os.exists(importMapPath) then
+        raw(importMapScript(upickle.default.read[Map[String, String]](os.read(importMapPath)), basePath))
+      else frag()
     body(
+      importMap,
       frag(scriptTags.toSeq*),
       div(id := appRoot),
       if includeRefresh then raw(refreshScript) else frag()

@@ -18,6 +18,8 @@ import fs2.io.file.*
 
 import scribe.Level
 
+import scala.jdk.CollectionConverters.*
+
 import cats.effect.*
 import cats.implicits.*
 
@@ -223,12 +225,13 @@ object LiveServer extends IOApp:
       // internal JS modules are served with immutable cache headers and cache
       // busting happens automatically on each rebuild.  Files on disk are never
       // modified.
-      cliInMemoryFiles <- (lsc.buildTool, lsc.inMemoryFiles) match
+      cliHashed <- (lsc.buildTool, lsc.inMemoryFiles) match
         case (_: ScalaCli, None) =>
           logger.debug("[liveServer] ScalaCli mode — creating CLI in-memory content-hash map").toResource >>
-            ContentHasher.buildInMemoryHashedFiles(outDirPath)(logger).map(f => Some(f)).toResource
+            ContentHasher.buildInMemoryHashedFiles(outDirPath)(logger).map(Some(_)).toResource
         case _ =>
-          Resource.pure[IO, Option[java.util.concurrent.ConcurrentHashMap[String, Array[Byte]]]](None)
+          Resource.pure[IO, Option[ContentHasher.HashedOutput]](None)
+      cliInMemoryFiles = cliHashed.map(h => java.util.concurrent.ConcurrentHashMap(h.files.asJava))
 
       // Plugin-provided inMemoryFiles take priority; CLI-created is the fallback.
       effectiveInMemoryFiles = lsc.inMemoryFiles.orElse(cliInMemoryFiles)
@@ -268,8 +271,11 @@ object LiveServer extends IOApp:
         effectiveInMemoryFiles
       )(logger)
 
-      _ <- effectiveInMemoryFiles match
-        case Some(files) =>
+      _ <- (cliHashed, effectiveInMemoryFiles) match
+        case (Some(hashed), _) =>
+          logger.debug("[liveServer] Seeding hash ref with the CLI import map").toResource >>
+            fileToHashRef.set(hashed.importMap).toResource
+        case (None, Some(files)) =>
           logger
             .debug(
               s"[liveServer] Seeding hash ref from IN-MEMORY files. count=${files
@@ -277,7 +283,7 @@ object LiveServer extends IOApp:
             )
             .toResource >>
             updateMapRefFromMemory(files, fileToHashRef)(logger).toResource
-        case None =>
+        case (None, None) =>
           logger.debug(s"[liveServer] Seeding hash ref from DISK. outDirPath=$outDirPath").toResource >>
             updateMapRef(outDirPath, fileToHashRef)(logger).toResource
       // _ <- stylesDir.fold(Resource.unit)(sd => seedMapOnStart(sd, mr))

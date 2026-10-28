@@ -128,8 +128,14 @@ private def fileWatcher(
               logger.debug("[fileWatcher] Rebuilding in-memory content-hashed files from disk") >>
                 ContentHasher
                   .buildInMemoryHashedFiles(stringPath)(logger)
-                  .flatTap(newFiles => IO { files.clear(); files.putAll(newFiles) }) >>
-                updateMapRefFromMemory(files, mr)(logger)
+                  .flatMap {
+                    hashed =>
+                      // Add the new files before dropping stale ones, so requests never see an empty map
+                      IO {
+                        files.putAll(hashed.files.asJava)
+                        files.keySet.retainAll(hashed.files.keySet.asJava)
+                      } >> mr.set(hashed.importMap)
+                  }
             case None =>
               updateMapRef(stringPath, mr)(logger)) >>
           logger.debug("[fileWatcher] hash map updated — publishing to refreshTopic") >>

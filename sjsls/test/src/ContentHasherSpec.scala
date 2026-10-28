@@ -44,199 +44,104 @@ class ContentHasherSuite extends CatsEffectSuite:
   }
 
   // --------------------------------------------------------------------------
-  // parseJsImports
+  // hashWithImportMap
   // --------------------------------------------------------------------------
 
-  test("parseJsImports extracts double-quoted relative import") {
-    val content = """import { foo } from "./chunk.js";"""
-    assertEquals(C.parseJsImports(content), Seq("chunk.js"))
+  private def utf8(s: String) = s.getBytes("UTF-8")
+
+  private val chunk = "export const x = 1;"
+  private val main = """import { x } from "./chunk.js"; console.log(x);"""
+
+  test("hashWithImportMap maps every JS module to a content-hashed name") {
+    val hashed = C.hashWithImportMap(Map("chunk.js" -> utf8(chunk), "main.js" -> utf8(main)))
+    assertEquals(hashed.importMap.keySet, Set("chunk.js", "main.js"))
+    assertEquals(hashed.files.keySet, hashed.importMap.values.toSet)
+    assert(hashed.importMap.values.forall(_.matches(".*\\.[a-f0-9]{16}\\.js")), hashed.importMap)
   }
 
-  test("parseJsImports extracts single-quoted relative import") {
-    val content = """import { foo } from './chunk.js';"""
-    assertEquals(C.parseJsImports(content), Seq("chunk.js"))
+  test("hashWithImportMap leaves imports between modules untouched") {
+    val hashed = C.hashWithImportMap(Map("chunk.js" -> utf8(chunk), "main.js" -> utf8(main)))
+    assertEquals(new String(hashed.files(hashed.importMap("main.js")), "UTF-8"), main)
   }
 
-  test("parseJsImports handles bare (no ./) imports") {
-    val content = """import { foo } from "chunk.js";"""
-    assertEquals(C.parseJsImports(content), Seq("chunk.js"))
+  test("hashWithImportMap: changing a dependency does not change the modules that import it") {
+    val before = C.hashWithImportMap(Map("chunk.js" -> utf8(chunk), "main.js" -> utf8(main)))
+    val after = C.hashWithImportMap(Map("chunk.js" -> utf8("export const x = 2;"), "main.js" -> utf8(main)))
+    assertNotEquals(after.importMap("chunk.js"), before.importMap("chunk.js"))
+    assertEquals(after.importMap("main.js"), before.importMap("main.js"))
   }
 
-  test("parseJsImports returns empty for no imports") {
-    assertEquals(C.parseJsImports("const x = 1;"), Seq.empty)
+  test("hashWithImportMap renames source maps and the sourceMappingURL that points at them") {
+    val hashed = C.hashWithImportMap(
+      Map("lib.js" -> utf8("export const y = 2;\n//# sourceMappingURL=lib.js.map"), "lib.js.map" -> utf8("{}"))
+    )
+    val hashedJs = hashed.importMap("lib.js")
+    assertEquals(hashed.files.keySet, Set(hashedJs, s"$hashedJs.map"))
+    assert(new String(hashed.files(hashedJs), "UTF-8").endsWith(s"sourceMappingURL=$hashedJs.map"))
   }
 
-  test("parseJsImports extracts multiple imports") {
-    val content =
-      """|import a from "./a.js";
-         |import b from "./b.js";
-         |""".stripMargin
-    assertEquals(C.parseJsImports(content).toSet, Set("a.js", "b.js"))
+  test("hashWithImportMap passes other files through unchanged") {
+    val hashed = C.hashWithImportMap(Map("main.wasm" -> Array[Byte](0, 97, 115, 109)))
+    assertEquals(hashed.importMap, Map.empty[String, String])
+    assertEquals(hashed.files.keySet, Set("main.wasm"))
   }
 
-  // --------------------------------------------------------------------------
-  // rewriteJsReferences
-  // --------------------------------------------------------------------------
-
-  test("rewriteJsReferences rewrites double-quoted relative import") {
-    val mapping = Map("chunk.js" -> "chunk.abc12345.js")
-    val content = """import * as m from "./chunk.js";"""
-    assertEquals(C.rewriteJsReferences(content, mapping), """import * as m from "./chunk.abc12345.js";""")
-  }
-
-  test("rewriteJsReferences rewrites sourceMappingURL comments") {
-    val mapping2 = Map("main.js" -> "main.abc12345.js", "main.js.map" -> "main.abc12345.js.map")
-    val content = "//# sourceMappingURL=main.js.map"
-    // sourceMappingURL=main.js.map is replaced by sourceMappingURL=main.abc12345.js.map
-    assertEquals(C.rewriteJsReferences(content, mapping2), "//# sourceMappingURL=main.abc12345.js.map")
-  }
-
-  test("rewriteJsReferences is a no-op when mapping is empty") {
-    val content = """import x from "./foo.js";"""
-    assertEquals(C.rewriteJsReferences(content, Map.empty), content)
-  }
-
-  // --------------------------------------------------------------------------
-  // topologicalSort
-  // --------------------------------------------------------------------------
-
-  test("topologicalSort puts dependency before dependent") {
-    val names = List("main.js", "chunk.js")
-    // main.js depends on chunk.js
-    val deps = Map("main.js" -> Set("chunk.js"), "chunk.js" -> Set.empty[String])
-    val sorted = C.topologicalSort(names, deps)
-    assert(sorted.indexOf("chunk.js") < sorted.indexOf("main.js"))
-  }
-
-  test("topologicalSort handles no-dependency graph") {
-    val names = List("a.js", "b.js", "c.js")
-    val deps = Map("a.js" -> Set.empty[String], "b.js" -> Set.empty[String], "c.js" -> Set.empty[String])
-    val sorted = C.topologicalSort(names, deps)
-    assertEquals(sorted.toSet, names.toSet)
-  }
-
-  test("topologicalSort returns all nodes") {
-    val names = List("a.js", "b.js")
-    val deps = Map("a.js" -> Set("b.js"), "b.js" -> Set.empty[String])
-    val sorted = C.topologicalSort(names, deps)
-    assertEquals(sorted.toSet, Set("a.js", "b.js"))
+  test("hashWithImportMap replaces hyphens with underscores in base name by default") {
+    val hashed = C.hashWithImportMap(Map("my-module.js" -> utf8("export const z = 3;")))
+    assert(hashed.importMap("my-module.js").startsWith("my_module."), hashed.importMap)
   }
 
   // --------------------------------------------------------------------------
   // buildInMemoryHashedFiles
   // --------------------------------------------------------------------------
 
-  test("buildInMemoryHashedFiles hashes JS files and rewrites imports") {
-    val chunkContent = "export const x = 1;"
-    val mainContent = """import { x } from "./chunk.js"; console.log(x);"""
-
+  test("buildInMemoryHashedFiles serves modules under both hashed and original names") {
     val tempDir = os.temp.dir()
     try
-      os.write(tempDir / "chunk.js", chunkContent)
-      os.write(tempDir / "main.js", mainContent)
+      os.write(tempDir / "chunk.js", chunk)
+      os.write(tempDir / "main.js", main)
 
-      val result = C
-        .buildInMemoryHashedFiles(
-          fs2.io.file.Path(tempDir.toString())
-        )(scribe.cats[IO])
+      val hashed = C
+        .buildInMemoryHashedFiles(fs2.io.file.Path(tempDir.toString()))(scribe.cats[IO])
         .unsafeRunSync()(using cats.effect.unsafe.implicits.global)
 
-      val keys = scala.jdk.CollectionConverters.SetHasAsScala(result.keySet()).asScala.toSet
-
-      // chunk.js must have been hashed to chunk.<hash>.js
-      val hashedChunk = keys.find(k => k.startsWith("chunk.") && k.endsWith(".js") && k != "chunk.js")
-      assert(hashedChunk.isDefined, s"Expected a hashed chunk.js in keys: $keys")
-
-      // main.js must be present with a hash too
-      val hashedMain = keys.find(k => k.startsWith("main.") && k.endsWith(".js") && k != "main.js")
-      assert(hashedMain.isDefined, s"Expected a hashed main.js in keys: $keys")
-
-      // main.js must also be present under its original name (HTML references /main.js)
-      assert(keys.contains("main.js"), s"main.js should be present as an alias key: $keys")
-
-      // The hashed main content must reference the hashed chunk name
-      val mainBytes = result.get(hashedMain.get)
-      val mainStr = new String(mainBytes, "UTF-8")
-      assert(mainStr.contains(hashedChunk.get), s"main.js content should reference ${hashedChunk.get}: $mainStr")
-
-      // Original (unhashed) name must not be present for internal (non-entry) modules
-      assert(!keys.contains("chunk.js"), s"chunk.js should not be a separate key: $keys")
+      assertEquals(hashed.files.keySet, Set("chunk.js", "main.js") ++ hashed.importMap.values)
+      assertEquals(new String(hashed.files("main.js"), "UTF-8"), main)
     finally os.remove.all(tempDir)
     end try
   }
 
-  test("buildInMemoryHashedFiles renames source-map files to match hashed JS") {
-    val jsContent = "export const y = 2; //# sourceMappingURL=lib.js.map"
-    val mapContent = """{"version":3,"sources":["lib.scala"]}"""
+  // --------------------------------------------------------------------------
+  // import map in generated HTML
+  // --------------------------------------------------------------------------
 
-    val tempDir = os.temp.dir()
-    try
-      os.write(tempDir / "lib.js", jsContent)
-      os.write(tempDir / "lib.js.map", mapContent)
-
-      val result = C
-        .buildInMemoryHashedFiles(
-          fs2.io.file.Path(tempDir.toString())
-        )(scribe.cats[IO])
-        .unsafeRunSync()(using cats.effect.unsafe.implicits.global)
-
-      val keys = scala.jdk.CollectionConverters.SetHasAsScala(result.keySet()).asScala.toSet
-
-      val hashedJs = keys.find(k => k.startsWith("lib.") && k.endsWith(".js") && k != "lib.js")
-      val hashedMap = keys.find(k => k.endsWith(".js.map"))
-      assert(hashedJs.isDefined, s"Expected hashed lib.js in keys: $keys")
-      assert(hashedMap.isDefined, s"Expected a .js.map in keys: $keys")
-      // The map should be renamed to match the hashed JS
-      assertEquals(hashedMap.get, hashedJs.get + ".map")
-    finally os.remove.all(tempDir)
-    end try
+  test("importMapScript renders original -> hashed names under the base path") {
+    assertEquals(
+      importMapScript(Map("main.js" -> "main.0123456789abcdef.js"), "/"),
+      """<script type="importmap">{"imports":{"/main.js":"/main.0123456789abcdef.js"}}</script>"""
+    )
   }
 
-  test("buildInMemoryHashedFiles replaces hyphens with underscores in base name") {
-    val jsContent = "export const z = 3;"
-
-    val tempDir = os.temp.dir()
-    try
-      os.write(tempDir / "my-module.js", jsContent)
-
-      val result = C
-        .buildInMemoryHashedFiles(
-          fs2.io.file.Path(tempDir.toString())
-        )(scribe.cats[IO])
-        .unsafeRunSync()(using cats.effect.unsafe.implicits.global)
-
-      val keys = scala.jdk.CollectionConverters.SetHasAsScala(result.keySet()).asScala.toSet
-      assert(
-        keys.forall(k => !k.contains("-")),
-        s"Hashed names should not contain hyphens: $keys"
-      )
-      assert(
-        keys.exists(k => k.startsWith("my_module.")),
-        s"Expected key starting with my_module. in: $keys"
-      )
-    finally os.remove.all(tempDir)
-    end try
+  test("Generated index.html carries the import map, and loads the hashed entry module") {
+    val entries = Map("main.js" -> "main.0123456789abcdef.js", "internal-a.js" -> "internal_a.fedcba9876543210.js")
+    for
+      ref <- cats.effect.Ref[IO].of(entries)
+      html <- vanillaTemplate(false, ref, false, false, Some("/main.js"), None).map(_.render)
+    yield
+      assert(html.contains(importMapScript(entries, "/")), html)
+      assert(html.contains("""<script src="/main.0123456789abcdef.js" type="module">"""), html)
+      assert(html.indexOf("importmap") < html.indexOf("type=\"module\""), "import map must precede module scripts")
+    end for
   }
 
-  test("buildInMemoryHashedFiles produces immutable-cache-friendly hashed names") {
-    val jsContent = "const a = 1;"
-    val tempDir = os.temp.dir()
-    try
-      os.write(tempDir / "app.js", jsContent)
-
-      val result = C
-        .buildInMemoryHashedFiles(
-          fs2.io.file.Path(tempDir.toString())
-        )(scribe.cats[IO])
-        .unsafeRunSync()(using cats.effect.unsafe.implicits.global)
-
-      val keys = scala.jdk.CollectionConverters.SetHasAsScala(result.keySet()).asScala.toSet
-      assert(
-        keys.forall(k => k.matches(".*\\.[a-f0-9]{8,}\\..*")),
-        s"All JS keys should be content-hashed: $keys"
-      )
-    finally os.remove.all(tempDir)
-    end try
+  test("No import map is rendered for unhashed (on disk) output") {
+    for
+      ref <- cats.effect.Ref[IO].of(Map("main.js" -> "d41d8cd98f00b204e9800998ecf8427e"))
+      html <- vanillaTemplate(false, ref, false, false, Some("/main.js"), None).map(_.render)
+    yield
+      assert(!html.contains("importmap"), html)
+      assert(html.contains("""<script src="/main.js" type="module">"""), html)
+    end for
   }
 
 end ContentHasherSuite
