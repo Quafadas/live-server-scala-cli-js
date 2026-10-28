@@ -19,6 +19,8 @@ import cats.effect.IO
 import cats.effect.kernel.Ref
 import cats.syntax.all.*
 
+import _root_.io.circe.Json
+
 private def generatedIndexHtml(
     injectStyles: Boolean,
     injectCssFile: Option[String],
@@ -167,11 +169,47 @@ private def makeInternalPreloads(ref: Ref[IO, Map[String, String]]) =
       for
         m <- modules
         if m._1.toString.endsWith(".js") && m._1.toString.startsWith("internal")
-      yield link(rel := "modulepreload", href := s"${m._1}?h=${m._2}")
+      // A preload must use the URL the import map resolves to, or the browser fetches the module twice.
+      yield
+        if fileNameIsHashed(m._2) then link(rel := "modulepreload", href := s"/${m._2}")
+        else link(rel := "modulepreload", href := s"${m._1}?h=${m._2}")
       end for
   }
 
 end makeInternalPreloads
+
+private def fileNameIsHashed(name: String) = name.matches(".*\\.[a-f0-9]{8,}\\..*")
+
+/** The original -> hashed JS module names in `ref`. Only populated when serving content-hashed output from memory. */
+private def importMapEntries(ref: Ref[IO, Map[String, String]]): IO[Map[String, String]] =
+  ref.get.map(_.filter((name, hashed) => name.endsWith(".js") && fileNameIsHashed(hashed)))
+
+/** An import map which points each JS module at its content-hashed file, e.g.
+  * `{"imports":{"./internal-foo.js":"./internal_foo.0123456789abcdef.js"}}`.
+  *
+  * Scala.js modules import each other by their original names, so with this map in the page they can be hashed
+  * independently: a change to one module changes only that module's URL. It must appear before any module script.
+  *
+  * @param basePath
+  *   prefix for both sides of the map, e.g. `/` or `./`, matching how the page refers to its scripts
+  */
+def importMapScript(entries: Map[String, String], basePath: String): String =
+  val imports = entries.toSeq.sorted.map((name, hashed) => s"$basePath$name" -> Json.fromString(s"$basePath$hashed"))
+  s"""<script type="importmap">${Json.obj("imports" -> Json.obj(imports*)).noSpaces}</script>"""
+end importMapScript
+
+/** Adds the import map to a user supplied index.html, straight after `<head>`. A page which already has an import map
+  * is left alone, as merging maps isn't supported; it still works, via the unhashed module names.
+  */
+private def injectImportMap(ref: Ref[IO, Map[String, String]], template: String): IO[String] =
+  importMapEntries(ref).map {
+    entries =>
+      val headOpen = "(?i)<head[^>]*>".r.findFirstMatchIn(template)
+      (headOpen, entries.isEmpty || template.contains("importmap")) match
+        case (Some(m), false) => template.patch(m.end, importMapScript(entries, "/"), 0)
+        case _                => template
+      end match
+  }
 
 def vanillaTemplate(
     styles: Boolean,
@@ -193,21 +231,24 @@ def vanillaTemplate(
     injectStyleSheet: Option[String]
 ): IO[TypedTag[String]] =
 
-  val preloads = makeInternalPreloads(ref)
-  preloads.map: modules =>
+  (makeInternalPreloads(ref), importMapEntries(ref)).mapN: (modules, entries) =>
     html(
       head(
         meta(
           httpEquiv := "Cache-control",
           content := "no-cache, no-store, must-revalidate"
         ),
+        if entries.nonEmpty then raw(importMapScript(entries, "/")) else (),
         if attemptPreload then modules else ()
       ),
       body(
         lessStyle(withStyles, stylesRefresh),
         injectMain match
-          case Some(main) => script(src := main, `type` := "module")
-          case None       => frag(),
+          case Some(main) =>
+            // A script src isn't resolved through the import map, so point it at the hashed entry module directly
+            val mainSrc = entries.get(main.stripPrefix("/")).fold(main)(hashed => s"/$hashed")
+            script(src := mainSrc, `type` := "module")
+          case None => frag(),
         injectStyleSheet match
           case Some(sheet) => link(rel := "stylesheet", href := sheet)
           case None        => frag(),

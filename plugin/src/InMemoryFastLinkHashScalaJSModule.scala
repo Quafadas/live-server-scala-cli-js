@@ -4,8 +4,6 @@ import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
-import scala.collection.mutable
-
 import org.scalajs.linker.interface.OutputDirectory
 
 import mill.*
@@ -168,80 +166,34 @@ trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModul
         }
       wasmReport
     else
-      // Hash JS files from the in-memory output directory, then write hashed output to Task.dest.
+      // Hash each JS module on its own content; the generated index.html carries an import map from the original
+      // module names to the hashed ones (see `bodyHtmlFromReport`), so imports between modules are left as-is.
       import mill.scalajslib.ContentHashScalaJSModule as C
 
-      val allFiles = inMemoryOutputDirectory.fileNames()
-      val jsFileNames = allFiles.filter(_.endsWith(".js")).toSet
-
-      def readStr(name: String): String =
-        val buf = inMemoryOutputDirectory.content(name).get
-        val bytes = new Array[Byte](buf.remaining())
-        buf.get(bytes)
-        new String(bytes, "UTF-8")
-      end readStr
-
-      def readBytes(name: String): Array[Byte] =
-        val buf = inMemoryOutputDirectory.content(name).get
-        val bytes = new Array[Byte](buf.remaining())
-        buf.get(bytes)
-        bytes
-      end readBytes
-
-      // Build dependency graph.
-      val fileDeps: Map[String, Set[String]] = jsFileNames
+      val linked = inMemoryOutputDirectory
+        .fileNames()
         .map {
           name =>
-            val imported = C.parseJsImports(readStr(name)).filter(jsFileNames.contains)
-            (name, imported.toSet)
+            val buf = inMemoryOutputDirectory.content(name).get
+            val bytes = new Array[Byte](buf.remaining())
+            buf.get(bytes)
+            name -> bytes
         }
         .toMap
+      val hashed = ContentHasher.hashWithImportMap(linked, C.sanitiseHashedBaseName)
+      hashed.files.foreach((name, bytes) => hashedOutputFiles.put(name, bytes))
+      os.write
+        .over(Task.dest / InMemoryFastLinkHashScalaJSModule.importMapFile, upickle.default.write(hashed.importMap))
 
-      // Process in topological order (dependency-first).
-      val sortedNames = C.topologicalSort(jsFileNames.toList, fileDeps)
-      val jsHashMapping = mutable.LinkedHashMap.empty[String, String]
-
-      sortedNames.foreach {
-        name =>
-          val content = readStr(name)
-          val rewrittenContent = C.rewriteJsReferences(content, jsHashMapping.toMap)
-          val hash = C.computeContentHash(rewrittenContent.getBytes("UTF-8"))
-          val baseName = C.sanitiseHashedBaseName(name.stripSuffix(".js"))
-          val hashedName = s"$baseName.$hash.js"
-          jsHashMapping(name) = hashedName
-
-          val finalContent = rewrittenContent.replace(
-            "sourceMappingURL=" + name + ".map",
-            "sourceMappingURL=" + hashedName + ".map"
-          )
-          hashedOutputFiles.put(hashedName, finalContent.getBytes("UTF-8"))
-      }
-
-      // Build full mapping including source-map renames.
-      val fullMapping: Map[String, String] = jsHashMapping
-        .flatMap {
-          case (orig, hashed) => Seq(orig -> hashed, orig + ".map" -> (hashed + ".map"))
-        }
-        .toMap
-
-      // Store remaining files (source maps, etc.) in hashedOutputFiles.
-      allFiles
-        .filterNot(jsFileNames.contains)
-        .foreach {
-          name =>
-            val targetName = fullMapping.getOrElse(name, name)
-            hashedOutputFiles.put(targetName, readBytes(name))
-        }
-
-      // Build updated Report.
       val updatedModules = report
         .publicModules
         .map {
           m =>
             Report.Module(
               moduleID = m.moduleID,
-              jsFileName = jsHashMapping.getOrElse(m.jsFileName, m.jsFileName),
-              sourceMapName = m.sourceMapName.map(sm => fullMapping.getOrElse(sm, sm)),
+              jsFileName = hashed.importMap.getOrElse(m.jsFileName, m.jsFileName),
+              sourceMapName =
+                m.sourceMapName.map(sm => hashed.importMap.get(sm.stripSuffix(".map")).fold(sm)(_ + ".map")),
               moduleKind = m.moduleKind
             )
         }
@@ -250,4 +202,9 @@ trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModul
     end if
   }
 
+end InMemoryFastLinkHashScalaJSModule
+
+object InMemoryFastLinkHashScalaJSModule:
+  /** Written alongside `fastLinkJS` output: a JSON object of original -> content-hashed JS module names. */
+  val importMapFile = "importmap.json"
 end InMemoryFastLinkHashScalaJSModule

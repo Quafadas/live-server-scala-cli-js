@@ -44,17 +44,20 @@ object MemJsTests extends TestSuite:
           // No hashed JS filename should contain a hyphen (all "-" must be replaced with "_").
           jsFiles.foreach(filename => assert(!filename.contains("-")))
 
-          // Every cross-module import must reference a file that actually exists in the in-memory map.
+          // Imports keep their original names; every one must resolve through the import map to a file in the output.
+          val importMap = upickle
+            .default
+            .read[Map[String, String]](os.read(report.dest.path / InMemoryFastLinkHashScalaJSModule.importMapFile))
           jsFiles.foreach {
             filename =>
               val content = new String(build.hashedOutputFiles.get(filename), "UTF-8")
               val imports = ContentHashScalaJSModule.parseJsImports(content)
               imports.foreach {
                 importedName =>
-                  if !jsFiles.contains(importedName) then
+                  if !importMap.get(importedName).exists(jsFiles.contains) then
                     throw new java.lang.AssertionError(
-                      s"In $filename: import '$importedName' not found in output. " +
-                        s"Output files: ${jsFiles.mkString(", ")}"
+                      s"In $filename: import '$importedName' doesn't resolve through the import map. " +
+                        s"Import map: ${importMap.mkString(", ")}. Output files: ${jsFiles.mkString(", ")}"
                     )
               }
           }

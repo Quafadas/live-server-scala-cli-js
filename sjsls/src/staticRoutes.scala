@@ -73,7 +73,9 @@ def serveIndexHtml(from: fs2.io.file.Path, modules: Ref[IO, Map[String, String]]
           .string
           .flatMap {
             body =>
-              for str <- if injectPreloads then (injectModulePreloads(modules, body)) else IO.pure(body)
+              for
+                withPreloads <- if injectPreloads then (injectModulePreloads(modules, body)) else IO.pure(body)
+                str <- injectImportMap(modules, withPreloads)
               yield
                 val bytes = str.getBytes(java.nio.charset.StandardCharsets.UTF_8)
                 Response[IO]().withEntity(bytes).putHeaders("Content-Type" -> "text/html; charset=utf-8")
