@@ -53,17 +53,19 @@ inline def cachedFileResponse(epochInstant: Instant, fullPath: Path, req: Reques
       )
   else
     OptionT
-      .liftF(fileLastModified(fullPath))
+      .liftF(fileLastModified(fullPath).attempt)
       .flatMap {
-        lastmod =>
+        // No such file (or unreadable) - let the wrapped service decide, which is normally a 404
+        case Left(_)        => service(req)
+        case Right(lastmod) =>
           req.headers.get(ci"If-Modified-Since") match
             case Some(header) =>
-              val browserLastModifiedAt = header.head.value
+              val browserLastModifiedAt = scala.util.Try(parseFromHeader(epochInstant, header.head.value)).toOption
               service(req).semiflatMap {
                 resp =>
                   val zdt = ZonedDateTime.ofInstant(Instant.ofEpochSecond(lastmod), ZoneId.of("GMT"))
                   val response =
-                    if parseFromHeader(epochInstant, browserLastModifiedAt) == lastmod then
+                    if browserLastModifiedAt.contains(lastmod) then
                       logger.debug(s"Time matches, returning 304 for ${req.uri.path}") >>
                         IO(
                           respondWithCacheLastModified(Response[IO](Status.NotModified), zdt)
@@ -77,7 +79,7 @@ inline def cachedFileResponse(epochInstant: Instant, fullPath: Path, req: Reques
                     end if
                   end response
                   logger.debug(lastmod.toString()) >>
-                    logger.debug(parseFromHeader(epochInstant, browserLastModifiedAt).toString()) >>
+                    logger.debug(browserLastModifiedAt.toString()) >>
                     response
               }
             case _ =>
@@ -90,7 +92,7 @@ inline def cachedFileResponse(epochInstant: Instant, fullPath: Path, req: Reques
                     )
                 }
 
-        end match
+          end match
       }
 
 object StaticMiddleware:

@@ -41,13 +41,13 @@ private[sjsls] object CliOps:
   val portOpt = Opts
     .option[Int]("port", "The port you want to run the server on - e.g. 3000")
     .withDefault(3000)
-    .validate("Port must be between 1 and 65535")(i => i > 0 && i < 65535)
+    .validate("Port must be between 1 and 65535")(i => i > 0 && i <= 65535)
     .map(i => Port.fromInt(i).get)
 
   val proxyPortTargetOpt = Opts
     .option[Int]("proxy-target-port", "The port you want to forward api requests to - e.g. 8080")
     .orNone
-    .validate("Proxy Port must be between 1 and 65535")(iOpt => iOpt.fold(true)(i => i > 0 && i < 65535))
+    .validate("Proxy Port must be between 1 and 65535")(iOpt => iOpt.fold(true)(i => i > 0 && i <= 65535))
     .map(i => i.flatMap(Port.fromInt))
 
   val proxyPathMatchPrefixOpt = Opts
@@ -115,7 +115,7 @@ private[sjsls] object CliOps:
   val millModuleNameOpt: Opts[Option[String]] = Opts
     .option[String](
       "mill-module-name",
-      "Extra arguments to pass to the build tool"
+      "The mill module to link, e.g. `frontend`. Required when --build-tool is mill"
     )
     .validate("mill module name cannot be blank") {
       case "" => false
@@ -131,12 +131,14 @@ private[sjsls] object CliOps:
     )
     .orNone
 
-  val dezombifyOpt = Opts
+  /** Dezombify is on by default; the flag opts out. */
+  val dezombifyOpt: Opts[Boolean] = Opts
     .flag(
-      "dezombify",
-      "Whether or not to attempt killing any processes that are using the specified port. Default: true"
+      "no-dezombify",
+      "Don't attempt to kill processes already using the specified port on startup. By default, they are killed."
     )
-    .orTrue
+    .orFalse
+    .map(!_)
 
   val logFileOpt: Opts[Option[String]] = Opts
     .option[String](
@@ -148,7 +150,7 @@ private[sjsls] object CliOps:
   val workspaceRootOpt: Opts[Option[String]] = Opts
     .option[String](
       "workspace-root",
-      "Absolute path to the project source root for Chrome DevTools automatic workspace folder integration. Defaults to the current working directory when it contains at least one `.scala` file. Pass `none` to disable."
+      "Absolute path to the project source root for Chrome DevTools automatic workspace folder integration. Defaults to the project directory (--project-dir, or the current working directory). Pass `none` to disable."
     )
     .orNone
 

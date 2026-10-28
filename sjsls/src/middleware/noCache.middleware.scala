@@ -12,7 +12,7 @@ import cats.data.OptionT
 import cats.effect.*
 import cats.syntax.all.*
 
-object NoCacheMiddlware:
+object NoCacheMiddleware:
 
   def apply(service: HttpRoutes[IO])(logger: Scribe[IO]): HttpRoutes[IO] = Kleisli {
     (req: Request[IO]) =>
@@ -26,4 +26,4 @@ object NoCacheMiddlware:
         }
   }
 
-end NoCacheMiddlware
+end NoCacheMiddleware

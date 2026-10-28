@@ -33,13 +33,13 @@ def buildRunner(
     case scli: ScalaCli =>
       buildRunnerScli(linkingTopic, workDir, outDir, invokeVia, extraBuildArgs)(logger)
     case m: Mill =>
-      buildRunnerMill(
-        linkingTopic,
-        workDir,
-        millModuleName.getOrElse(throw new Exception("must have a module name when running with mill")),
-        invokeVia,
-        extraBuildArgs
-      )(logger)
+      millModuleName match
+        case Some(moduleName) =>
+          buildRunnerMill(linkingTopic, workDir, moduleName, invokeVia, extraBuildArgs)(logger)
+        case None =>
+          Resource.raiseError[IO, Unit, Throwable](
+            CliValidationError("--mill-module-name is required when --build-tool is mill")
+          )
     case n: NoBuildTool =>
       logger.info("No build tool specified, skipping build").toResource
   end match

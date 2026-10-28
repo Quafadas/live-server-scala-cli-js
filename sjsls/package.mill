@@ -13,7 +13,7 @@ import scalanativelib.api.*
 
 object `package` extends Module:
 
-  trait SjslsPlatformModule extends PlatformScalaModule with FormatFixPublish:
+  trait SjslsPlatformModule extends PlatformScalaModule with FormatFixPublish with BuildInfo:
 
     override def scalaVersion = V.scalaLts
 
@@ -30,6 +30,10 @@ object `package` extends Module:
     )
 
     def artifactName = "sjsls"
+
+    val buildInfoPackageName = "io.github.quafadas.sjsls"
+    override def buildInfoObjectName = "SjslsBuildInfo"
+    def buildInfoMembers = Seq(BuildInfo.Value("version", publishVersion()))
   end SjslsPlatformModule
 
   object jvm extends SjslsPlatformModule:

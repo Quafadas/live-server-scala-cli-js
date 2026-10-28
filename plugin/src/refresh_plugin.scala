@@ -204,7 +204,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     if serverLog() then Some(PathRef(Task.dest / "sjsls.log")) else None
   }
 
-  /** Whether the server should attempt to clean up child processes on shutdown. */
+  /** Whether the server should kill any process already listening on [[port]] before it starts. */
   def dezombify = Task {
     true
   }

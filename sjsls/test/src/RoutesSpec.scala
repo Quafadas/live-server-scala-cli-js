@@ -507,6 +507,39 @@ class RoutesSuite extends CatsEffectSuite:
       }
   }
 
+  externalIndexHtml.test("Missing static files return 404, and a malformed If-Modified-Since is ignored") {
+    staticDir =>
+      val app = for
+        logger <- IO(scribe.cats[IO]).toResource
+        fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
+        refreshPub <- Topic[IO, Unit].toResource
+        assetRefreshPub <- Topic[IO, String].toResource
+        theseRoutes <- routes(
+          os.temp.dir().toString,
+          refreshPub,
+          assetRefreshPub,
+          Some(IndexHtmlConfig.IndexHtmlPath(staticDir.toFs2)),
+          HttpRoutes.empty[IO],
+          fileToHashRef,
+          None,
+          false,
+          ScalaCli()
+        )(logger)
+      yield theseRoutes.orNotFound
+
+      app.use {
+        served =>
+          val missing = org.http4s.Request[IO](uri = uri"/favicon.ico")
+          val badHeader = org
+            .http4s
+            .Request[IO](uri = uri"/image.webp")
+            .withHeaders(org.http4s.Headers.of(org.http4s.Header.Raw(ci"If-Modified-Since", "not a date")))
+
+          assertIO(served(missing).map(_.status.code), 404) >>
+            assertIO(served(badHeader).map(_.status.code), 200)
+      }
+  }
+
   hashedFiles.test("That hashed files have immutable headers") {
     tempDir =>
       val app = for
@@ -728,6 +761,24 @@ class DevToolsRouteSuite extends CatsEffectSuite:
                 )
                 _ <- IO(assertEquals(body, """{"workspace":{"root":"/test/root","uuid":"test-uuid"}}"""))
               yield ()
+          }
+    }
+  }
+
+  test("well-known JSON escapes Windows paths") {
+    makeApp(Some(("""C:\Users\me\project""", "test-uuid"))).use {
+      client =>
+        client
+          .run(Request[IO](uri = uri"/.well-known/appspecific/com.chrome.devtools.json"))
+          .use {
+            resp =>
+              resp
+                .bodyText
+                .compile
+                .string
+                .map(
+                  body => assertEquals(body, """{"workspace":{"root":"C:\\Users\\me\\project","uuid":"test-uuid"}}""")
+                )
           }
     }
   }
