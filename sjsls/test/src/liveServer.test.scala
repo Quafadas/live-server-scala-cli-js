@@ -87,6 +87,12 @@ trait PlaywrightTest extends CatsEffectSuite:
 
   val vanilla = vanillaTemplate(true, true, Some("main.js"), None)
 
+  /** The server adds an import map to a user's index.html once scala-cli's first link lands, which races these
+    * requests. Drop it, and whitespace, so a page compares the same either way.
+    */
+  def normaliseHtml(html: String): String =
+    html.replaceAll("(?s)<script type=\"importmap\">.*?</script>", "").filterNot(_.isWhitespace)
+
   val files =
     IO {
       val tempDir = os.temp.dir()
@@ -144,8 +150,9 @@ trait PlaywrightTest extends CatsEffectSuite:
     }
   }.test("incremental") {
     (_, testDir, port) =>
+      // The first link starts a fresh scala-cli, which can be slow on a CI runner with cold caches
       val increaseTimeout = ContainsTextOptions()
-      increaseTimeout.setTimeout(15000)
+      increaseTimeout.setTimeout(60000)
       val recompileTimeout = ContainsTextOptions()
       recompileTimeout.setTimeout(60000)
       IO.sleep(3.seconds) >>
@@ -256,12 +263,12 @@ trait PlaywrightTest extends CatsEffectSuite:
           Ok
         ) >>
         assertIO(
-          client.expect[String](s"http://localhost:$port").map(_.filterNot(_.isWhitespace)),
-          vanilla.filterNot(_.isWhitespace)
+          client.expect[String](s"http://localhost:$port").map(normaliseHtml),
+          normaliseHtml(vanilla)
         ) >>
         assertIO(
-          client.expect[String](s"http://localhost:$port/app/spaRoute").map(_.filterNot(_.isWhitespace)),
-          vanilla.filterNot(_.isWhitespace)
+          client.expect[String](s"http://localhost:$port/app/spaRoute").map(normaliseHtml),
+          normaliseHtml(vanilla)
         )
 
   }

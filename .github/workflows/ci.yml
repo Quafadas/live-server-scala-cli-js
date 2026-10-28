@@ -74,7 +74,7 @@ jobs:
       - name: Pre-fetch ScalaJS linker deps and integration test deps
         run: |
           ./mill sjsls.cacheJsLibs.fastLinkJS
-          cs fetch org.scala-js:scalajs-dom_sjs1_3:2.8.0 io.github.quafadas:vecxt_sjs1_3:0.0.38
+          cs fetch org.scala-js:scalajs-dom_sjs1_3:2.8.1 io.github.quafadas:vecxt_sjs1_3:0.0.38
 
       - name: scala-cli version
         run: scala-cli compile -e "()" --platform js && scala-cli run -e "()"

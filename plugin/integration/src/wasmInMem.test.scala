@@ -12,7 +12,7 @@ object MemWasmTests extends TestSuite:
   def tests: Tests = Tests {
     test("fastLinkJS WASM output has a hashed wasm file, not hashed JS files") {
       object build extends TestRootModule with InMemoryFastLinkHashScalaJSModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def scalaJSExperimentalUseWebAssembly = true
 
         override def mvnDeps = Seq(
@@ -56,7 +56,7 @@ object MemWasmTests extends TestSuite:
 
     test("InMemoryFastLinkHashScalaJSModule fullLinkJS runs wasm-opt and hashes the optimised binary") {
       object build extends TestRootModule with InMemoryFastLinkHashScalaJSModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def scalaJSExperimentalUseWebAssembly = true
 
         override def mvnDeps = Seq(
