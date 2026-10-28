@@ -23,13 +23,16 @@ import cats.effect.kernel.Ref
 import cats.effect.kernel.Resource
 import cats.syntax.all.*
 
+import _root_.io.circe.Json
+import _root_.io.circe.syntax.EncoderOps
+
 // TODO: Test that the map of hashes is updated, when an external build tool is responsible for refresh pulses
 
 private def devToolsRoute(workspace: Option[(String, String)]): HttpRoutes[IO] =
   workspace match
     case None               => HttpRoutes.empty[IO]
     case Some((root, uuid)) =>
-      val json = s"""{"workspace":{"root":"$root","uuid":"$uuid"}}"""
+      val json = Json.obj("workspace" -> Json.obj("root" -> root.asJson, "uuid" -> uuid.asJson)).noSpaces
       HttpRoutes.of[IO] {
         case GET -> Root / ".well-known" / "appspecific" / "com.chrome.devtools.json" =>
           Ok(json, `Content-Type`(MediaType.application.json))

@@ -47,7 +47,7 @@ def staticAssetRoutes(
 
     case Some(IndexHtmlConfig.StylesOnly(stylesPath, styleFile)) =>
       val isLess = styleFile.endsWith(".less")
-      NoCacheMiddlware(
+      NoCacheMiddleware(
         Router(
           "" -> fileService[IO](FileService.Config(stylesPath.toString()))
         )
@@ -75,9 +75,8 @@ def serveIndexHtml(from: fs2.io.file.Path, modules: Ref[IO, Map[String, String]]
             body =>
               for str <- if injectPreloads then (injectModulePreloads(modules, body)) else IO.pure(body)
               yield
-                val bytes = str.getBytes()
-                f.withEntity(bytes)
-                Response[IO]().withEntity(bytes).putHeaders("Content-Type" -> "text/html")
+                val bytes = str.getBytes(java.nio.charset.StandardCharsets.UTF_8)
+                Response[IO]().withEntity(bytes).putHeaders("Content-Type" -> "text/html; charset=utf-8")
 
           }
     }

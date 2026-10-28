@@ -11,7 +11,7 @@ cs launch io.github.quafadas::sjsls:latest.version -- --help
 ```
 Usage:
     LiveServer --init <string>
-    LiveServer [--project-dir <string>] [--out-dir <string>] [--port <integer>] [--proxy-target-port <integer>] [--proxy-prefix-path <string>] [--client-routes-prefix <string>] [--log-level <string>] [--build-tool <string>] [--browse-on-open-at <string>] [--prevent-browser-open] [--extra-build-args <string>]... [--mill-module-name <string>] [--styles-dir <string>] [--path-to-index-html <string>] [--build-tool-invocation <string>] [--inject-preloads] [--dezombify] [--log-file <string>] [--workspace-root <string>] [--workspace-uuid <string>]
+    LiveServer [--project-dir <string>] [--out-dir <string>] [--port <integer>] [--proxy-target-port <integer>] [--proxy-prefix-path <string>] [--client-routes-prefix <string>] [--log-level <string>] [--build-tool <string>] [--browse-on-open-at <string>] [--prevent-browser-open] [--extra-build-args <string>]... [--mill-module-name <string>] [--styles-dir <string>] [--path-to-index-html <string>] [--build-tool-invocation <string>] [--inject-preloads] [--no-dezombify] [--log-file <string>] [--workspace-root <string>] [--workspace-uuid <string>]
 
 Scala JS live server
 
@@ -45,7 +45,7 @@ Options and flags:
     --extra-build-args <string>
         Extra arguments to pass to the build tool
     --mill-module-name <string>
-        Extra arguments to pass to the build tool
+        The mill module to link, e.g. `frontend`. Required when --build-tool is mill
     --styles-dir <string>
         A fully qualified path to your styles directory with LESS files in - e.g. c:/temp/helloScalaJS/styles
     --path-to-index-html <string>
@@ -54,12 +54,12 @@ Options and flags:
         This string will be passed to an fs2 process which invokes the build tool. By default it's 'scala-cli', or `mill`, and is assumed is on the path
     --inject-preloads
         Whether or not to attempt injecting module preloads into the index.html, potentially speeds up page load, but may not work with all servers and or cause instability in the refresh process.
-    --dezombify
-        Whether or not to attempt killing any processes that are using the specified port. Default: true
+    --no-dezombify
+        Don't attempt to kill processes already using the specified port on startup. By default, they are killed.
     --log-file <string>
         Write server logs to this file path instead of (or in addition to) the console. Useful when running under Mill watch mode where stdout/stderr is managed per-task.
     --workspace-root <string>
-        Absolute path to the project source root for Chrome DevTools automatic workspace folder integration. Defaults to the current working directory when it contains at least one `.scala` file. Pass `none` to disable.
+        Absolute path to the project source root for Chrome DevTools automatic workspace folder integration. Defaults to the project directory (--project-dir, or the current working directory). Pass `none` to disable.
     --workspace-uuid <string>
         UUID to use in the Chrome DevTools workspace descriptor. If omitted a random UUID is generated at startup and reused for the lifetime of this CLI session.
 ```

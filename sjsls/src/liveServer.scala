@@ -181,7 +181,6 @@ object LiveServer extends IOApp:
       indexOpts <- (indexHtmlTemplatePath, stylesDirPath) match
         case (Some(html), None) =>
           val indexHtmlFile = html / "index.html"
-          println(indexHtmlFile)
           (for
             indexHtmlExists <- Files[IO].exists(indexHtmlFile)
             _ <- IO.raiseUnless(indexHtmlExists)(CliValidationError(s"index.html doesn't exist in $html"))
@@ -327,9 +326,8 @@ object LiveServer extends IOApp:
       visibility = Visibility.Partial
     )
 
-    val version = "0.0.1"
     val finalOpts = versionFlag
-      .as(IO.println(version).as(ExitCode.Success))
+      .as(IO.println(SjslsBuildInfo.version).as(ExitCode.Success))
       .orElse(
         initOpt.map(scaffoldProject(_))
       )

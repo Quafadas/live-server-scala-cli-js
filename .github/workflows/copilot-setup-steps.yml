@@ -59,7 +59,7 @@ jobs:
             playwright-${{ runner.os }}-
 
       - name: Install Playwright
-        run: cs launch com.microsoft.playwright:playwright:1.59.0 -M "com.microsoft.playwright.CLI" -- install chromium-headless-shell
+        run: cs launch com.microsoft.playwright:playwright:1.64.0 -M "com.microsoft.playwright.CLI" -- install chromium-headless-shell
 
       - name: Install binaryen
         run: sudo apt-get update && sudo apt-get install -y binaryen
