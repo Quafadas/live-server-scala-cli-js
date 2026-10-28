@@ -7,7 +7,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: coursier/setup-action@main
+      - uses: coursier/setup-action@v1
         with:
           jvm: temurin@17
           apps: scala-cli

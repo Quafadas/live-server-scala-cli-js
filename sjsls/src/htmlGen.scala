@@ -11,8 +11,6 @@ import org.http4s.Status
 import org.http4s.dsl.io.*
 import org.http4s.scalatags.*
 
-import fs2.io.file.Path
-
 import scribe.Scribe
 
 import cats.effect.IO
@@ -73,7 +71,7 @@ private def lessStyle(withStyles: Boolean, stylesRefresh: Boolean): Seq[Modifier
           """less = {env: "development",async: true,fileAsync: true,dumpLineNumbers: "comments",relativeUrls: false};"""
         )
       ),
-      script(src := "https://cdn.jsdelivr.net/npm/less"),
+      script(src := "https://cdn.jsdelivr.net/npm/less@4.6.3/dist/less.min.js"),
       if stylesRefresh then script("less.watch();") else frag()
     )
   else Seq.empty
@@ -101,25 +99,6 @@ sse.addEventListener('message', (e) => {
   }
 });"""))
 
-/*
- * create an html template with that has a head, which includes script tags, that have modulepreload enabled
- */
-
-// def generateHtml(modules: Seq[(Path, String)]) = (template: String => String) =>
-//   template(makeHeader(modules, true).render)
-
-private def injectRefreshScript(template: String) =
-  val bodyCloseTag = "</body>"
-  val insertionPoint = template.indexOf(bodyCloseTag)
-
-  val newHtmlContent = template.substring(0, insertionPoint) +
-    refreshScript.render + "\n" +
-    template.substring(insertionPoint)
-
-  newHtmlContent
-
-end injectRefreshScript
-
 private def injectModulePreloads(ref: Ref[IO, Map[String, String]], template: String) =
   val preloads = makeInternalPreloads(ref)
   preloads.map: modules =>
@@ -127,40 +106,11 @@ private def injectModulePreloads(ref: Ref[IO, Map[String, String]], template: St
     val headCloseTag = "</head>"
     val insertionPoint = template.indexOf(headCloseTag)
 
-    val newHtmlContent = template.substring(0, insertionPoint) +
-      modulesStringsInject +
-      template.substring(insertionPoint)
-    newHtmlContent
+    if insertionPoint < 0 then template
+    else template.substring(0, insertionPoint) + modulesStringsInject + template.substring(insertionPoint)
+    end if
 
 end injectModulePreloads
-
-private def makeHeader(modules: Seq[(Path, String)], withStyles: Boolean, attemptPreload: Boolean = false) =
-  val scripts =
-    for
-      m <- modules
-      if m._1.toString.endsWith(".js")
-    yield link(
-      rel := "modulepreload",
-      href := s"${m._1}?hash=${m._2}"
-    )
-
-  html(
-    head(
-      meta(
-        httpEquiv := "Cache-control",
-        content := "no-cache, no-store, must-revalidate"
-      ),
-      if attemptPreload then scripts else ()
-    ),
-    body(
-      lessStyle(withStyles, true),
-      script(src := "main.js", `type` := "module"),
-      div(id := "app"),
-      // script(src := "main"),
-      refreshScript
-    )
-  )
-end makeHeader
 
 private def makeInternalPreloads(ref: Ref[IO, Map[String, String]]) =
   val keys = ref.get.map(_.toSeq)
@@ -171,18 +121,16 @@ private def makeInternalPreloads(ref: Ref[IO, Map[String, String]]) =
         if m._1.toString.endsWith(".js") && m._1.toString.startsWith("internal")
       // A preload must use the URL the import map resolves to, or the browser fetches the module twice.
       yield
-        if fileNameIsHashed(m._2) then link(rel := "modulepreload", href := s"/${m._2}")
+        if isHashedFileName(m._2) then link(rel := "modulepreload", href := s"/${m._2}")
         else link(rel := "modulepreload", href := s"${m._1}?h=${m._2}")
       end for
   }
 
 end makeInternalPreloads
 
-private def fileNameIsHashed(name: String) = name.matches(".*\\.[a-f0-9]{8,}\\..*")
-
 /** The original -> hashed JS module names in `ref`. Only populated when serving content-hashed output from memory. */
 private def importMapEntries(ref: Ref[IO, Map[String, String]]): IO[Map[String, String]] =
-  ref.get.map(_.filter((name, hashed) => name.endsWith(".js") && fileNameIsHashed(hashed)))
+  ref.get.map(_.filter((name, hashed) => name.endsWith(".js") && isHashedFileName(hashed)))
 
 /** An import map which points each JS module at its content-hashed file, e.g.
   * `{"imports":{"./internal-foo.js":"./internal_foo.0123456789abcdef.js"}}`.

@@ -7,21 +7,6 @@ import munit.CatsEffectSuite
 
 class UtilityFcs extends CatsEffectSuite:
 
-  test("That we actually inject the preloads ") {
-
-    val html = makeHeader(
-      modules = Seq(
-        (fs2.io.file.Path("main.js"), "hash")
-      ),
-      withStyles = false,
-      attemptPreload = true
-    )
-
-    assert(html.render.contains("modulepreload"))
-    assert(html.render.contains("hash"))
-
-  }
-
   ResourceFunFixture {
     for
       ref <- Ref.of[IO, Map[String, String]](Map.empty).toResource
@@ -35,19 +20,12 @@ class UtilityFcs extends CatsEffectSuite:
         assert(html.contains("internal.js"))
   }
 
-  test(" That we can inject a refresh script") {
-    val html = injectRefreshScript("<html><head></head><body></body></html>")
-    assert(
-      html.contains("sse.addEventListener")
-    )
-
-    assert(
-      html.contains("location.reload()")
-    )
-
-    assert(
-      html.contains("AssetRefresh")
-    )
+  ResourceFunFixture {
+    Ref.of[IO, Map[String, String]](Map("internal.js" -> "hash")).toResource
+  }.test("A page without a </head> is left as is rather than failing") {
+    ref =>
+      val page = "<html><body></body></html>"
+      assertIO(injectModulePreloads(ref, page), page)
   }
 
 end UtilityFcs

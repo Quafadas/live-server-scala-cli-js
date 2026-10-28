@@ -117,4 +117,24 @@ class BuildRoutesSuite extends CatsEffectSuite:
       assertIO(css, Status.NotFound)
   }
 
+  test("content-hashed file names are recognised from the file name alone") {
+    assert(isHashedFileName("main.abc12345.js"))
+    assert(isHashedFileName("/internal_foo.0123456789abcdef.js.map"))
+    assert(isHashedFileName("assets/main.abc12345.wasm"))
+    // All digits is a date or version, not a hash
+    assert(!isHashedFileName("photo.20240101.jpg"))
+    assert(!isHashedFileName("main.js"))
+    // A hash-like directory doesn't make the file in it hashed
+    assert(!isHashedFileName("/build.abc12345.out/main.js"))
+  }
+
+  test("spaRoute serves its file for GET and doesn't match other methods") {
+    val index = java.nio.file.Files.createTempFile("index", ".html")
+    java.nio.file.Files.writeString(index, "<html></html>")
+    val route = spaRoute[IO](index.toString)
+    val get = route(makeReq("/anything")).map(_.status).getOrElse(Status.NotFound)
+    val post = route(makeReq("/anything").withMethod(org.http4s.Method.POST)).map(_.status).value
+    assertIO(get, Status.Ok) >> assertIO(post, None)
+  }
+
 end BuildRoutesSuite

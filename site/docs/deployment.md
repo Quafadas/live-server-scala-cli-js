@@ -137,7 +137,7 @@ For the server, we then need to setup some routes, which reference this;
 This is aliased as
 
 ```scala sc:nocompile
-val allFrontendRoutes = io.github.quafadas.sjsls.defaultFrontendRoutes[IO]("ui")
+val allFrontendRoutes = io.github.quafadas.sjsls.defaultFrontendRoutes("ui")
 ```
 
 For convience. It is not hard to track back through this code to see what's it's doing - it the JS from the server root, and any time it detects a request beginning with `ui`, simply returns `index.html`.

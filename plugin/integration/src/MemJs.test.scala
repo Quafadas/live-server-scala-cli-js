@@ -6,7 +6,6 @@ import mill.testkit.TestRootModule
 import mill.testkit.UnitTester
 import mill.util.TokenReaders.*
 import mill.javalib.DepSyntax
-import mill.scalajslib.ContentHashScalaJSModule
 import mill.scalajslib.api.ModuleSplitStyle
 import utest.*
 
@@ -51,7 +50,7 @@ object MemJsTests extends TestSuite:
           jsFiles.foreach {
             filename =>
               val content = new String(build.hashedOutputFiles.get(filename), "UTF-8")
-              val imports = ContentHashScalaJSModule.parseJsImports(content)
+              val imports = FileBasedContentHashScalaJSModule.parseJsImports(content)
               imports.foreach {
                 importedName =>
                   if !importMap.get(importedName).exists(jsFiles.contains) then

@@ -5,12 +5,11 @@ import java.security.MessageDigest
 import scala.collection.mutable
 
 import mill.PathRef
-import mill.scalajslib.ContentHashScalaJSModule
 import mill.scalajslib.api.ModuleKind
 import mill.scalajslib.api.Report
 import munit.FunSuite
 
-/** Unit tests for [[ContentHashScalaJSModule]].
+/** Unit tests for [[FileBasedContentHashScalaJSModule]].
   *
   * These tests exercise the pure helper methods exposed on the companion object (`computeContentHash`,
   * `rewriteJsReferences`, `parseJsImports`, `topologicalSort`, `applyContentHash`) without requiring an actual Scala.js
@@ -18,7 +17,7 @@ import munit.FunSuite
   */
 class ContentHashScalaJSModuleSuite extends FunSuite:
 
-  private val C = ContentHashScalaJSModule
+  private val C = FileBasedContentHashScalaJSModule
 
   // --------------------------------------------------------------------------
   // computeContentHash
@@ -269,7 +268,10 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
           publicModules = Seq(Report.Module("a", "a.js", None, ModuleKind.ESModule)),
           dest = PathRef(srcDir)
         )
-        val outFiles = os.list(ContentHashScalaJSModule.applyContentHash(report, destDir).dest.path).map(_.last).toSet
+        val outFiles = os
+          .list(FileBasedContentHashScalaJSModule.applyContentHash(report, destDir).dest.path)
+          .map(_.last)
+          .toSet
         val hashedA = outFiles.find(f => f.startsWith("a.") && f.endsWith(".js")).get
         val hashedB = outFiles.find(f => f.startsWith("b.") && f.endsWith(".js")).get
         (hashedA, hashedB)
@@ -369,7 +371,7 @@ class ContentHashScalaJSModuleSuite extends FunSuite:
   }
 
   test("in-memory: hashing workflow with MemOutputDirectory produces sanitised names") {
-    val C = ContentHashScalaJSModule
+    val C = FileBasedContentHashScalaJSModule
 
     val dir = MemOutputDirectory()
     dir.put("my-chunk.js", ByteBuffer.wrap("export const y = 2;\n".getBytes("UTF-8")))

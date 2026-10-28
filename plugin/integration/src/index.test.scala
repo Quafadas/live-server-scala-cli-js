@@ -6,7 +6,6 @@ import mill.testkit.TestRootModule
 import mill.testkit.UnitTester
 import mill.util.TokenReaders.*
 import mill.javalib.DepSyntax
-import mill.scalajslib.ContentHashScalaJSModule
 import mill.scalajslib.api.ModuleSplitStyle
 import utest.*
 

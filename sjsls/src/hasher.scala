@@ -13,11 +13,8 @@ inline def fileLastModified(filePath: fs2.io.file.Path): IO[Long] =
 // def fileLastModified(filePath: Path): IO[FiniteDuration] =
 //   fs2.io.file.Files[IO].getLastModifiedTime(fs2.io.file.Path(filePath.toString()))
 
-inline def uriIsHashed(uri: org.http4s.Uri.Path): Boolean =
-  uri.toString.matches(".*\\.[a-f0-9]{8,}\\..*")
-
 inline def fileAlreadyHashed(filePath: fs2.io.file.Path): Boolean =
-  filePath.fileName.toString.matches(".*\\.[a-f0-9]{8,}\\..*")
+  isHashedFileName(filePath.fileName.toString)
 
 inline def fileHash(filePath: fs2.io.file.Path): IO[String] =
   // If the filename itself, already contains a hash, then let's accept it as is and not waste time hashing the file again

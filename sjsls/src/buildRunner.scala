@@ -91,6 +91,8 @@ def buildRunnerScli(
                       logger.trace(s"$aChunk :: Linking unfinished") >>
                         IO.unit
                 )
+                // Nothing reads stdout, but it must be drained or scala-cli blocks once the pipe fills
+                .concurrently(p.stdout.drain)
                 .compile
                 .drain
           }
@@ -180,6 +182,8 @@ def buildRunnerMill(
               //     IO.unit
               // end if
           )
+          // Nothing reads stdout, but it must be drained or mill blocks once the pipe fills
+          .concurrently(p.stdout.drain)
           .compile
           .drain
         // .both(stdOut)

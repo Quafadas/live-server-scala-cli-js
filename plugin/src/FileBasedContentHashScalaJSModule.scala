@@ -4,6 +4,7 @@ import java.security.MessageDigest
 
 import scala.collection.mutable
 import scala.concurrent.Await
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
@@ -24,12 +25,6 @@ import mill.scalajslib.config.ScalaJSConfigModule
   * `.wasm` binary before computing the content hash, so the stored hash always reflects the production-optimised
   * artifact. Override [[wasmOptFlags]] to customise the optimisation level. The `-all` flag is mandatory for Scala.js
   * WASM output — `wasm-opt` must be present on `$$PATH`.
-  *
-  * @note
-  *   This trait is placed in the `mill.scalajslib` package (vendored alongside Mill) so that it can access the
-  *   `private[scalajslib]` members [[ScalaJSWorker]] and [[ScalaJSModule.linkJs]], which are intentionally hidden from
-  *   external packages. No Mill sources are modified; we only add a new trait that overrides one `private[scalajslib]`
-  *   method.
   *
   * @example
   *   {{{
@@ -130,6 +125,15 @@ end FileBasedContentHashScalaJSModule
 
 object FileBasedContentHashScalaJSModule:
 
+  private def normaliseModuleNameSegment(segment: String): String =
+    if segment.matches("_?(?:[A-Z]_)+[A-Z]\\$?") then segment.replace("_", "")
+    else segment
+  end normaliseModuleNameSegment
+
+  def sanitiseHashedBaseName(baseName: String): String =
+    baseName.replace("-", "_").split('.').map(normaliseModuleNameSegment).mkString(".")
+  end sanitiseHashedBaseName
+
   /** Process WASM fullLinkJS output: optionally run wasm-opt, content-hash .wasm files, patch JS loaders.
     *
     * @param report
@@ -173,7 +177,7 @@ object FileBasedContentHashScalaJSModule:
                       "wasm-opt",
                       List(f.toString) ++ flags.toList ++ List("-o", tempOutPath.toString) ++ mapFlags
                     )
-                    .call(stdout = os.Inherit, stderr = os.Inherit, mergeErrIntoOut = true, check = false)
+                    .call(stdout = os.Inherit, stderr = os.Inherit)
                 else
                   os.copy.over(f, tempOutPath)
                   if sourceMap then os.copy.over(f / os.up / (f.last + ".map"), tempOutPathMap)
@@ -185,10 +189,13 @@ object FileBasedContentHashScalaJSModule:
                 val hashedName = s"${f.baseName}.$hash.wasm"
                 wasmRenames(f.last) = hashedName
                 os.write.over(destDir / hashedName, optimisedBytes)
-                if sourceMap && minify then os.copy.over(tempOutPathMap, destDir / (hashedName + ".map"))
+                if sourceMap && os.exists(tempOutPathMap) then
+                  os.copy.over(tempOutPathMap, destDir / (hashedName + ".map"))
                 end if
 
               case "js" =>
+                os.copy.over(f, destDir / f.last)
+              case "map" if f.last.endsWith(".js.map") =>
                 os.copy.over(f, destDir / f.last)
               case _ => ()
             end match
@@ -196,7 +203,7 @@ object FileBasedContentHashScalaJSModule:
 
       // Patch wasm references in JS loader files so they point to the hashed wasm filename.
       os.list(destDir)
-        .filter(p => os.isFile(p) && p.ext == "js" && p.last.contains("main"))
+        .filter(p => os.isFile(p) && p.ext == "js")
         .foreach {
           jsFile =>
             val patched = rewriteJsReferences(os.read(jsFile), wasmRenames.toMap)
@@ -227,6 +234,8 @@ object FileBasedContentHashScalaJSModule:
   ): Report =
     val srcDir = report.dest.path
     val tempDir = os.temp.dir(deleteOnExit = false)
+    // terser runs as an external process, so these futures mostly block waiting on it.
+    given ExecutionContext = ExecutionContext.global
     try
       val jsFiles = os.list(srcDir).filter(p => os.isFile(p) && p.ext == "js")
       val futures = jsFiles.map {
@@ -282,8 +291,6 @@ object FileBasedContentHashScalaJSModule:
     val srcDir = report.dest.path
     os.makeDir.all(destDir)
 
-    import mill.scalajslib.ContentHashScalaJSModule as C
-
     val jsFiles = os.list(srcDir).filter(p => os.isFile(p) && p.ext == "js")
     val jsFileNames = jsFiles.map(_.last).toSet
 
@@ -313,7 +320,7 @@ object FileBasedContentHashScalaJSModule:
 
         // Hash the rewritten content (so the filename hash reflects the final content).
         val hash = computeContentHash(rewrittenContent.getBytes("UTF-8"))
-        val hashedName = s"${C.sanitiseHashedBaseName(f.baseName)}.$hash.${f.ext}"
+        val hashedName = s"${sanitiseHashedBaseName(f.baseName)}.$hash.${f.ext}"
         jsHashMapping(name) = hashedName
 
         // Also update the sourceMappingURL comment that points to this file's own map.

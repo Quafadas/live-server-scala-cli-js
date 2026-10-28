@@ -40,25 +40,7 @@ trait ScalaJsWebAppModule extends InMemoryFastLinkHashScalaJSModule with ScalaJs
     * JS assets from the in-memory hashed output map instead of a directory on disk.
     */
   override def lcs = Task.Worker {
-    val (site, js) = siteGen()
-    Task.log.info("Gen lsc (in-memory)")
-    LiveServerConfig(
-      baseDir = None,
-      outDir = Some(js),
-      port =
-        com.comcast.ip4s.Port.fromInt(port()).getOrElse(throw new IllegalArgumentException(s"invalid port: ${port()}")),
-      indexHtmlTemplate = Some(site),
-      buildTool = io.github.quafadas.sjsls.NoBuildTool(),
-      openBrowserAt = "/index.html",
-      preventBrowserOpen = !openBrowser(),
-      dezombify = dezombify(),
-      logLevel = logLevel(),
-      logFile = logFile().fold[Option[String]](None)(p => Some(p.path.toString)),
-      customRefresh = Some(updateServer),
-      devToolsWorkspaceRoot = Some(moduleDir.toString()),
-      devToolsWorkspaceUuid = Some(devToolsUuid()),
-      inMemoryFiles = Some(hashedOutputFiles)
-    )
+    super.lcs().copy(inMemoryFiles = Some(hashedOutputFiles))
   }
 
   /** Assemble a static site directory from the production-style linker output.
@@ -88,6 +70,6 @@ trait ScalaJsWebAppModule extends InMemoryFastLinkHashScalaJSModule with ScalaJs
     */
   def serveCommand = Task {
     val publishDir = assembleSite().path
-    s"jwebserver -d  \"$publishDir\" -p 8080"
+    s"jwebserver -d \"$publishDir\" -p ${port()}"
   }
 end ScalaJsWebAppModule

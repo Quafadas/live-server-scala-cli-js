@@ -37,11 +37,11 @@ object `package` extends ScalaModule with FormatFixPublish:
 
   override def pomSettings = Task {
     PomSettings(
-      description = "Mill plugin for mdoc, static site generation",
+      description = "Mill plugin for developing Scala.js apps with sjsls live reload and content-hashed output",
       organization = "io.github.quafadas",
-      url = "https://github.com/Quafadas/millSite",
+      url = "https://github.com/Quafadas/live-server-scala-cli-js",
       licenses = Seq(License.`Apache-2.0`),
-      versionControl = VersionControl.github("quafadas", "millSite"),
+      versionControl = VersionControl.github("quafadas", "live-server-scala-cli-js"),
       developers = Seq(
         Developer("quafadas", "Simon Parten", "https://github.com/quafadas")
       )
