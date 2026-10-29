@@ -30,6 +30,7 @@ private def isHashSegment(s: String): Boolean =
 private[sjsls] def isHashedFileName(path: String): Boolean =
   val segments = path.substring(path.lastIndexOf('/') + 1).split("\\.", -1)
   segments.slice(1, segments.length - 1).exists(isHashSegment)
+end isHashedFileName
 
 private def cacheHeaders[F[_]](key: String)(resp: Response[F]): Response[F] =
   if isHashedFileName(key) then resp.putHeaders(Header.Raw(ci"Cache-Control", "public, max-age=31536000, immutable"))
