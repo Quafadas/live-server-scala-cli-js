@@ -88,7 +88,7 @@ jobs:
         run: ./mill --no-server __.test
 
       - name: Test Plugin
-        run: ./mill --no-server plugin.integration.testForked
+        run: ./mill plugin.integration.testForked
 
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v5
