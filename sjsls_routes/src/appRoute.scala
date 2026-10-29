@@ -20,11 +20,16 @@ import cats.effect.kernel.Async
 import cats.syntax.all.*
 
 // A `.<hash>.` segment in the file name, e.g. `main.0123abcd.js`. The hash must mix letters and digits, so names like
-// `photo.20240101.jpg` aren't mistaken for content-hashed (and so immutable) files.
-private val hashedFileNamePattern = "(?:.*/)?[^/]*\\.(?=[0-9]*[a-f])(?=[a-f]*[0-9])[a-f0-9]{8,}\\.[^/]*".r
+// `photo.20240101.jpg` aren't mistaken for content-hashed (and so immutable) files. Checked by hand rather than with a
+// lookahead regex, because Scala Native's RE2-based regex doesn't support lookaheads.
+private def isHashSegment(s: String): Boolean =
+  s.length >= 8 && s.forall(c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) && s.exists(_.isDigit) &&
+    s.exists(_.isLetter)
 
 /** Whether the last segment of `path` carries a content hash, so it can be served as immutable. */
-private[sjsls] def isHashedFileName(path: String): Boolean = hashedFileNamePattern.matches(path)
+private[sjsls] def isHashedFileName(path: String): Boolean =
+  val segments = path.substring(path.lastIndexOf('/') + 1).split("\\.", -1)
+  segments.slice(1, segments.length - 1).exists(isHashSegment)
 
 private def cacheHeaders[F[_]](key: String)(resp: Response[F]): Response[F] =
   if isHashedFileName(key) then resp.putHeaders(Header.Raw(ci"Cache-Control", "public, max-age=31536000, immutable"))
