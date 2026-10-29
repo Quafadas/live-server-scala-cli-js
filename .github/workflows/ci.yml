@@ -54,7 +54,7 @@ jobs:
         run: npm install -g terser
 
       - name: Download deps
-        run: ./mill __.prepareOffline
+        run: ./mill --no-server __.prepareOffline
 
       - name: Cache Playwright dependencies
         id: cache-pw
