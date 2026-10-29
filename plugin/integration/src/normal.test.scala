@@ -116,7 +116,7 @@ object WebAppModuleTests extends TestSuite:
       os.write(assetsTempDir / "fonts" / "font.woff2", "fake-font")
 
       object build extends TestRootModule with ScalaJsWebAppModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
 
@@ -210,7 +210,7 @@ object WebAppModuleTests extends TestSuite:
 
     test("publish succeeds without assets directory") {
       object build extends TestRootModule with ScalaJsWebAppModule:
-        override def scalaVersion: Simple[String] = "3.8.2"
+        override def scalaVersion: Simple[String] = V2.scalaVersion
         override def moduleSplitStyle: Simple[ModuleSplitStyle] =
           ModuleSplitStyle.SmallModulesFor("webapp")
 

@@ -18,7 +18,6 @@ import mill.scalajslib.api.ModuleKind
 import mill.scalajslib.api.ModuleSplitStyle
 import mill.scalajslib.api.Report
 import mill.scalajslib.config.ScalaJSConfigModule
-implicit val ec: scala.concurrent.ExecutionContext = scala.concurrent.ExecutionContext.global
 
 /** Base Mill plugin trait for Scala.js applications served by sjsls during development.
   *
@@ -39,6 +38,9 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
   lazy val updateServer = Topic[IO, Unit].unsafeRunSync()
   lazy val updateAsset = Topic[IO, String].unsafeRunSync()
 
+  /** Set by [[pulseOnRefresh]] when there is a new link, and cleared by [[siteGen]] once it has told browsers. */
+  private lazy val refreshPending = new java.util.concurrent.atomic.AtomicBoolean(false)
+
   override def moduleKind: Simple[ModuleKind] = ModuleKind.ESModule
 
   /** Render the `<head>` section used by generated HTML.
@@ -47,6 +49,8 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     * whole task unless you need full control over the generated markup.
     */
   def indexHtmlHead = Task {
+    // Read through `assets` so that adding or removing index.less re-renders the head
+    val hasLess = os.exists(assets().path / "index.less")
     head(
       meta(charset := "utf-8"),
       meta(name := "viewport", content := "width=device-width, initial-scale=1"),
@@ -181,9 +185,6 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     assetsDir
   }
 
-  /** True when `assets/index.less` exists and should be included in the generated page. */
-  def hasLess = os.exists(assetsDir / "index.less")
-
   /** Port used by the development server. */
   def port = Task {
     8080
@@ -221,10 +222,12 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     java.util.UUID.randomUUID().toString
   }
 
-  /** Run `fastLinkJS` and notify connected browsers that a new build is available. */
+  /** Run `fastLinkJS` and mark that connected browsers should reload. [[siteGen]] sends the refresh once the site
+    * reflects the new build.
+    */
   def pulseOnRefresh = Task {
     val report = fastLinkJS()
-    updateServer.publish1(Task.log.debug("publish update")).unsafeRunSync()
+    refreshPending.set(true)
     report
   }
 
@@ -232,6 +235,9 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     *
     * This task writes `index.html`, copies assets when available, publishes CSS/LESS asset refresh events, and returns
     * a tuple of `(siteDir, jsOutputDir)` for consumption by [[lcs]].
+    *
+    * A page refresh is published only after the site is written, as this directory is what the server serves
+    * `index.html` from. Mill clears it before this task runs, so refreshing any earlier can reload a missing page.
     */
   def siteGen = Task {
     val linkReport = pulseOnRefresh()
@@ -249,6 +255,10 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
           Task.log.debug(s"Publishing asset refresh for $p")
           updateAsset.publish1(p).unsafeRunSync()
       }
+    end if
+    if refreshPending.getAndSet(false) then
+      Task.log.debug("publish update")
+      updateServer.publish1(()).unsafeRunSync()
     end if
     (Task.dest.toString(), linkReport.dest.path.toString())
   }

@@ -15,7 +15,7 @@ private[sjsls] def checkPortInUse(port: Port): IO[Boolean] =
 
   if osName.contains("win") then
     val ps =
-      s"Get-NetTCPConnection -LocalPort $portInt -ErrorAction SilentlyContinue | Measure-Object | Select-Object -ExpandProperty Count"
+      s"Get-NetTCPConnection -LocalPort $portInt -State Listen -ErrorAction SilentlyContinue | Measure-Object | Select-Object -ExpandProperty Count"
 
     process
       .ProcessBuilder("powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps)
@@ -25,7 +25,8 @@ private[sjsls] def checkPortInUse(port: Port): IO[Boolean] =
           proc.stdout.through(fs2.text.utf8.decode).compile.string.map(_.trim.toIntOption.getOrElse(0) > 0)
       }
   else
-    val sh = s"lsof -ti tcp:$portInt 2>/dev/null | wc -l"
+    // -sTCP:LISTEN, or lsof also reports clients connected to this port on some other host (e.g. a browser).
+    val sh = s"lsof -ti tcp:$portInt -sTCP:LISTEN 2>/dev/null | wc -l"
 
     process
       .ProcessBuilder("sh", "-c", sh)
@@ -70,7 +71,7 @@ private def killProcessesOnPort(port: Port): IO[Unit] =
     // Windows: try PowerShell Get-NetTCPConnection, fallback to netstat/taskkill
     val ps = s"""
     |if (Get-Command Get-NetTCPConnection -ErrorAction SilentlyContinue) {
-    |  $$pids = Get-NetTCPConnection -LocalPort $portInt -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique
+    |  $$pids = Get-NetTCPConnection -LocalPort $portInt -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique
     |  if ($$pids) {
     |    Write-Host "Found PIDs: $$pids"
     |    $$pids | ForEach-Object { Stop-Process -Id $$_ -Force }
@@ -79,7 +80,7 @@ private def killProcessesOnPort(port: Port): IO[Unit] =
     |    Write-Host "No processes found on port $portInt"
     |  }
     |} else {
-    |  $$lines = netstat -ano | Select-String ":$portInt\\s"
+    |  $$lines = netstat -ano | Select-String ":$portInt\\s.*LISTENING"
     |  $$pids = $$lines | ForEach-Object { ($$_ -split '\\s+')[-1] } | Select-Object -Unique
     |  if ($$pids) {
     |    Write-Host "Found PIDs: $$pids"
@@ -107,7 +108,7 @@ private def killProcessesOnPort(port: Port): IO[Unit] =
     val sh = s"""
     |current_pid=$currentPid
     |if command -v lsof >/dev/null 2>&1; then
-    |  pids=$$(lsof -ti tcp:$portInt 2>/dev/null | grep -wv "$$current_pid")
+    |  pids=$$(lsof -ti tcp:$portInt -sTCP:LISTEN 2>/dev/null | grep -wv "$$current_pid")
     |  if [ -n "$$pids" ]; then
     |    echo "Found PIDs to kill: $$pids"
     |    kill -TERM $$pids 2>/dev/null || true

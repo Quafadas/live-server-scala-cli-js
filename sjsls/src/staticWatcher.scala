@@ -160,7 +160,7 @@ def updateMapRefFromMemory(
         entry =>
           val name = entry.getKey
           val hash =
-            if name.matches(".*\\.[a-f0-9]{8,}\\..*") then name
+            if isHashedFileName(name) then name
             else
               val md = java.security.MessageDigest.getInstance("MD5")
               md.digest(entry.getValue).map("%02x".format(_)).mkString

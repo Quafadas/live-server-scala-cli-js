@@ -19,11 +19,21 @@ import scribe.Scribe
 import cats.effect.kernel.Async
 import cats.syntax.all.*
 
-private val hashedPattern = ".*\\.[a-f0-9]{8,}\\..*".r
+// A `.<hash>.` segment in the file name, e.g. `main.0123abcd.js`. The hash must mix letters and digits, so names like
+// `photo.20240101.jpg` aren't mistaken for content-hashed (and so immutable) files. Checked by hand rather than with a
+// lookahead regex, because Scala Native's RE2-based regex doesn't support lookaheads.
+private def isHashSegment(s: String): Boolean =
+  s.length >= 8 && s.forall(c => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) && s.exists(_.isDigit) &&
+    s.exists(_.isLetter)
+
+/** Whether the last segment of `path` carries a content hash, so it can be served as immutable. */
+private[sjsls] def isHashedFileName(path: String): Boolean =
+  val segments = path.substring(path.lastIndexOf('/') + 1).split("\\.", -1)
+  segments.slice(1, segments.length - 1).exists(isHashSegment)
+end isHashedFileName
 
 private def cacheHeaders[F[_]](key: String)(resp: Response[F]): Response[F] =
-  if hashedPattern.matches(key) then
-    resp.putHeaders(Header.Raw(ci"Cache-Control", "public, max-age=31536000, immutable"))
+  if isHashedFileName(key) then resp.putHeaders(Header.Raw(ci"Cache-Control", "public, max-age=31536000, immutable"))
   else resp.putHeaders(Header.Raw(ci"Cache-Control", "no-cache, must-revalidate"))
 
 def appRoute[F[_]: Files](stringPath: String)(using f: Async[F]): HttpRoutes[F] = HttpRoutes.of[F] {
@@ -64,7 +74,7 @@ def appRouteInMemory[F[_]](lookup: String => Option[Array[Byte]])(using
       case Some(bytes) =>
         val resp = cacheHeaders(key)(Response[F](Status.Ok).withEntity(bytes).withContentType(contentTypeFor(ext)))
         logger.debug(
-          s"[appRouteInMemory] HIT  ext=$ext key='$key' size=${bytes.length} bytes hashed=${hashedPattern.matches(key)}"
+          s"[appRouteInMemory] HIT  ext=$ext key='$key' size=${bytes.length} bytes hashed=${isHashedFileName(key)}"
         ) >> f.pure(resp)
       case None =>
         logger.debug(
@@ -82,7 +92,7 @@ end appRouteInMemory
 
 def fileRoute[F[_]: Async](stringPath: String) = fileService[F](FileService.Config(stringPath))
 
-def spaRoute[F[_]: Async](stringPath: String) = HttpRoutes[F] {
-  case GET -> _ =>
-    StaticFile.fromPath(fs2.io.file.Path(stringPath))
+def spaRoute[F[_]: Async](stringPath: String) = HttpRoutes.of[F] {
+  case req @ GET -> _ =>
+    StaticFile.fromPath(fs2.io.file.Path(stringPath), Some(req)).getOrElseF(Async[F].pure(Response[F](Status.NotFound)))
 }

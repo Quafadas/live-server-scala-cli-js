@@ -23,8 +23,8 @@ object `package` extends ScalaModule with FormatFixPublish:
         mvn"com.lihaoyi::mill-libs-scalajslib-config-1:$millVersion",
         mvn"co.fs2:fs2-io_3:${V.fs2}",
         mvn"org.scala-js:scalajs-linker_2.13:${V.scalaJs}",
-        mvn"org.scala-js:scalajs-js-envs_2.13:1.5.0",
-        mvn"at.yawk.lz4:lz4-java:1.11.0"
+        mvn"org.scala-js:scalajs-js-envs_2.13:1.6.0",
+        mvn"at.yawk.lz4:lz4-java:1.12.1"
       )
   }
 
@@ -37,11 +37,11 @@ object `package` extends ScalaModule with FormatFixPublish:
 
   override def pomSettings = Task {
     PomSettings(
-      description = "Mill plugin for mdoc, static site generation",
+      description = "Mill plugin for developing Scala.js apps with sjsls live reload and content-hashed output",
       organization = "io.github.quafadas",
-      url = "https://github.com/Quafadas/millSite",
+      url = "https://github.com/Quafadas/live-server-scala-cli-js",
       licenses = Seq(License.`Apache-2.0`),
-      versionControl = VersionControl.github("quafadas", "millSite"),
+      versionControl = VersionControl.github("quafadas", "live-server-scala-cli-js"),
       developers = Seq(
         Developer("quafadas", "Simon Parten", "https://github.com/quafadas")
       )

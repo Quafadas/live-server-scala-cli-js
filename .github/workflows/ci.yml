@@ -31,12 +31,12 @@ jobs:
     steps:
       - uses: taiki-e/install-action@just
       - uses: coursier/cache-action@v8
-      - uses: coursier/setup-action@main
+      - uses: coursier/setup-action@v1
         with:
           jvm: temurin@21
           apps: scala-cli
       - name: Checkout current branch (full)
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -54,7 +54,7 @@ jobs:
         run: npm install -g terser
 
       - name: Download deps
-        run: ./mill __.prepareOffline
+        run: ./mill --no-server __.prepareOffline
 
       - name: Cache Playwright dependencies
         id: cache-pw
@@ -73,7 +73,7 @@ jobs:
       - name: Pre-fetch ScalaJS linker deps and integration test deps
         run: |
           ./mill sjsls.cacheJsLibs.fastLinkJS
-          cs fetch org.scala-js:scalajs-dom_sjs1_3:2.8.0 io.github.quafadas:vecxt_sjs1_3:0.0.38
+          cs fetch org.scala-js:scalajs-dom_sjs1_3:2.8.1 io.github.quafadas:vecxt_sjs1_3:0.0.38
 
       - name: scala-cli version
         run: scala-cli compile -e "()" --platform js && scala-cli run -e "()"
@@ -85,7 +85,7 @@ jobs:
           scala-cli package "$HELLO_WORLD_FILE" -o ${PWD}/tmp -f --power
 
       - name: Test CLI
-        run: ./mill __.test
+        run: ./mill --no-server __.test
 
       - name: Test Plugin
         run: ./mill plugin.integration.testForked
@@ -106,13 +106,13 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@main
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           fetch-tags: true
 
       - uses: coursier/cache-action@v8
-      - uses: coursier/setup-action@main
+      - uses: coursier/setup-action@v1
         with:
           jvm: temurin@21
           apps: scala-cli
@@ -146,18 +146,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: coursier/cache-action@v8
-      - uses: coursier/setup-action@main
+      - uses: coursier/setup-action@v1
         with:
           jvm: temurin@21
           apps: scala-cli
-      - uses: actions/checkout@main
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           fetch-tags: true
       - run: ./mill site.siteGen
       - name: Setup Pages
-        uses: actions/configure-pages@main
-      - uses: actions/upload-artifact@main
+        uses: actions/configure-pages@v5
+      - uses: actions/upload-artifact@v4
         with:
           name: page
           path: out/site/laika/generateSite.dest
@@ -174,14 +174,14 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/download-artifact@main
+    - uses: actions/download-artifact@v4
       with:
         name: page
         path: .
-    - uses: actions/configure-pages@main
-    - uses: actions/upload-pages-artifact@main
+    - uses: actions/configure-pages@v5
+    - uses: actions/upload-pages-artifact@v3
       with:
         path: .
     - name: Deploy to GitHub Pages
       id: deployment
-      uses: actions/deploy-pages@main
+      uses: actions/deploy-pages@v4

@@ -52,7 +52,7 @@ jobs:
           ref: ${{ needs.guard.outputs.release_tag }}
 
       - uses: coursier/cache-action@v8
-      - uses: coursier/setup-action@main
+      - uses: coursier/setup-action@v1
         with:
           jvm: temurin@21
 
@@ -89,7 +89,7 @@ jobs:
           ref: ${{ needs.guard.outputs.release_tag }}
 
       - uses: coursier/cache-action@v8
-      - uses: coursier/setup-action@main
+      - uses: coursier/setup-action@v1
         with:
           jvm: temurin@21
 
@@ -142,7 +142,7 @@ jobs:
 
 
   #     - uses: coursier/cache-action@v8
-  #     - uses: coursier/setup-action@main
+  #     - uses: coursier/setup-action@v1
   #       with:
   #         jvm: temurin@21
 

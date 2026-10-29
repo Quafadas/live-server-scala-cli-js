@@ -39,4 +39,4 @@ jobs:
             # Add multiple commands to run if needed
             cs version
             ./mill -v
-            ./mill __.prepareOffline
+            ./mill --no-server __.prepareOffline

@@ -67,14 +67,14 @@ end frontendRoutes
   *   \- configure the route you want the SPA to be served under
   * @return
   */
-def defaultFrontendRoutes[F[_]](spaPrefix: String = "ui") =
+def defaultFrontendRoutes(spaPrefix: String = "ui") =
   val frontendJs = org.http4s.server.staticcontent.resourceServiceBuilder[IO]("").toRoutes
   val serveIndexHtmlBelowSpaPrefix = HttpRoutes.of[IO] {
     case req @ GET -> _ =>
       StaticFile.fromResource("index.html", req.some).getOrElseF(NotFound())
   }
   frontendRoutes(
-    Some("ui", serveIndexHtmlBelowSpaPrefix),
+    Some(spaPrefix, serveIndexHtmlBelowSpaPrefix),
     None,
     Some(frontendJs)
   )

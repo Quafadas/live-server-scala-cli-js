@@ -4,6 +4,8 @@ import java.nio.ByteBuffer
 import java.security.MessageDigest
 import java.util.concurrent.ConcurrentHashMap
 
+import scala.jdk.CollectionConverters.*
+
 import org.scalajs.linker.interface.OutputDirectory
 
 import mill.*
@@ -25,15 +27,9 @@ import mill.scalajslib.config.ScalaJSConfigModule
   * artifact. Override [[wasmOptFlags]] to customise the optimisation level. The `-all` flag is mandatory for Scala.js
   * WASM output — `wasm-opt` must be present on `$$PATH`.
   *
-  * @note
-  *   This trait is placed in the `mill.scalajslib` package (vendored alongside Mill) so that it can access the
-  *   `private[scalajslib]` members [[ScalaJSWorker]] and [[ScalaJSModule.linkJs]], which are intentionally hidden from
-  *   external packages. No Mill sources are modified; we only add a new trait that overrides one `private[scalajslib]`
-  *   method.
-  *
   * @example
   *   {{{
-  * object app extends ScalaJSModule with InMemoryHashScalaJSModule {
+  * object app extends ScalaJSModule with InMemoryFastLinkHashScalaJSModule {
   *   def scalaVersion   = "3.3.6"
   *   def scalaJSVersion = "1.19.0"
   * }
@@ -79,7 +75,6 @@ trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModul
     val renameMap = jsRenames.map { case (orig, hashed, _) => orig -> hashed }.toMap
 
     // Patch wasm references in JS loader files so they point to the hashed wasm filename.
-    import mill.scalajslib.ContentHashScalaJSModule as C
     inMemoryOutputDirectory
       .fileNames()
       .filter(_.endsWith(".js"))
@@ -88,7 +83,7 @@ trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModul
           val buf = inMemoryOutputDirectory.content(jsName).get
           val bytes = new Array[Byte](buf.remaining())
           buf.get(bytes)
-          val patched = C.rewriteJsReferences(new String(bytes, "UTF-8"), renameMap)
+          val patched = FileBasedContentHashScalaJSModule.rewriteJsReferences(new String(bytes, "UTF-8"), renameMap)
           inMemoryOutputDirectory.remove(jsName)
           inMemoryOutputDirectory.put(jsName, ByteBuffer.wrap(patched.getBytes("UTF-8")))
       }
@@ -150,27 +145,9 @@ trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModul
     */
   override def fastLinkJS = Task {
     val report = super.fastLinkJS()
-    hashedOutputFiles.clear()
-    if scalaJSExperimentalUseWebAssembly() then
-      val wasmReport = processWasm(report)
-      // Populate hashedOutputFiles from inMemoryOutputDirectory after WASM processing
-      inMemoryOutputDirectory
-        .fileNames()
-        .foreach {
-          name =>
-            Task.log.debug(s"Adding in-memory file to hashedOutputFiles: $name")
-            val buf = inMemoryOutputDirectory.content(name).get
-            val bytes = new Array[Byte](buf.remaining())
-            buf.get(bytes)
-            hashedOutputFiles.put(name, bytes)
-        }
-      wasmReport
-    else
-      // Hash each JS module on its own content; the generated index.html carries an import map from the original
-      // module names to the hashed ones (see `bodyHtmlFromReport`), so imports between modules are left as-is.
-      import mill.scalajslib.ContentHashScalaJSModule as C
 
-      val linked = inMemoryOutputDirectory
+    def linkedFiles(): Map[String, Array[Byte]] =
+      inMemoryOutputDirectory
         .fileNames()
         .map {
           name =>
@@ -180,8 +157,26 @@ trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModul
             name -> bytes
         }
         .toMap
-      val hashed = ContentHasher.hashWithImportMap(linked, C.sanitiseHashedBaseName)
-      hashed.files.foreach((name, bytes) => hashedOutputFiles.put(name, bytes))
+
+    // The live server reads hashedOutputFiles while we update it. Add the new files before dropping stale ones, so
+    // requests never see an empty map.
+    def publish(files: Map[String, Array[Byte]]): Unit =
+      hashedOutputFiles.putAll(files.asJava)
+      hashedOutputFiles.keySet.retainAll(files.keySet.asJava)
+    end publish
+
+    if scalaJSExperimentalUseWebAssembly() then
+      val wasmReport = processWasm(report)
+      val files = linkedFiles()
+      Task.log.debug(s"In-memory files for hashedOutputFiles: ${files.keys.mkString(", ")}")
+      publish(files)
+      wasmReport
+    else
+      // Hash each JS module on its own content; the generated index.html carries an import map from the original
+      // module names to the hashed ones (see `bodyHtmlFromReport`), so imports between modules are left as-is.
+      val hashed =
+        ContentHasher.hashWithImportMap(linkedFiles(), FileBasedContentHashScalaJSModule.sanitiseHashedBaseName)
+      publish(hashed.files)
       os.write
         .over(Task.dest / InMemoryFastLinkHashScalaJSModule.importMapFile, upickle.default.write(hashed.importMap))
 

@@ -116,7 +116,8 @@ object LiveServer extends IOApp:
 
   def main(lsc: LiveServerConfig): Resource[IO, Server] =
 
-    val level = Level.get(lsc.logLevel).get
+    val level =
+      Level.get(lsc.logLevel).getOrElse(throw IllegalArgumentException(s"Invalid log level: ${lsc.logLevel}"))
     val baseLogger = scribe.Logger.root.clearHandlers().clearModifiers()
     lsc
       .logFile
