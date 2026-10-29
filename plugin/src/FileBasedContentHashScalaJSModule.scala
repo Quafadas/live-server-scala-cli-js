@@ -40,6 +40,16 @@ import mill.scalajslib.config.ScalaJSConfigModule
 trait FileBasedContentHashScalaJSModule extends ScalaJSConfigModule:
   override def moduleKind: Task.Simple[ModuleKind] = Task(ModuleKind.ESModule)
 
+  // Scala.js >= 1.22 rejects the WebAssembly backend unless the ES version is at least ES2022.
+  override def esFeatures: Task.Simple[ESFeatures] = Task {
+    val base = super.esFeatures()
+    val wasmCompatible = Set(ESVersion.ES2022, ESVersion.ES2023, ESVersion.ES2024)
+    if scalaJSExperimentalUseWebAssembly() && !wasmCompatible.contains(base.esVersion) then
+      base.withESVersion(ESVersion.ES2022)
+    else base
+    end if
+  }
+
   /** Flags passed to `wasm-opt` when minifying WASM output during `fullLinkJS`.
     *
     * The `-all` flag is mandatory — Scala.js emits WASM features that `wasm-opt` rejects unless all features are
