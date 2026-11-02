@@ -1,7 +1,10 @@
 package io.github.quafadas.sjsls
 
+import com.comcast.ip4s.Host
 import com.comcast.ip4s.Port
 import com.monovore.decline.Opts
+
+import cats.syntax.option.*
 
 private[sjsls] object CliOps:
   val defaultWorkspaceRoot: String = sys.props.getOrElse("user.dir", ".")
@@ -43,6 +46,14 @@ private[sjsls] object CliOps:
     .withDefault(3000)
     .validate("Port must be between 1 and 65535")(i => i > 0 && i <= 65535)
     .map(i => Port.fromInt(i).get)
+
+  val hostOpt: Opts[Host] = Opts
+    .option[String](
+      "host",
+      "The interface to bind the server to - e.g. 0.0.0.0 to make it reachable from your network. Default: localhost"
+    )
+    .withDefault("localhost")
+    .mapValidated(h => Host.fromString(h).toValidNel(s"Invalid host: $h"))
 
   val proxyPortTargetOpt = Opts
     .option[Int]("proxy-target-port", "The port you want to forward api requests to - e.g. 8080")
