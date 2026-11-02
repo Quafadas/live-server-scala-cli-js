@@ -7,8 +7,9 @@ import org.http4s.ember.client.EmberClientBuilder
 import org.http4s.ember.server.EmberServerBuilder
 import org.http4s.server.Server
 
+import com.comcast.ip4s.Host
+import com.comcast.ip4s.IpAddress
 import com.comcast.ip4s.Port
-import com.comcast.ip4s.host
 import com.monovore.decline.*
 import com.monovore.decline.effect.*
 
@@ -31,16 +32,23 @@ object LiveServer extends IOApp:
 
   private val sessionUuid: String = java.util.UUID.randomUUID().toString
 
-  private def buildServer(httpApp: HttpApp[IO], port: Port) = EmberServerBuilder
+  private def buildServer(httpApp: HttpApp[IO], host: Host, port: Port) = EmberServerBuilder
     .default[IO]
     .withHttp2
-    .withHost(host"localhost")
+    .withHost(host)
     .withPort(port)
     .withHttpApp(httpApp)
     .withShutdownTimeout(Duration.Zero)
     .build
 
-  def parseOpts = (
+  private[sjsls] def isLoopback(host: Host): Boolean = host match
+    case ip: IpAddress => ip.isLoopback
+    case other         =>
+      other.toString.equalsIgnoreCase("localhost") ||
+      IpAddress.fromString(other.toString).exists(_.isLoopback)
+
+  // mapN tops out at 22 elements, so further options are attached in parseOpts
+  private def coreOpts = (
     baseDirOpt,
     outDirOpt,
     portOpt,
@@ -113,6 +121,8 @@ object LiveServer extends IOApp:
         workspaceUuid
       )
   }
+
+  def parseOpts = coreOpts.product(hostOpt).map((lsc, host) => lsc.copy(host = host))
 
   def main(lsc: LiveServerConfig): Resource[IO, Server] =
 
@@ -299,8 +309,13 @@ object LiveServer extends IOApp:
         case _ => Resource.unit[IO]
 
       // _ <- stylesDir.fold(Resource.unit[IO])(sd => fileWatcher(fs2.io.file.Path(sd), mr))
-      _ <- logger.info(s"[liveServer] Start dev server on http://localhost:${lsc.port}").toResource
-      server <- buildServer(app.orNotFound, lsc.port)
+      _ <- logger.info(s"[liveServer] Start dev server on http://${lsc.host}:${lsc.port}").toResource
+      _ <- IO
+        .whenA(!isLoopback(lsc.host))(
+          logger.warn(s"[liveServer] Bound to ${lsc.host} - the dev server is reachable from your network")
+        )
+        .toResource
+      server <- buildServer(app.orNotFound, lsc.host, lsc.port)
 
       _ <- IO.whenA(!lsc.preventBrowserOpen)(openBrowser(Some(lsc.openBrowserAt), lsc.port)(logger)).toResource
     yield server

@@ -11,7 +11,7 @@ cs launch io.github.quafadas::sjsls:latest.version -- --help
 ```
 Usage:
     LiveServer --init <string>
-    LiveServer [--project-dir <string>] [--out-dir <string>] [--port <integer>] [--proxy-target-port <integer>] [--proxy-prefix-path <string>] [--client-routes-prefix <string>] [--log-level <string>] [--build-tool <string>] [--browse-on-open-at <string>] [--prevent-browser-open] [--extra-build-args <string>]... [--mill-module-name <string>] [--styles-dir <string>] [--path-to-index-html <string>] [--build-tool-invocation <string>] [--inject-preloads] [--no-dezombify] [--log-file <string>] [--workspace-root <string>] [--workspace-uuid <string>]
+    LiveServer [--project-dir <string>] [--out-dir <string>] [--port <integer>] [--proxy-target-port <integer>] [--proxy-prefix-path <string>] [--client-routes-prefix <string>] [--log-level <string>] [--build-tool <string>] [--browse-on-open-at <string>] [--prevent-browser-open] [--extra-build-args <string>]... [--mill-module-name <string>] [--styles-dir <string>] [--path-to-index-html <string>] [--build-tool-invocation <string>] [--inject-preloads] [--no-dezombify] [--log-file <string>] [--workspace-root <string>] [--workspace-uuid <string>] [--host <string>]
 
 Scala JS live server
 
@@ -62,6 +62,8 @@ Options and flags:
         Absolute path to the project source root for Chrome DevTools automatic workspace folder integration. Defaults to the project directory (--project-dir, or the current working directory). Pass `none` to disable.
     --workspace-uuid <string>
         UUID to use in the Chrome DevTools workspace descriptor. If omitted a random UUID is generated at startup and reused for the lifetime of this CLI session.
+    --host <string>
+        The interface to bind the server to - e.g. 0.0.0.0 to make it reachable from your network. Default: localhost
 ```
 
 # Examples;
@@ -164,6 +166,16 @@ cs launch io.github.quafadas::sjsls:@VERSION@ -- \
     --proxy-target-port 8080 \
 
 ```
+
+## Reach the dev server from another device
+
+By default the server only listens on `localhost`. To open it from a phone or another machine on your network, bind to all interfaces:
+
+```sh
+cs launch io.github.quafadas::sjsls:@VERSION@ -- --host 0.0.0.0
+```
+
+Then browse to `http://<your-machine-ip>:<port>`. Live reload works for those browsers too. Only do this on a network you trust, because anyone who can reach the port can read the files being served.
 
 ## Static site, no build tool.
 

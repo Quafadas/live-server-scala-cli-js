@@ -7,6 +7,8 @@ import fs2.concurrent.Topic
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
 
+import com.comcast.ip4s.Host
+
 import io.github.quafadas.sjsls.LiveServerConfig
 import mill.PathRef
 import mill.Task
@@ -190,6 +192,12 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
     8080
   }
 
+  /** Interface the development server binds to. Override with e.g. `"0.0.0.0"` to make it reachable from your network.
+    */
+  def host = Task {
+    "localhost"
+  }
+
   /** Whether the browser should be opened automatically when the server starts. */
   def openBrowser = Task {
     true
@@ -280,6 +288,7 @@ trait ScalaJsRefreshModule extends ScalaJSConfigModule:
       outDir = Some(js),
       port =
         com.comcast.ip4s.Port.fromInt(port()).getOrElse(throw new IllegalArgumentException(s"invalid port: ${port()}")),
+      host = Host.fromString(host()).getOrElse(throw new IllegalArgumentException(s"invalid host: ${host()}")),
       indexHtmlTemplate = Some(site),
       buildTool = io.github.quafadas.sjsls.NoBuildTool(), // Here we are a slave to the build tool
       openBrowserAt = "/index.html",

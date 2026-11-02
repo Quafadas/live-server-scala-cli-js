@@ -1,6 +1,8 @@
 package io.github.quafadas.sjsls
 
+import com.comcast.ip4s.Host
 import com.comcast.ip4s.Port
+import com.comcast.ip4s.host
 
 import fs2.concurrent.Topic
 
@@ -29,5 +31,6 @@ case class LiveServerConfig(
     customAssetRefresh: Option[Topic[IO, String]] = None,
     devToolsWorkspaceRoot: Option[String] = None,
     devToolsWorkspaceUuid: Option[String] = None,
-    inMemoryFiles: Option[java.util.concurrent.ConcurrentHashMap[String, Array[Byte]]] = None
+    inMemoryFiles: Option[java.util.concurrent.ConcurrentHashMap[String, Array[Byte]]] = None,
+    host: Host = host"localhost"
 )
