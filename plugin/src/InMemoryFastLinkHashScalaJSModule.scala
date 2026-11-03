@@ -14,6 +14,7 @@ import mill.api.TaskCtx.Log
 import mill.scalajslib.api
 import mill.scalajslib.api.ModuleKind
 import mill.scalajslib.api.Report
+import mill.scalajslib.config.LinkerOutputDigest
 import mill.scalajslib.config.ScalaJSConfigModule
 
 /** A Mill module trait that adds content hashing to Scala.js linked output, using an in-memory linker output directory.
@@ -38,13 +39,32 @@ import mill.scalajslib.config.ScalaJSConfigModule
   * Running `mill app.fastLinkJS` (or `fullLinkJS`) will produce hashed files in the task output directory, e.g.
   * `out/app/fastLinkJS.dest/main.a1b2c3d4.js`.
   */
-trait InMemoryFastLinkHashScalaJSModule extends FileBasedContentHashScalaJSModule with ScalaJSConfigModule:
+trait InMemoryFastLinkHashScalaJSModule
+    extends FileBasedContentHashScalaJSModule
+    with ScalaJSConfigModule
+    with LinkerOutputDigest:
   val inMemoryOutputDirectory: MemOutputDirectory = MemOutputDirectory()
   val hashedOutputFiles: ConcurrentHashMap[String, Array[Byte]] = new ConcurrentHashMap()
 
   override def customLinkerOutputDir: Option[OutputDirectory] =
     Some(inMemoryOutputDirectory)
   end customLinkerOutputDir
+
+  /** The linker output lives in memory, where Mill can't see it. Without this digest the link task's result never
+    * changes, so Mill would skip `fastLinkJS`, `fullLinkJS` and everything after them on every build but the first.
+    */
+  override protected def linkerOutputDigest: Option[String] =
+    val digest = MessageDigest.getInstance("SHA-256")
+    inMemoryOutputDirectory
+      .fileNames()
+      .sorted
+      .foreach {
+        name =>
+          digest.update(name.getBytes("UTF-8"))
+          inMemoryOutputDirectory.content(name).foreach(digest.update)
+      }
+    Some(digest.digest().map("%02x".format(_)).mkString)
+  end linkerOutputDigest
 
   override def moduleKind: Simple[ModuleKind] = ModuleKind.ESModule
 
