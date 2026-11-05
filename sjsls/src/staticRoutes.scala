@@ -33,8 +33,9 @@ def staticAssetRoutes(
     case Some(IndexHtmlConfig.IndexHtmlPath(path)) =>
       HttpRoutes
         .of[IO] {
-          case req @ GET -> Root => serveIndexHtml(path, modules, injectPreloads)
-
+          // `/index.html` too, or the file service below would serve the template without this build's import map
+          case GET -> Root                => serveIndexHtml(path, modules, injectPreloads)
+          case GET -> Root / "index.html" => serveIndexHtml(path, modules, injectPreloads)
         }
         .combineK(
           StaticMiddleware(
@@ -61,6 +62,11 @@ def staticAssetRoutes(
         )(logger)
       )
 
+/** The user's index.html, with the current build's import map (and preloads) injected.
+  *
+  * Marked `no-store`: the body changes on every link while the template on disk doesn't, so a cached copy would point
+  * the page at the previous build's content-hashed modules.
+  */
 def serveIndexHtml(from: fs2.io.file.Path, modules: Ref[IO, Map[String, String]], injectPreloads: Boolean) =
   StaticFile
     .fromPath[IO](from / "index.html")
@@ -78,7 +84,9 @@ def serveIndexHtml(from: fs2.io.file.Path, modules: Ref[IO, Map[String, String]]
                 str <- injectImportMap(modules, withPreloads)
               yield
                 val bytes = str.getBytes(java.nio.charset.StandardCharsets.UTF_8)
-                Response[IO]().withEntity(bytes).putHeaders("Content-Type" -> "text/html; charset=utf-8")
+                Response[IO]()
+                  .withEntity(bytes)
+                  .putHeaders("Content-Type" -> "text/html; charset=utf-8", "Cache-Control" -> "no-store")
 
           }
     }

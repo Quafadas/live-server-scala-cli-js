@@ -23,6 +23,7 @@ import scribe.Scribe
 import cats.effect.*
 import cats.effect.kernel.Ref
 import cats.effect.std.MapRef
+import cats.syntax.all.*
 
 import munit.CatsEffectSuite
 
@@ -582,63 +583,109 @@ class RoutesSuite extends CatsEffectSuite:
       }
   }
 
-  externalIndexHtml.test("Client SPA routes return index.html") {
+  def indexHtmlPathRoutes(staticDir: os.Path, fileToHashRef: Ref[IO, Map[String, String]]) =
+    for
+      logger <- IO(scribe.cats[IO]).toResource
+      refreshPub <- Topic[IO, Unit].toResource
+      assetRefreshPub <- Topic[IO, String].toResource
+      theseRoutes <- routes(
+        os.temp.dir().toString,
+        refreshPub,
+        assetRefreshPub,
+        Some(IndexHtmlConfig.IndexHtmlPath(staticDir.toFs2)),
+        HttpRoutes.empty[IO],
+        fileToHashRef,
+        Some("app"),
+        false,
+        ScalaCli()
+      )(logger)
+    yield theseRoutes.orNotFound
+
+  def lastModifiedOf(file: os.Path) = fileLastModified(file.toFs2).map {
+    seconds => httpCacheFormat(ZonedDateTime.ofInstant(Instant.ofEpochSecond(seconds), ZoneId.of("GMT")))
+  }
+
+  // Every URL which serves the user's index.html, with the current build's import map injected
+  val indexHtmlUrls = List(uri"/", uri"/index.html", uri"/app/page")
+
+  externalIndexHtml.test("The user's index.html is not stored by the browser, at any URL which serves it") {
     staticDir =>
-      def cacheFormatTime = fileLastModified((staticDir / "index.html").toFs2).map {
-        seconds =>
-          httpCacheFormat(ZonedDateTime.ofInstant(Instant.ofEpochSecond(seconds), ZoneId.of("GMT")))
+      val app = Ref[IO].of(Map.empty[String, String]).toResource.flatMap(indexHtmlPathRoutes(staticDir, _))
+      app.use {
+        served =>
+          indexHtmlUrls.traverse_ {
+            url =>
+              for
+                resp <- served(Request[IO](uri = url))
+                body <- resp.bodyText.compile.string
+              yield
+                assertEquals(resp.status.code, 200, url)
+                assert(body.contains("<h1>Test</h1>"), s"$url: $body")
+                assertEquals(resp.headers.get(ci"Cache-Control").map(_.head.value), Some("no-store"), url)
+                // No validators: the body is generated per build, so there's nothing the browser could revalidate
+                assert(resp.headers.get(ci"Last-Modified").isEmpty, s"$url: ${resp.headers}")
+                assert(resp.headers.get(ci"ETag").isEmpty, s"$url: ${resp.headers}")
+          }
       }
+  }
 
-      val app = for
-        logger <- IO(scribe.cats[IO]).toResource
-        fileToHashRef <- Ref[IO].of(Map.empty[String, String]).toResource
-        fileToHashMapRef = MapRef.fromSingleImmutableMapRef[IO, String, String](fileToHashRef)
-        refreshPub <- Topic[IO, Unit].toResource
-        assetRefreshPub <- Topic[IO, String].toResource
-        theseRoutes <- routes(
-          os.temp.dir().toString,
-          refreshPub,
-          assetRefreshPub,
-          Some(IndexHtmlConfig.IndexHtmlPath(staticDir.toFs2)),
-          HttpRoutes.empty[IO],
-          fileToHashRef,
-          Some("app"),
-          false,
-          ScalaCli()
-        )(logger)
-      yield (theseRoutes.orNotFound, logger)
+  // Regression: the client route used to validate If-Modified-Since against the template's mtime, and /index.html
+  // served the template from disk. The import map changes on every link but the template doesn't, so a reload got a
+  // 304 (or no import map at all) and kept running the previous build.
+  externalIndexHtml.test("index.html carries the new import map after a rebuild, whatever validators are sent") {
+    staticDir =>
+      val buildA = Map("main.js" -> "main.0123456789abcdef.js")
+      val buildB = Map("main.js" -> "main.fedcba9876543210.js")
+      lastModifiedOf(staticDir / "index.html").flatMap {
+        templateModified =>
+          indexHtmlUrls.traverse_ {
+            url =>
+              (for
+                fileToHashRef <- Ref[IO].of(buildA).toResource
+                served <- indexHtmlPathRoutes(staticDir, fileToHashRef)
+              yield (served, fileToHashRef)).use {
+                case (served, fileToHashRef) =>
+                  for
+                    first <- served(Request[IO](uri = url))
+                    firstBody <- first.bodyText.compile.string
+                    _ = assert(firstBody.contains("/main.0123456789abcdef.js"), s"$url: $firstBody")
+                    _ <- fileToHashRef.set(buildB)
+                    // Whatever the browser held onto from the first load, plus the template's mtime, which used to 304
+                    validators = Headers(
+                      Header.Raw(
+                        ci"If-Modified-Since",
+                        first.headers.get(ci"Last-Modified").fold(templateModified)(_.head.value)
+                      ),
+                      Header.Raw(ci"If-None-Match", first.headers.get(ci"ETag").fold("\"stale\"")(_.head.value))
+                    )
+                    second <- served(Request[IO](uri = url, headers = validators))
+                    secondBody <- second.bodyText.compile.string
+                  yield
+                    assertEquals(second.status.code, 200, url)
+                    assert(secondBody.contains("/main.fedcba9876543210.js"), s"$url: $secondBody")
+                    assert(!secondBody.contains("/main.0123456789abcdef.js"), s"$url: $secondBody")
+                  end for
+              }
+          }
+      }
+  }
 
+  // Other files in the index.html directory have no per-build content, so they revalidate against their mtime
+  externalIndexHtml.test("Static files beside index.html revalidate against their mtime") {
+    staticDir =>
+      val app = Ref[IO].of(Map.empty[String, String]).toResource.flatMap(indexHtmlPathRoutes(staticDir, _))
       app
-        .both(cacheFormatTime.toResource)
+        .both(lastModifiedOf(staticDir / "index.less").toResource)
         .use {
-          case ((served, logger), firstModified) =>
-            val request1 = org.http4s.Request[IO](uri = org.http4s.Uri.unsafeFromString("app/whocare"))
+          case (served, firstModified) =>
+            val request =
+              Request[IO](uri = uri"/index.less").withHeaders(Headers(Header.Raw(ci"If-Modified-Since", firstModified)))
 
-            val request2 = org
-              .http4s
-              .Request[IO](uri = org.http4s.Uri.unsafeFromString("/index.html"))
-              .withHeaders(
-                org.http4s.Headers.of(org.http4s.Header.Raw(ci"If-Modified-Since", firstModified.toString()))
-              )
-
-            served(request1).flatTap(r => logger.debug("headers" + r.headers.headers.mkString(","))) >>
-              logger.trace("first modified " + firstModified) >>
-              // You need these ... otherwise no caching.
-              // https://simonhearne.com/2022/caching-header-best-practices/
-              assertIOBoolean(served(request1).map(_.headers.get(ci"ETag").isDefined)) >>
-              assertIOBoolean(served(request1).map(_.headers.get(ci"Cache-Control").isDefined)) >>
-              assertIOBoolean(served(request1).map(_.headers.get(ci"Expires").isDefined)) >>
-              assertIOBoolean(served(request1).map(_.headers.get(ci"Last-Modified").isDefined)) >>
-              // Don't forget to set them _all_
-              assertIO(served(request1).map(_.status.code), 200) >>
-              assertIO(served(request2).map(_.status.code), 304) >>
-              IO.sleep(
-                1500.millis
-              ) >> // have to wait at least one second otherwish last modified could be the same, if test took <1 sceond to get to this point
-              IO.blocking(os.write.over(staticDir / "index.html", """<head><title>Test</title></head>""")) >>
-              served(request2).flatMap(_.bodyText.compile.string).flatMap(s => logger.trace(s)) >>
-              assertIO(served(request2).map(_.status.code), 200)
-
+            assertIO(served(request).map(_.status.code), 304) >>
+              // wait at least a second, or the new mtime could fall in the same second as the old one
+              IO.sleep(1500.millis) >>
+              IO.blocking(os.write.over(staticDir / "index.less", "h1 {color: blue;}")) >>
+              assertIO(served(request).map(_.status.code), 200)
         }
   }
 

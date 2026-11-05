@@ -64,10 +64,9 @@ def buildSpaRoute(
       )(logger)
 
     case Some(IndexHtmlConfig.IndexHtmlPath(dir)) =>
-      StaticFileMiddleware(
-        HttpRoutes.of[IO] {
-          case req @ GET -> _ => serveIndexHtml(dir, modules, injectPreloads)
-        },
-        dir / "index.html"
-      )(logger)
+      // Served as `/` is. The import map in this page changes on every link, and the template's mtime doesn't, so
+      // validating against the template would 304 a reload onto the previous build's modules.
+      HttpRoutes.of[IO] {
+        case GET -> _ => serveIndexHtml(dir, modules, injectPreloads)
+      }
 end buildSpaRoute

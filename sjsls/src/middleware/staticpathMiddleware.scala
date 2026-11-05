@@ -22,6 +22,10 @@ import cats.data.OptionT
 import cats.effect.*
 import cats.syntax.all.*
 
+def parseFromHeader(epochInstant: Instant, header: String): Long =
+  java.time.Duration.between(epochInstant, ZonedDateTime.parse(header, formatter)).toSeconds()
+end parseFromHeader
+
 inline def respondWithCacheLastModified(resp: Response[IO], lastModZdt: ZonedDateTime) =
   resp.putHeaders(
     Header.Raw(ci"Cache-Control", "no-cache"),
