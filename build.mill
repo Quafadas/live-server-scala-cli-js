@@ -3,7 +3,7 @@
 //| mill-jvm-opts: -Xmx4g
 //| mvnDeps:
 //| - com.lihaoyi::mill-contrib-buildinfo:$MILL_VERSION
-//| - com.goyeau::mill-scalafix::0.6.0
+//| - com.goyeau::mill-scalafix::0.6.2
 //| - io.github.quafadas:millSite_mill1_3.8:0.0.57
 
 
@@ -27,14 +27,17 @@ object V:
   val pwV = build.pwV
   val http4sVersion = "0.23.38"
   val circeVersion = "0.14.17"
-  val scalaVersion = "3.10.0"
+  val scalaVersion = "3.10.1"
   val laminar = "17.2.1"
   val scalaJsDom = "2.8.1"
-  val scalaJs = "1.22.0"
-  val fs2 = "3.14.0"
+  val scalaJs = "1.23.0"
+  // scala-cli (1.19.0) still bundles a 1.22 Scala.js linker and cannot read 1.23 IR.
+  // Used for the scala-cli driven test fixtures; bump to scalaJs once scala-cli catches up.
+  val scalaJsCli = "1.22.0"
+  val fs2 = "3.15.0"
   val scalaTags = mvn"com.lihaoyi::scalatags::0.13.1"
   val millLibs = mvn"com.lihaoyi::mill-libs:$millVersion"
-  val scribeVersion = "3.19.0"
+  val scribeVersion = "3.19.1"
   val scalaNativeVersion = "0.5.12"
   val decline = "2.6.2"
   val osLib = "0.11.10"
@@ -93,7 +96,7 @@ object PlaywrightSetup extends JavaModule:
     val code = s"""
   //> using scala ${V.scalaVersion}
   //> using platform js
-  //> using jsVersion ${V.scalaJs}
+  //> using jsVersion ${V.scalaJsCli}
 
   //> using dep org.scala-js::scalajs-dom::${V.scalaJsDom}
   //> using dep com.raquo::laminar::${V.laminar}
